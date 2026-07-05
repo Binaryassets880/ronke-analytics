@@ -200,6 +200,7 @@ export interface WalletData {
   diamondBucket: DiamondBucket | null;
   neverSold: boolean;
   everPaperSold: boolean;
+  firstAcquiredAt: string | null;
   heldTokens: WalletHeldToken[];
   everHeld: boolean;
 }
@@ -213,14 +214,16 @@ export async function getWallet(address: string): Promise<WalletData> {
     diamondBucket: null,
     neverSold: false,
     everPaperSold: false,
+    firstAcquiredAt: null,
     heldTokens: [],
     everHeld: false,
   };
   const sql = getSql();
   if (!sql) return empty;
   const balances = await sql`
-    SELECT asset, balance::text AS balance, token_count FROM holder_balances
-    WHERE address = ${address}
+    SELECT asset, balance::text AS balance, token_count,
+           first_acquired_at::text AS first_acquired_at
+    FROM holder_balances WHERE address = ${address}
   `;
   const metrics = await sql`
     SELECT asset, holding_duration_days, diamond_bucket, never_sold, ever_paper_sold
@@ -230,9 +233,12 @@ export async function getWallet(address: string): Promise<WalletData> {
 
   let ronkeBalance = "0";
   let ronkeverseCount = 0;
+  let firstAcquiredAt: string | null = null;
   for (const r of balances) {
     if (r.asset === "ronke_token") ronkeBalance = String(r.balance);
     else ronkeverseCount = Number(r.token_count);
+    const fa = r.first_acquired_at as string | null;
+    if (fa && (firstAcquiredAt === null || fa < firstAcquiredAt)) firstAcquiredAt = fa;
   }
   let holdingDurationDays = 0;
   let diamondBucket: DiamondBucket | null = null;
@@ -259,6 +265,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     diamondBucket,
     neverSold,
     everPaperSold,
+    firstAcquiredAt,
     heldTokens: held.map((r) => ({
       tokenId: String(r.token_id),
       rarityRank: r.rarity_rank == null ? null : Number(r.rarity_rank),
