@@ -20,7 +20,17 @@ import { RoninDataClient } from "@/lib/ronin/client";
 import { assertContinuity, type KnownTransfer } from "@/lib/ronin/continuity";
 import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
 import { rebuild } from "@/lib/analytics/rebuild";
-import type { SyncClient, RebuildFn } from "./sync";
+import type { RebuildFn } from "./sync";
+import type { NormalizedTransfer } from "@/lib/types";
+
+/** The backfill uses the full-history (ASC + client-filter) transfer stream. */
+interface BackfillClient {
+  fetchTransfers(
+    asset: Asset,
+    fromBlock?: number,
+    toBlock?: number,
+  ): AsyncIterable<NormalizedTransfer>;
+}
 
 /**
  * Known continuity fixtures recorded by the U13 spike (a real pre-migration and
@@ -46,7 +56,7 @@ export const KNOWN_CONTINUITY: Partial<Record<Asset, { pre: KnownTransfer; post:
 /** Full-history pull for one asset, resuming from its cursor. */
 export async function backfillAsset(
   sql: Sql,
-  client: SyncClient,
+  client: BackfillClient,
   asset: Asset,
 ): Promise<{ appended: number; maxBlock: number }> {
   const cursor = await getCursor(sql, asset);

@@ -19,10 +19,10 @@ import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
 import { rebuild } from "@/lib/analytics/rebuild";
 
 export interface SyncClient {
-  fetchTransfers(
+  /** Recent tail only: transfers with block_number > sinceBlock (DESC + stop). */
+  fetchNewTransfers(
     asset: Asset,
-    fromBlock?: number,
-    toBlock?: number,
+    sinceBlock: number,
   ): AsyncIterable<import("@/lib/types").NormalizedTransfer>;
 }
 
@@ -37,7 +37,7 @@ export async function syncAsset(
   const cursor = await getCursor(sql, asset);
   let maxBlock = cursor;
   let appended = 0;
-  for await (const t of client.fetchTransfers(asset, cursor + 1)) {
+  for await (const t of client.fetchNewTransfers(asset, cursor)) {
     if (t.blockNumber <= cursor) continue; // guard: only strictly-newer events
     appended += await insertTransfer(sql, t);
     if (t.blockNumber > maxBlock) maxBlock = t.blockNumber;

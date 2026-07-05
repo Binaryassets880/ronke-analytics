@@ -30,29 +30,58 @@ export class RoninDataClient {
 
   /**
    * Stream normalized transfers for an asset over [fromBlock, toBlock],
-   * deduped on (txHash, logIndex). `source` defaults to Moralis.
+   * deduped on (txHash, logIndex). Pages the full history ASC via cursor and
+   * filters by block_number CLIENT-SIDE - Moralis's from_block/to_block filters
+   * 425 on older Ronin blocks (U13), so we never send them. Used by backfill
+   * (fromBlock=0 -> everything) and by continuity's pre-migration scan.
    */
   async *fetchTransfers(
     asset: Asset,
-    fromBlock?: number,
+    fromBlock = 0,
     toBlock?: number,
     source: ProviderSource = "moralis",
   ): AsyncIterable<NormalizedTransfer> {
-    const contract = contractFor(asset);
-    const query: TransferQuery = { fromBlock, toBlock, order: "ASC" };
-    const seen = new Set<string>();
-    if (source === "moralis") {
-      for await (const t of this.moralis.fetchTransfers(contract, query)) {
-        const key = `${t.txHash}:${t.logIndex}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        yield t;
-      }
-    } else {
+    if (source !== "moralis") {
       throw new Error(
         "Blockscout transfer streaming is a deferred deliverable (KTD-5); " +
           "Moralis spans the full history per the U13 spike.",
       );
+    }
+    const contract = contractFor(asset);
+    const query: TransferQuery = { order: "ASC" };
+    const seen = new Set<string>();
+    for await (const t of this.moralis.fetchTransfers(contract, query)) {
+      if (t.blockNumber < fromBlock) continue;
+      if (toBlock != null && t.blockNumber > toBlock) continue;
+      const key = `${t.txHash}:${t.logIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      yield t;
+    }
+  }
+
+  /**
+   * Stream only the recent tail: transfers with block_number > sinceBlock.
+   * Pages DESC (newest first) and STOPS as soon as it reaches an event at or
+   * below the cursor, so a daily sync reads only new activity instead of the
+   * full history. This is the efficient incremental path (no block filters).
+   */
+  async *fetchNewTransfers(
+    asset: Asset,
+    sinceBlock: number,
+    source: ProviderSource = "moralis",
+  ): AsyncIterable<NormalizedTransfer> {
+    if (source !== "moralis") {
+      throw new Error("Only the Moralis source is implemented (KTD-5).");
+    }
+    const contract = contractFor(asset);
+    const seen = new Set<string>();
+    for await (const t of this.moralis.fetchTransfers(contract, { order: "DESC" })) {
+      if (t.blockNumber <= sinceBlock) return; // reached known history; stop paging
+      const key = `${t.txHash}:${t.logIndex}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      yield t;
     }
   }
 

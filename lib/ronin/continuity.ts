@@ -69,13 +69,19 @@ async function scanFor(
   known: KnownTransfer,
 ): Promise<boolean> {
   const target = known.txHash.toLowerCase();
-  // A tight window around the known block keeps the probe cheap.
-  for await (const t of client.fetchTransfers(
-    asset,
-    known.blockNumber,
-    known.blockNumber,
-  )) {
+  // Moralis block-range filters 425 on older blocks (U13), so we scan the
+  // stream from the end nearest the target: a pre-migration transfer sits near
+  // genesis (ASC finds it on the first pages), a post-migration one near the
+  // tip (DESC finds it immediately). Capped so it never runs away.
+  const MAX_SCAN = 5000;
+  const stream =
+    known.blockNumber >= MIGRATION_BLOCK
+      ? client.fetchNewTransfers(asset, 0) // DESC from newest
+      : client.fetchTransfers(asset, 0); // ASC from genesis
+  let seen = 0;
+  for await (const t of stream) {
     if (t.txHash.toLowerCase() === target) return true;
+    if (++seen >= MAX_SCAN) break;
   }
   return false;
 }

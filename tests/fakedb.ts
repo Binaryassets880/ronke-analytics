@@ -48,14 +48,21 @@ export function makeFakeDb() {
   };
 }
 
-/** A fake client that yields events with blockNumber >= fromBlock. */
+/** A fake client mirroring RoninDataClient's backfill + incremental methods. */
 export function makeFakeClient(dataset: Record<string, NormalizedTransfer[]>) {
   return {
+    // Backfill path: everything in [fromBlock, toBlock].
     async *fetchTransfers(asset: Asset, fromBlock = 0, toBlock?: number) {
       for (const t of dataset[asset] ?? []) {
         if (t.blockNumber < fromBlock) continue;
         if (toBlock != null && t.blockNumber > toBlock) continue;
         yield t;
+      }
+    },
+    // Incremental path: only the tail strictly newer than sinceBlock.
+    async *fetchNewTransfers(asset: Asset, sinceBlock: number) {
+      for (const t of dataset[asset] ?? []) {
+        if (t.blockNumber > sinceBlock) yield t;
       }
     },
   };

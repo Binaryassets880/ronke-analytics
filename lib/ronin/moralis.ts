@@ -33,8 +33,13 @@ export interface MoralisOptions {
 }
 
 export interface TransferQuery {
-  fromBlock?: number;
-  toBlock?: number;
+  /**
+   * Paging order. Block-range filters (from_block/to_block) are intentionally
+   * NOT supported: Moralis returns HTTP 425 "Block timestamp not found" for
+   * older Ronin blocks when those filters are used (verified against the live
+   * API). Callers page the full stream via cursor and filter by block_number
+   * client-side, or use DESC order with an early stop for incremental tails.
+   */
   order?: "ASC" | "DESC";
 }
 
@@ -72,17 +77,43 @@ export class MoralisProvider {
     this.lastCallAt = Date.now();
   }
 
+  /** Transient statuses worth retrying with backoff during a long backfill. */
+  private static readonly TRANSIENT = new Set([408, 425, 429, 500, 502, 503, 504]);
+  private static readonly MAX_RETRIES = 5;
+
   private async request(path: string, params: Record<string, string>): Promise<any> {
-    await this.pace();
     const url = new URL(this.baseUrl + path);
     url.searchParams.set("chain", RONIN_CHAIN_PARAM);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    const res = await this.fetchImpl(url.toString(), {
-      headers: { "X-API-Key": this.apiKey, accept: "application/json" },
-    });
-    if (res.status === 401) {
-      // Moralis returns 401 for both a bad key AND CU-budget exhaustion on the
-      // free tier. The body message disambiguates (crypto-books pattern).
+
+    let lastErr = "";
+    for (let attempt = 0; attempt <= MoralisProvider.MAX_RETRIES; attempt++) {
+      await this.pace();
+      const res = await this.fetchImpl(url.toString(), {
+        headers: { "X-API-Key": this.apiKey, accept: "application/json" },
+      });
+
+      if (res.status === 401) {
+        // Moralis returns 401 for both a bad key AND CU-budget exhaustion on the
+        // free tier. The body message disambiguates (crypto-books pattern).
+        let detail = "";
+        try {
+          const j = await res.json();
+          detail = j?.message || j?.error || "";
+        } catch {
+          detail = "";
+        }
+        if (/usage exceeded|budget/i.test(detail)) {
+          throw new MoralisCuError(
+            `Moralis CU budget exhausted: ${detail} (see https://admin.moralis.com/usage)`,
+          );
+        }
+        throw new MoralisAuthError(`Moralis 401 (bad key?): ${detail || "unauthorized"}`);
+      }
+
+      if (res.status < 400) return res.json();
+
+      // Capture the body message for diagnostics / CU detection.
       let detail = "";
       try {
         const j = await res.json();
@@ -90,20 +121,22 @@ export class MoralisProvider {
       } catch {
         detail = "";
       }
-      if (/usage exceeded|budget|rate limit/i.test(detail)) {
-        throw new MoralisCuError(
-          `Moralis CU budget exhausted: ${detail} (see https://admin.moralis.com/usage)`,
-        );
+      lastErr = `HTTP ${res.status}${detail ? `: ${detail}` : ""}`;
+
+      // A 429 whose body names the CU budget is terminal; a plain 429 is a
+      // transient rate limit worth backing off on.
+      if (res.status === 429 && /usage exceeded|budget/i.test(detail)) {
+        throw new MoralisCuError(`Moralis CU budget exhausted: ${detail}`);
       }
-      throw new MoralisAuthError(`Moralis 401 (bad key?): ${detail || "unauthorized"}`);
+
+      if (MoralisProvider.TRANSIENT.has(res.status) && attempt < MoralisProvider.MAX_RETRIES) {
+        // Exponential backoff: 0.5s, 1s, 2s, 4s, 8s.
+        await sleep(500 * 2 ** attempt);
+        continue;
+      }
+      throw new MoralisError(`Moralis ${lastErr}`);
     }
-    if (res.status === 429) {
-      throw new MoralisCuError("Moralis 429: rate limit / CU budget exceeded");
-    }
-    if (res.status >= 400) {
-      throw new MoralisError(`Moralis HTTP ${res.status}`);
-    }
-    return res.json();
+    throw new MoralisError(`Moralis request failed after retries: ${lastErr}`);
   }
 
   /** Stream normalized transfers for a contract, paginating via cursor. */
@@ -121,8 +154,6 @@ export class MoralisProvider {
         limit: String(PAGE_SIZE),
         order: query.order ?? "ASC",
       };
-      if (query.fromBlock != null) params.from_block = String(query.fromBlock);
-      if (query.toBlock != null) params.to_block = String(query.toBlock);
       if (cursor) params.cursor = cursor;
       const body = await this.request(endpoint, params);
       for (const row of body?.result ?? []) {

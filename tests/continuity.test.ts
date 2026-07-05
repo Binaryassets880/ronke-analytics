@@ -23,18 +23,22 @@ const nftRow = (hash: string, block: number) => ({
   contract_type: "ERC721",
 });
 
-/** Fake fetch keyed on from_block: returns the matching known tx or empty. */
+/**
+ * Fake fetch keyed on paging ORDER (no block filters - Moralis 425s on those):
+ * ASC pages from genesis yield the pre-migration tx; DESC pages from the tip
+ * yield the post-migration tx.
+ */
 function continuityFetch(opts: { includePre: boolean }): FetchImpl {
   return (async (input: string) => {
     const url = new URL(String(input));
-    const fromBlock = Number(url.searchParams.get("from_block"));
-    if (fromBlock === PRE.blockNumber && opts.includePre) {
-      return jsonResponse({ result: [nftRow(PRE.txHash, PRE.blockNumber)], cursor: null });
-    }
-    if (fromBlock === POST.blockNumber) {
+    const order = url.searchParams.get("order");
+    if (order === "DESC") {
       return jsonResponse({ result: [nftRow(POST.txHash, POST.blockNumber)], cursor: null });
     }
-    return jsonResponse({ result: [], cursor: null });
+    return jsonResponse({
+      result: opts.includePre ? [nftRow(PRE.txHash, PRE.blockNumber)] : [],
+      cursor: null,
+    });
   }) as unknown as FetchImpl;
 }
 
