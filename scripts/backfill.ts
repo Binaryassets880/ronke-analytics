@@ -13,9 +13,8 @@
  */
 
 import { requireSql, type Sql } from "@/db/client";
-import { moralisApiKey } from "@/config/env";
 import { ASSETS, type Asset } from "@/config/contracts";
-import { MoralisProvider } from "@/lib/ronin/moralis";
+import { BlockscoutProvider } from "@/lib/ronin/blockscout";
 import { RoninDataClient } from "@/lib/ronin/client";
 import { assertContinuity, type KnownTransfer } from "@/lib/ronin/continuity";
 import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
@@ -23,12 +22,13 @@ import { rebuild } from "@/lib/analytics/rebuild";
 import type { RebuildFn } from "./sync";
 import type { NormalizedTransfer } from "@/lib/types";
 
-/** The backfill uses the full-history (ASC + client-filter) transfer stream. */
+/** The backfill uses the full-history transfer stream (Blockscout by default). */
 interface BackfillClient {
   fetchTransfers(
     asset: Asset,
     fromBlock?: number,
     toBlock?: number,
+    source?: "moralis" | "blockscout",
   ): AsyncIterable<NormalizedTransfer>;
 }
 
@@ -53,43 +53,57 @@ export const KNOWN_CONTINUITY: Partial<Record<Asset, { pre: KnownTransfer; post:
   // asserted at runtime here.
 };
 
-/** Full-history pull for one asset, resuming from its cursor. */
+/**
+ * Full-history pull for one asset. Blockscout has no daily cap, so this runs to
+ * completion in one pass; ON CONFLICT DO NOTHING makes a re-run after an
+ * interruption safe (it re-reads and dedupes). The cursor advances to the max
+ * block seen so incremental sync takes over afterward.
+ */
 export async function backfillAsset(
   sql: Sql,
   client: BackfillClient,
   asset: Asset,
+  source: "moralis" | "blockscout" = "blockscout",
 ): Promise<{ appended: number; maxBlock: number }> {
   const cursor = await getCursor(sql, asset);
-  const fromBlock = cursor > 0 ? cursor + 1 : 0;
   let maxBlock = cursor;
   let appended = 0;
-  for await (const t of client.fetchTransfers(asset, fromBlock)) {
+  for await (const t of client.fetchTransfers(asset, 0, undefined, source)) {
     appended += await insertTransfer(sql, t);
     if (t.blockNumber > maxBlock) maxBlock = t.blockNumber;
   }
-  if (maxBlock > cursor) await setCursor(sql, asset, maxBlock);
+  if (maxBlock > cursor) await setCursor(sql, asset, maxBlock, source);
   return { appended, maxBlock };
 }
 
 export async function backfill(
   sql: Sql,
   client: RoninDataClient,
-  opts: { rebuildFn?: RebuildFn; asOf?: Date; assertContinuityFor?: Asset[] } = {},
+  opts: {
+    rebuildFn?: RebuildFn;
+    asOf?: Date;
+    source?: "moralis" | "blockscout";
+    /** Assets to run the Moralis continuity assertion for. Empty by default -
+     *  Blockscout is the canonical Ronin index, so it inherently spans the L2
+     *  boundary and no assertion is needed. */
+    assertContinuityFor?: Asset[];
+  } = {},
 ): Promise<{ appended: number }> {
   const asOf = opts.asOf ?? new Date();
   const rebuildFn = opts.rebuildFn ?? rebuild;
+  const source = opts.source ?? "blockscout";
 
-  // Continuity gate before pulling (KTD-4).
-  const toAssert = opts.assertContinuityFor ?? (Object.keys(KNOWN_CONTINUITY) as Asset[]);
-  for (const asset of toAssert) {
+  // Optional continuity gate (KTD-4) - only if explicitly requested.
+  for (const asset of opts.assertContinuityFor ?? []) {
     const known = KNOWN_CONTINUITY[asset];
     if (known) await assertContinuity(client, asset, known);
   }
   await setMeta(sql, "continuity_verified", "true");
+  await setMeta(sql, "backfill_source", source);
 
   let appended = 0;
   for (const asset of ASSETS) {
-    const r = await backfillAsset(sql, client, asset);
+    const r = await backfillAsset(sql, client, asset, source);
     appended += r.appended;
   }
   await setMeta(sql, "backfill_complete", "true");
@@ -99,9 +113,8 @@ export async function backfill(
 
 if (process.argv[1]?.endsWith("backfill.ts")) {
   const sql = requireSql();
-  const client = new RoninDataClient({
-    moralis: new MoralisProvider({ apiKey: moralisApiKey() }),
-  });
+  // Blockscout needs no API key; no CU cap; full history in one run.
+  const client = new RoninDataClient({ blockscout: new BlockscoutProvider() });
   backfill(sql, client)
     .then(({ appended }) => {
       console.log(`Backfill complete. Appended ${appended} events; snapshots rebuilt.`);

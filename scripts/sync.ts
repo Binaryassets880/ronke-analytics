@@ -11,9 +11,8 @@
  */
 
 import { requireSql, type Sql } from "@/db/client";
-import { moralisApiKey } from "@/config/env";
 import { ASSETS, type Asset } from "@/config/contracts";
-import { MoralisProvider } from "@/lib/ronin/moralis";
+import { BlockscoutProvider } from "@/lib/ronin/blockscout";
 import { RoninDataClient } from "@/lib/ronin/client";
 import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
 import { rebuild } from "@/lib/analytics/rebuild";
@@ -23,6 +22,7 @@ export interface SyncClient {
   fetchNewTransfers(
     asset: Asset,
     sinceBlock: number,
+    source?: "moralis" | "blockscout",
   ): AsyncIterable<import("@/lib/types").NormalizedTransfer>;
 }
 
@@ -37,7 +37,7 @@ export async function syncAsset(
   const cursor = await getCursor(sql, asset);
   let maxBlock = cursor;
   let appended = 0;
-  for await (const t of client.fetchNewTransfers(asset, cursor)) {
+  for await (const t of client.fetchNewTransfers(asset, cursor, "blockscout")) {
     if (t.blockNumber <= cursor) continue; // guard: only strictly-newer events
     appended += await insertTransfer(sql, t);
     if (t.blockNumber > maxBlock) maxBlock = t.blockNumber;
@@ -67,9 +67,8 @@ export async function sync(
 
 if (process.argv[1]?.endsWith("sync.ts")) {
   const sql = requireSql();
-  const client = new RoninDataClient({
-    moralis: new MoralisProvider({ apiKey: moralisApiKey() }),
-  });
+  // Blockscout for transfers: no CU cap, DESC + stop-at-cursor reads only the tail.
+  const client = new RoninDataClient({ blockscout: new BlockscoutProvider() });
   sync(sql, client)
     .then(({ appended }) => {
       console.log(`Sync complete. Appended ${appended} new events; snapshots rebuilt.`);

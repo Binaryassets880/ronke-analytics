@@ -177,32 +177,33 @@ describe("RoninDataClient dedup", () => {
     const moralis = new MoralisProvider({ apiKey: "k", fetchImpl, rateDelayMs: 0 });
     const client = new RoninDataClient({ moralis });
     const out = [];
-    for await (const t of client.fetchTransfers("ronke_token")) out.push(t);
+    for await (const t of client.fetchTransfers("ronke_token", 0, undefined, "moralis")) out.push(t);
     expect(out).toHaveLength(1);
   });
 });
 
-describe("BlockscoutProvider fallback", () => {
+describe("BlockscoutProvider owners (v2)", () => {
   it("returns holder rows in the normalized OwnerRow shape", async () => {
     let page = 0;
     const fetchImpl = (async () => {
       page += 1;
       if (page === 1) {
         return jsonResponse({
-          result: [
-            { address: "0xHOLDER1", value: "100" },
-            { address: "0xHOLDER2", value: "50" },
+          items: [
+            { address: { hash: "0xHOLDER1" }, value: "100" },
+            { address: { hash: "0xHOLDER2" }, value: "50" },
           ],
+          next_page_params: null,
         });
       }
-      return jsonResponse({ result: [] });
+      return jsonResponse({ items: [], next_page_params: null });
     }) as unknown as FetchImpl;
-    const bs = new BlockscoutProvider({ fetchImpl });
+    const bs = new BlockscoutProvider({ fetchImpl, rateDelayMs: 0 });
     const rows = [];
     for await (const r of bs.fetchOwners(RONKE)) rows.push(r);
     expect(rows).toEqual([
-      { address: "0xholder1", balance: 100n, tokenCount: undefined },
-      { address: "0xholder2", balance: 50n, tokenCount: undefined },
+      { address: "0xholder1", balance: 100n, tokenCount: undefined, isContract: undefined },
+      { address: "0xholder2", balance: 50n, tokenCount: undefined, isContract: undefined },
     ]);
   });
 });

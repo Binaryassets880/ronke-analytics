@@ -74,10 +74,12 @@ async function scanFor(
   // genesis (ASC finds it on the first pages), a post-migration one near the
   // tip (DESC finds it immediately). Capped so it never runs away.
   const MAX_SCAN = 5000;
+  // Continuity is a Moralis-specific check ("does Moralis index pre-L2
+  // history"); Blockscout is the canonical index and needs no such assertion.
   const stream =
     known.blockNumber >= MIGRATION_BLOCK
-      ? client.fetchNewTransfers(asset, 0) // DESC from newest
-      : client.fetchTransfers(asset, 0); // ASC from genesis
+      ? client.fetchNewTransfers(asset, 0, "moralis") // DESC from newest
+      : client.fetchTransfers(asset, 0, undefined, "moralis"); // ASC from genesis
   let seen = 0;
   for await (const t of stream) {
     if (t.txHash.toLowerCase() === target) return true;
