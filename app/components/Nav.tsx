@@ -1,9 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { AssetToggle } from "./AssetToggle";
+import { WalletSearch } from "./WalletSearch";
 
-/**
- * Persistent app shell nav. Fleshed out in U7 with the token/NFT asset toggle
- * and wallet search; this is the U1 skeleton so the layout compiles.
- */
 const LINKS = [
   { href: "/", label: "Overview" },
   { href: "/holders", label: "Holders" },
@@ -14,7 +13,7 @@ const LINKS = [
 export function Nav() {
   return (
     <header className="border-b border-[var(--border)]">
-      <nav className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
+      <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
         <Link href="/" className="font-semibold tracking-tight">
           Ronke Analytics
         </Link>
@@ -24,6 +23,14 @@ export function Nav() {
               {l.label}
             </Link>
           ))}
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <Suspense fallback={null}>
+            <AssetToggle />
+          </Suspense>
+          <div className="hidden sm:block sm:w-72">
+            <WalletSearch compact />
+          </div>
         </div>
       </nav>
     </header>
