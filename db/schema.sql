@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS transfer_events (
   quantity      NUMERIC     NOT NULL DEFAULT 0,
   is_mint       BOOLEAN     NOT NULL DEFAULT FALSE,
   is_burn       BOOLEAN     NOT NULL DEFAULT FALSE,
-  raw           JSONB,
+  -- NOTE: no `raw` payload column - persisting per-event provider JSON blew past
+  -- Neon's free-tier storage cap (Blockscout inlines full NFT metadata). All
+  -- analytics derive from the typed columns above.
   -- Idempotent appends: a re-pulled event collides here and is a no-op under
   -- INSERT ... ON CONFLICT DO NOTHING.
   CONSTRAINT transfer_events_uniq UNIQUE (asset, tx_hash, log_index)

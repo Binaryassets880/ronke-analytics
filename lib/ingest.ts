@@ -33,14 +33,16 @@ export async function setCursor(
  * is how we count genuinely-new appends.
  */
 export async function insertTransfer(sql: Sql, t: NormalizedTransfer): Promise<number> {
+  // NOTE: the `raw` provider payload is intentionally NOT persisted - it added
+  // ~1.3 KB/row (mostly Blockscout's inline NFT metadata) and blew past Neon's
+  // free-tier storage cap. Analytics derive everything from the typed columns.
   const rows = await sql`
     INSERT INTO transfer_events
       (asset, tx_hash, log_index, block_number, block_time, from_address,
-       to_address, token_id, quantity, is_mint, is_burn, raw)
+       to_address, token_id, quantity, is_mint, is_burn)
     VALUES (${t.asset}, ${t.txHash}, ${t.logIndex}, ${t.blockNumber},
             ${t.blockTime.toISOString()}, ${t.from}, ${t.to}, ${t.tokenId},
-            ${t.quantity.toString()}, ${t.isMint}, ${t.isBurn},
-            ${t.raw ? JSON.stringify(t.raw) : null})
+            ${t.quantity.toString()}, ${t.isMint}, ${t.isBurn})
     ON CONFLICT (asset, tx_hash, log_index) DO NOTHING
     RETURNING id
   `;
