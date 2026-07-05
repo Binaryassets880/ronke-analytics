@@ -12,19 +12,26 @@ import type { Asset } from "@/config/contracts";
 import { contractFor } from "@/config/contracts";
 import { MoralisProvider, type TransferQuery } from "./moralis";
 import { BlockscoutProvider } from "./blockscout";
+import { GoldRushProvider } from "./goldrush";
 
 export interface RoninDataClientOptions {
   moralis?: MoralisProvider;
   blockscout?: BlockscoutProvider;
+  goldrush?: GoldRushProvider;
 }
+
+/** Sentinel end block for open-ended ranges. */
+const MAX_BLOCK = 999_999_999;
 
 export class RoninDataClient {
   private moralis?: MoralisProvider;
   private blockscout?: BlockscoutProvider;
+  private goldrush?: GoldRushProvider;
 
   constructor(opts: RoninDataClientOptions) {
     this.moralis = opts.moralis;
     this.blockscout = opts.blockscout;
+    this.goldrush = opts.goldrush;
   }
 
   private requireMoralis(): MoralisProvider {
@@ -34,6 +41,10 @@ export class RoninDataClient {
   private requireBlockscout(): BlockscoutProvider {
     if (!this.blockscout) throw new Error("Blockscout provider not configured");
     return this.blockscout;
+  }
+  private requireGoldrush(): GoldRushProvider {
+    if (!this.goldrush) throw new Error("GoldRush provider not configured");
+    return this.goldrush;
   }
 
   /**
@@ -53,7 +64,9 @@ export class RoninDataClient {
     const stream =
       source === "blockscout"
         ? this.requireBlockscout().fetchTransfers(contract)
-        : this.requireMoralis().fetchTransfers(contract, { order: "ASC" } as TransferQuery);
+        : source === "goldrush"
+          ? this.requireGoldrush().fetchTransfers(contract, fromBlock, toBlock ?? MAX_BLOCK)
+          : this.requireMoralis().fetchTransfers(contract, { order: "ASC" } as TransferQuery);
     for await (const t of stream) {
       if (t.blockNumber < fromBlock) continue;
       if (toBlock != null && t.blockNumber > toBlock) continue;

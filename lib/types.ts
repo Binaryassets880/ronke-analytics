@@ -34,4 +34,4 @@ export interface OwnerRow {
 }
 
 /** Which provider served a request. */
-export type ProviderSource = "moralis" | "blockscout";
+export type ProviderSource = "moralis" | "blockscout" | "goldrush";

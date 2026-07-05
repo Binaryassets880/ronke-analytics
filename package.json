@@ -12,11 +12,13 @@
     "test:watch": "vitest",
     "migrate": "tsx --env-file-if-exists=.env db/migrate.ts",
     "backfill": "tsx --env-file-if-exists=.env scripts/backfill.ts",
+    "backfill:prel2": "tsx --env-file-if-exists=.env scripts/backfill-prel2.ts",
     "sync": "tsx --env-file-if-exists=.env scripts/sync.ts",
     "rebuild": "tsx --env-file-if-exists=.env scripts/rebuild.ts",
     "seed-labels": "tsx --env-file-if-exists=.env scripts/seed-labels.ts",
     "fetch-traits": "tsx --env-file-if-exists=.env scripts/fetch-traits.ts",
-    "probe": "tsx --env-file-if-exists=.env scripts/probe-providers.ts"
+    "probe": "tsx --env-file-if-exists=.env scripts/probe-providers.ts",
+    "probe:goldrush": "tsx --env-file-if-exists=.env scripts/probe-goldrush.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
