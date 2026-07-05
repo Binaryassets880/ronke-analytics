@@ -1,0 +1,120 @@
+{
+  "status": 200,
+  "body": {
+    "amount": "1",
+    "token_id": "3510",
+    "token_address": "0x810b6d1374ac7ba0e83612e7d49f49a13f1de019",
+    "contract_type": "ERC721",
+    "owner_of": "0xb8b55efd433b480a4798e068801d672433245133",
+    "last_metadata_sync": "2026-06-16T13:33:43.186Z",
+    "last_token_uri_sync": "2026-06-16T13:33:42.663Z",
+    "metadata": "{\"name\":\"Ronkeverse #3510\",\"description\":\"Ronkeverse is the ultimate expression of the Ronke spirit-a premium collection created by the Ronke community, for the Ronke community. More than just NFTs, these are symbols of unity, creativity, and the unstoppable force that is Ronke. We are all Ronke!\",\"image\":\"https://ronkeverse.s3.us-east-2.amazonaws.com/img/Ronkeverse_Final/3510.png\",\"attributes\":[{\"trait_type\":\"Background\",\"value\":\"Pink\"},{\"trait_type\":\"Body\",\"value\":\"Ronke\"},{\"trait_type\":\"Clothes\",\"value\":\"WcRonke\"},{\"trait_type\":\"Mouth\",\"value\":\"Pironke\"},{\"trait_type\":\"Eyes\",\"value\":\"Pharohnke\"},{\"trait_type\":\"Hair - Headwear\",\"value\":\"Slickedback Yellow\"}]}",
+    "block_number": "57885401",
+    "block_number_minted": null,
+    "name": "Ronkeverse",
+    "symbol": "RONKE",
+    "token_hash": "82325e85659b0411d87c393311e4e44c",
+    "token_uri": "https://ronkeverse.s3.us-east-2.amazonaws.com/metadata/ronkeverse_metadata/3510",
+    "minter_address": null,
+    "rarity_rank": 4653,
+    "rarity_percentage": 66.82,
+    "rarity_label": "Top 67%",
+    "verified_collection": true,
+    "possible_spam": false,
+    "normalized_metadata": {
+      "name": "Ronkeverse #3510",
+      "description": "Ronkeverse is the ultimate expression of the Ronke spirit-a premium collection created by the Ronke community, for the Ronke community. More than just NFTs, these are symbols of unity, creativity, and the unstoppable force that is Ronke. We are all Ronke!",
+      "animation_url": null,
+      "external_link": null,
+      "external_url": null,
+      "image": "https://ronkeverse.s3.us-east-2.amazonaws.com/img/Ronkeverse_Final/3510.png",
+      "attributes": [
+        {
+          "trait_type": "Background",
+          "value": "Pink",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 20% trait",
+          "count": 1365,
+          "percentage": 19.6
+        },
+        {
+          "trait_type": "Body",
+          "value": "Ronke",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 34% trait",
+          "count": 2345,
+          "percentage": 33.68
+        },
+        {
+          "trait_type": "Clothes",
+          "value": "WcRonke",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 2% trait",
+          "count": 80,
+          "percentage": 1.15
+        },
+        {
+          "trait_type": "Mouth",
+          "value": "Pironke",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 3% trait",
+          "count": 150,
+          "percentage": 2.15
+        },
+        {
+          "trait_type": "Eyes",
+          "value": "Pharohnke",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 1% trait",
+          "count": 66,
+          "percentage": 0.95
+        },
+        {
+          "trait_type": "Hair - Headwear",
+          "value": "Slickedback Yellow",
+          "display_type": null,
+          "max_value": null,
+          "trait_count": 0,
+          "order": null,
+          "rarity_label": "Top 2% trait",
+          "count": 85,
+          "percentage": 1.22
+        }
+      ]
+    },
+    "collection_logo": "https://i2c.seadn.io/collection/ronkeverse/image/0423337193d35d4d5fd0b131d08c45/900423337193d35d4d5fd0b131d08c45.webp",
+    "collection_banner_image": "https://i2c.seadn.io/collection/ronkeverse/banner/3bbe8427647caf98efcb682ef517df/523bbe8427647caf98efcb682ef517df.png?fit=inside",
+    "collection_category": "",
+    "project_url": "",
+    "wiki_url": "",
+    "discord_url": "",
+    "telegram_url": "https://t.me/RonkeRonin/246",
+    "twitter_username": "RonkeOnRon",
+    "instagram_username": "",
+    "list_price": {
+      "listed": false,
+      "price": null,
+      "price_currency": null,
+      "price_usd": null,
+      "marketplace": null
+    },
+    "floor_price": "239.5",
+    "floor_price_usd": "14.46",
+    "floor_price_currency": "RON"
+  }
+}
