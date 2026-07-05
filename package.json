@@ -10,13 +10,13 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "migrate": "tsx db/migrate.ts",
-    "backfill": "tsx scripts/backfill.ts",
-    "sync": "tsx scripts/sync.ts",
-    "rebuild": "tsx scripts/rebuild.ts",
-    "seed-labels": "tsx scripts/seed-labels.ts",
-    "fetch-traits": "tsx scripts/fetch-traits.ts",
-    "probe": "tsx scripts/probe-providers.ts"
+    "migrate": "tsx --env-file-if-exists=.env db/migrate.ts",
+    "backfill": "tsx --env-file-if-exists=.env scripts/backfill.ts",
+    "sync": "tsx --env-file-if-exists=.env scripts/sync.ts",
+    "rebuild": "tsx --env-file-if-exists=.env scripts/rebuild.ts",
+    "seed-labels": "tsx --env-file-if-exists=.env scripts/seed-labels.ts",
+    "fetch-traits": "tsx --env-file-if-exists=.env scripts/fetch-traits.ts",
+    "probe": "tsx --env-file-if-exists=.env scripts/probe-providers.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
