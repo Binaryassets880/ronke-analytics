@@ -124,6 +124,23 @@ export class Labels {
   }
 
   /**
+   * True if this counterparty holds units on the wallet's behalf (staking /
+   * bridge / team). Moving units to/from such an address is NOT an acquisition
+   * or a disposal - the wallet retains ownership - so the behavioral FIFO
+   * engine neither creates nor consumes a lot, and the diamond clock is
+   * preserved (KTD-6: "does not reset diamond status").
+   */
+  isRetainOwnership(address: string): boolean {
+    const label = this.get(address);
+    if (!label) return false;
+    return (
+      label.category === "staking" ||
+      label.category === "bridge" ||
+      label.category === "team"
+    );
+  }
+
+  /**
    * Classify an outbound transfer as a genuine sell (KTD-6):
    *  - not a self-move (from == to),
    *  - not to a burn address,
