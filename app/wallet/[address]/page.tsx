@@ -1,6 +1,7 @@
 import { normalizeAddress } from "@/lib/format";
-import { getWallet } from "@/lib/queries";
+import { getWallet, getWalletBadges } from "@/lib/queries";
 import { WalletView } from "@/app/components/WalletView";
+import { BadgeShelf } from "@/app/components/BadgeShelf";
 import { DIAMOND_THRESHOLDS } from "@/config/contracts";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,15 @@ export default async function WalletPage({
     );
   }
 
-  const wallet = await getWallet(normalized);
-  return <WalletView wallet={wallet} diamondTooltip={DIAMOND_TOOLTIP} />;
+  const [wallet, badges] = await Promise.all([
+    getWallet(normalized),
+    getWalletBadges(normalized),
+  ]);
+  return (
+    <WalletView
+      wallet={wallet}
+      diamondTooltip={DIAMOND_TOOLTIP}
+      badgeShelf={wallet.everHeld ? <BadgeShelf badges={badges} /> : undefined}
+    />
+  );
 }
