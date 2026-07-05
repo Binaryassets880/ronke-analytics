@@ -1,7 +1,7 @@
 ---
 title: "feat: Ronke Analytics Dashboard - holder data + diamond-hands stats for $RONKE and Ronkeverse on Ronin"
 type: feat
-status: active
+status: completed
 date: 2026-07-05
 deepened: 2026-07-05
 origin: none (direct planning from user request)
