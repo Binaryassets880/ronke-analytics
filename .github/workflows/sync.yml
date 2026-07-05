@@ -1,0 +1,34 @@
+name: sync
+
+# KTD-7: the daily append + snapshot rebuild runs on a scheduled worker,
+# NOT on Vercel (the full rebuild exceeds serverless time/memory limits).
+# Vercel serves reads only. This Action runs scripts/sync.ts, which appends
+# new transfer_events past the per-asset cursor and then rebuilds snapshots
+# as its final step (KTD-3, the staleness footgun guard).
+
+on:
+  schedule:
+    # Daily at 07:00 UTC. Adjust as the CU budget allows.
+    - cron: "0 7 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ronke-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sync + rebuild
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MORALIS_API_KEY: ${{ secrets.MORALIS_API_KEY }}
+        run: npm run sync
