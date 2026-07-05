@@ -4,6 +4,7 @@ import {
   MoralisCuError,
   MoralisAuthError,
   normalizeTransfer,
+  isCuExhaustedMessage,
 } from "@/lib/ronin/moralis";
 import { BlockscoutProvider } from "@/lib/ronin/blockscout";
 import { RoninDataClient } from "@/lib/ronin/client";
@@ -80,6 +81,17 @@ describe("MoralisProvider.fetchTransfers", () => {
     await expect(async () => {
       for await (const _ of pBad.fetchTransfers(RONKE)) void _;
     }).rejects.toBeInstanceOf(MoralisAuthError);
+  });
+
+  it("classifies real CU-exhaustion phrasings as CU, not bad-key", () => {
+    // The exact free-tier message that first slipped through as an auth error.
+    expect(
+      isCuExhaustedMessage(
+        "Validation service blocked: Your plan: free-plan-daily total included usage has been consumed, please upgrade your plan here",
+      ),
+    ).toBe(true);
+    expect(isCuExhaustedMessage("Total included usage exceeded")).toBe(true);
+    expect(isCuExhaustedMessage("Token is invalid format")).toBe(false);
   });
 
   it("filters spam and zero-value legs", async () => {

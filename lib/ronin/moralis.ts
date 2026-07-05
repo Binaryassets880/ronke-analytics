@@ -55,6 +55,17 @@ export interface MoralisAttribute {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Detect a CU/plan-exhaustion message in a Moralis error body. Moralis phrases
+ * this several ways (all return 401/429 on the free tier), e.g.
+ * "Total included usage exceeded" and "free-plan-daily total included usage has
+ * been consumed, please upgrade your plan". A genuine bad-key body
+ * ("Token is invalid format") matches none of these.
+ */
+export function isCuExhaustedMessage(detail: string): boolean {
+  return /usage|consumed|budget|upgrade your plan|quota|rate limit exceeded/i.test(detail);
+}
+
 export class MoralisProvider {
   readonly source = "moralis" as const;
   private apiKey: string;
@@ -103,9 +114,9 @@ export class MoralisProvider {
         } catch {
           detail = "";
         }
-        if (/usage exceeded|budget/i.test(detail)) {
+        if (isCuExhaustedMessage(detail)) {
           throw new MoralisCuError(
-            `Moralis CU budget exhausted: ${detail} (see https://admin.moralis.com/usage)`,
+            `Moralis CU budget exhausted: ${detail} (resets daily; see https://admin.moralis.com/usage)`,
           );
         }
         throw new MoralisAuthError(`Moralis 401 (bad key?): ${detail || "unauthorized"}`);
@@ -125,7 +136,7 @@ export class MoralisProvider {
 
       // A 429 whose body names the CU budget is terminal; a plain 429 is a
       // transient rate limit worth backing off on.
-      if (res.status === 429 && /usage exceeded|budget/i.test(detail)) {
+      if (res.status === 429 && isCuExhaustedMessage(detail)) {
         throw new MoralisCuError(`Moralis CU budget exhausted: ${detail}`);
       }
 
