@@ -38,6 +38,9 @@ export const RONIN_CHAIN_PARAM = "ronin";
  */
 export const MIGRATION_BLOCK = 55_577_490;
 
+/** The L2 migration date (2026-05-12), used for the OG/Early badge cutoff. */
+export const MIGRATION_DATE = new Date("2026-05-12T00:00:00.000Z");
+
 /**
  * $RONKE (ERC-20) and Ronkeverse (ERC-721).
  * R1: spot-confirm on app.roninchain.com before trusting for production;
