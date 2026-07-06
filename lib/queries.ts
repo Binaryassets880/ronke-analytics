@@ -540,6 +540,37 @@ export async function getRarityLeaderboard(
   }));
 }
 
+export interface DailyToken {
+  tokenId: string;
+  rarityRank: number | null;
+  imageUrl: string;
+}
+
+/**
+ * "Today's Random Ronke" for the hero. Deterministic per `seed` (pass the day,
+ * e.g. "2026-07-06") so it's stable for the day and rotates daily, while still
+ * looking random. Only picks tokens that actually have an image. Null when no
+ * ranked/imaged tokens exist yet (DB empty), so the caller can fall back.
+ */
+export async function getDailyRandomToken(seed: string): Promise<DailyToken | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  const rows = await sql`
+    SELECT token_id, rarity_rank, image_url
+    FROM token_rarity
+    WHERE image_url IS NOT NULL AND image_url <> ''
+    ORDER BY md5(token_id || ${seed})
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    tokenId: String(r.token_id),
+    rarityRank: r.rarity_rank == null ? null : Number(r.rarity_rank),
+    imageUrl: String(r.image_url),
+  };
+}
+
 export interface TokenDetail {
   tokenId: string;
   rarityRank: number | null;

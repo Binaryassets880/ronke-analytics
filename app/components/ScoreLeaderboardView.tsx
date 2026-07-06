@@ -40,9 +40,9 @@ export function ScoreLeaderboardView({
               <tr className="border-b border-[var(--border)] text-left text-neutral-400">
                 <th className="p-3">#</th>
                 <th>Wallet</th>
-                <th className="text-right">Ronke Score</th>
-                <th className="text-right">$RONKE</th>
-                <th className="text-right">Ronkeverse</th>
+                <th className="text-right">Total Score</th>
+                <th className="text-right">$RONKE Score</th>
+                <th className="text-right">Ronkeverse Score</th>
                 <th className="text-right">Bodies</th>
               </tr>
             </thead>

@@ -26,7 +26,7 @@ export function RonkeMark({ size = "md" }: { size?: "sm" | "md" }) {
         className="font-bold tracking-tight"
         style={{ fontSize: size === "sm" ? 16 : 19, letterSpacing: "-0.02em" }}
       >
-        RONKE<span style={{ color: "var(--accent)" }}>VERSE</span>
+        <span style={{ color: "var(--accent)" }}>RONKE</span>VERSE
       </span>
     </Link>
   );

@@ -5,15 +5,14 @@ import {
   VERIFIED_ADDRESSES,
   MARKET_LINKS,
   OFFICIAL_LINKS,
-  RNS_EXPLAINER,
   GLOSSARY,
   explorerTokenUrl,
 } from "@/config/resources";
 
 export const metadata: Metadata = {
-  title: "Ronke Resources",
+  title: "Resources",
   description:
-    "Verified $RONKE and Ronkeverse contract addresses, where to buy and trade, official links, RNS, and a plain-English glossary.",
+    "Verified $RONKE and Ronkeverse contract addresses, where to buy and trade, official links, and a plain-English glossary.",
 };
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -80,10 +79,6 @@ export default function ResourcesPage() {
             </li>
           ))}
         </ul>
-      </Card>
-
-      <Card title={RNS_EXPLAINER.title}>
-        <p className="text-sm text-neutral-300">{RNS_EXPLAINER.body}</p>
       </Card>
 
       <Card title="Official links">

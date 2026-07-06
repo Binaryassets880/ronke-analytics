@@ -39,26 +39,33 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "JetBrains Mono", monospace;
 }
 
-html {
-  color-scheme: dark;
-}
+/*
+ * Base element styles live in @layer base so Tailwind utilities (which sit in a
+ * later layer) always win. Without this, an unlayered `a { color: inherit }`
+ * would override text-color utilities on links (e.g. an active tab's dark text).
+ */
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-::selection {
-  background: rgba(39, 185, 252, 0.3);
-  color: #fff;
+  ::selection {
+    background: rgba(39, 185, 252, 0.3);
+    color: #fff;
+  }
 }
 
 /* Numbers, addresses, tickers - always mono, always tabular. */

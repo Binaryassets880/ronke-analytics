@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { getEcosystemStats } from "@/lib/queries";
+import { getEcosystemStats, getDailyRandomToken, type DailyToken } from "@/lib/queries";
 import { StatTile } from "./components/StatTile";
 import { WalletSearch } from "./components/WalletSearch";
 import { BadgeCatalog } from "./components/BadgeCatalog";
@@ -37,7 +37,11 @@ const SECTIONS = [
 ];
 
 export default async function LandingPage() {
-  const stats = await getEcosystemStats();
+  const daySeed = new Date().toISOString().slice(0, 10); // UTC YYYY-MM-DD
+  const [stats, dailyRonke] = await Promise.all([
+    getEcosystemStats(),
+    getDailyRandomToken(daySeed),
+  ]);
 
   return (
     <div className="space-y-16">
@@ -73,7 +77,7 @@ export default async function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3.5">
             <Link
-              href="/overview"
+              href="#ronke-score"
               className="rounded-2xl px-6 py-3.5 text-[15px] font-bold text-[#04121c]"
               style={{ background: "var(--accent)", boxShadow: "0 8px 30px rgba(39,185,252,0.32)" }}
             >
@@ -95,33 +99,13 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Mascot */}
+        {/* Today's Random Ronke */}
         <div className="relative hidden items-center justify-center md:flex">
           <div
             className="absolute h-80 w-80 rounded-full"
             style={{ background: "radial-gradient(circle, rgba(39,185,252,0.28), transparent 65%)", filter: "blur(10px)" }}
           />
-          <div
-            className="rv-float relative flex h-[380px] w-[340px] flex-col items-center justify-center rounded-3xl border border-[var(--border-strong)]"
-            style={{
-              background:
-                "repeating-linear-gradient(45deg, #0d1017, #0d1017 12px, #10141d 12px, #10141d 24px)",
-              boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
-            }}
-          >
-            <Image
-              src="/mascot/ronke-mascot.png"
-              alt="Ronke, the Blue Monke"
-              width={300}
-              height={300}
-              className="h-[300px] w-auto object-contain"
-              style={{ filter: "drop-shadow(0 0 24px rgba(39,185,252,0.5))" }}
-              priority
-            />
-            <div className="mono absolute bottom-4 left-4 rounded-full border border-[var(--border-strong)] bg-[rgba(7,8,12,0.85)] px-3 py-1.5 text-xs">
-              Ronke · <span style={{ color: "var(--accent)" }}>the Blue Monke</span>
-            </div>
-          </div>
+          <DailyRonkeCard token={dailyRonke} />
         </div>
       </section>
 
@@ -144,7 +128,8 @@ export default async function LandingPage() {
 
       {/* Ronke Score search - the interactive hook */}
       <section
-        className="relative overflow-hidden rounded-[28px] border border-[#1c2a3a] p-8 sm:p-11"
+        id="ronke-score"
+        className="relative scroll-mt-24 overflow-hidden rounded-[28px] border border-[#1c2a3a] p-8 sm:p-11"
         style={{ background: "linear-gradient(160deg, #0e1621, #0b0d14 55%)" }}
       >
         <div
@@ -193,6 +178,73 @@ export default async function LandingPage() {
 
       {/* Badge gallery */}
       <BadgeCatalog />
+    </div>
+  );
+}
+
+function DailyRonkeCard({ token }: { token: DailyToken | null }) {
+  const cardStyle = {
+    background: "repeating-linear-gradient(45deg, #0d1017, #0d1017 12px, #10141d 12px, #10141d 24px)",
+    boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+  } as const;
+
+  const body = (
+    <>
+      <div className="mono flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[var(--muted-2)]">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+        Today&rsquo;s Random Ronke
+      </div>
+
+      {token ? (
+        <Image
+          src={token.imageUrl}
+          alt={`Ronkeverse #${token.tokenId}`}
+          width={260}
+          height={260}
+          unoptimized
+          className="h-[260px] w-[260px] rounded-2xl border border-[var(--border-strong)] object-cover"
+          style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
+          priority
+        />
+      ) : (
+        <Image
+          src="/mascot/ronke-mascot.png"
+          alt="Ronke, the Blue Monke"
+          width={240}
+          height={240}
+          className="h-[240px] w-auto object-contain"
+          style={{ filter: "drop-shadow(0 0 24px rgba(39,185,252,0.5))" }}
+          priority
+        />
+      )}
+
+      <div className="mono flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[rgba(7,8,12,0.85)] px-3.5 py-1.5 text-[13px]">
+        {token ? (
+          <>
+            <span className="font-bold">Ronke #{token.tokenId}</span>
+            {token.rarityRank != null ? (
+              <span style={{ color: "var(--accent)" }}>· rank {token.rarityRank}</span>
+            ) : null}
+          </>
+        ) : (
+          <span>
+            Ronke · <span style={{ color: "var(--accent)" }}>the Blue Monke</span>
+          </span>
+        )}
+      </div>
+    </>
+  );
+
+  const className =
+    "rv-float relative flex h-[380px] w-[340px] flex-col items-center justify-center gap-5 rounded-3xl border border-[var(--border-strong)] px-6";
+
+  return token ? (
+    <Link href={`/rarity/${token.tokenId}`} className={className} style={cardStyle}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className} style={cardStyle}>
+      {body}
     </div>
   );
 }

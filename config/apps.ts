@@ -14,6 +14,8 @@ export type AppStatus = "live" | "beta" | "coming-soon";
 export interface AppCard {
   key: string;
   title: string;
+  /** Short ticker / abbreviation shown as a chip (e.g. "RONKESTR"). */
+  ticker?: string;
   blurb: string;
   href: string;
   status: AppStatus;
@@ -26,16 +28,38 @@ export interface AppCard {
 
 export const APPS: AppCard[] = [
   {
-    key: "ronke-score",
-    title: "Ronke Score",
+    key: "ronke-strategy",
+    title: "Ronke Strategy",
+    ticker: "RONKESTR",
     blurb:
-      "The analytics hub - holder ratings, diamond-hands stats, badges, and Ronkeverse rarity. You're already here.",
-    href: "/",
-    status: "live",
-    emoji: "\u{1F4CA}", // 📊
-    gradient: "from-sky-500/30 to-emerald-500/20",
+      "The perpetual NFT machine - fees buy Ronkeverse NFTs, relist at a markup, then buy & burn. Forever.",
+    href: "https://roninstrategy.fun",
+    status: "beta",
+    emoji: "\u{267E}\u{FE0F}", // ♾️
+    gradient: "from-violet-500/30 to-indigo-500/20",
   },
-  // Add official Ronke apps here as they ship.
+  {
+    key: "age-of-ronke",
+    title: "Age of Ronke",
+    ticker: "AoR",
+    blurb:
+      "The Ronke strategy game - build, defend, and rise through the Ages of the Ronkeverse.",
+    href: "#", // TODO: set the real Age of Ronke URL when it ships
+    status: "coming-soon",
+    emoji: "\u{2694}\u{FE0F}", // ⚔️
+    gradient: "from-amber-500/30 to-rose-500/20",
+  },
+  {
+    key: "ronke-rice-farm",
+    title: "Ronke Rice Farm",
+    ticker: "RRF",
+    blurb:
+      "A 69.69-day farming competition where strategy beats speed. Survive the Jeet Jail, earn $RICE.",
+    href: "https://ronkericefarmer.com",
+    status: "live",
+    emoji: "\u{1F33E}", // 🌾
+    gradient: "from-emerald-500/30 to-yellow-500/20",
+  },
 ];
 
 export const STATUS_LABEL: Record<AppStatus, string> = {
