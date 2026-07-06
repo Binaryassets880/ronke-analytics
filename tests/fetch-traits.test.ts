@@ -3,14 +3,18 @@ import { fetchTraits } from "@/scripts/fetch-traits";
 import type { MoralisProvider, MoralisAttribute } from "@/lib/ronin/moralis";
 import type { Sql } from "@/db/client";
 
-/** A fake tagged-template sql that records every query, returns []. */
+/** A fake sql supporting both the tagged template and .query() (insertMany). */
 function fakeSql() {
   const calls: { text: string }[] = [];
-  const sql = ((strings: TemplateStringsArray, ...vals: unknown[]) => {
+  const fn = (strings: TemplateStringsArray, ..._vals: unknown[]) => {
     calls.push({ text: strings.join("?") });
     return Promise.resolve([] as unknown[]);
-  }) as unknown as Sql;
-  return { sql, calls };
+  };
+  (fn as unknown as { query: unknown }).query = (text: string, _params?: unknown[]) => {
+    calls.push({ text });
+    return Promise.resolve([] as unknown[]);
+  };
+  return { sql: fn as unknown as Sql, calls };
 }
 
 /** A fake provider streaming a fixed set of tokens. */
@@ -43,16 +47,17 @@ describe("fetchTraits (U10)", () => {
     expect(res.unrevealed).toBe(1);
   });
 
-  it("writes an nft_traits upsert for each normalized trait", async () => {
+  it("batch-upserts nft_traits and persists rarity", async () => {
     const { sql, calls } = fakeSql();
     const provider = fakeProvider([
       { tokenId: "1", attributes: [attr("Background", "Pink"), attr("Body", "Ronke")], imageUrl: null },
     ]);
     await fetchTraits(sql, provider, new Date("2026-07-05T00:00:00Z"));
+    // One batched insert statement carrying both trait rows.
     const inserts = calls.filter((c) => c.text.includes("INSERT INTO nft_traits"));
-    expect(inserts).toHaveLength(2);
+    expect(inserts).toHaveLength(1);
     // meta + rarity persistence also ran
     expect(calls.some((c) => c.text.includes("token_rarity"))).toBe(true);
-    expect(calls.some((c) => c.text.includes("revealed_supply") || c.text.includes("meta"))).toBe(true);
+    expect(calls.some((c) => c.text.includes("meta"))).toBe(true);
   });
 });

@@ -10,7 +10,7 @@
  * testable with hand-built aggregates.
  */
 
-import type { Sql } from "@/db/client";
+import { insertMany, type Sql } from "@/db/client";
 import {
   BADGES,
   highestTier,
@@ -107,19 +107,17 @@ const TOKEN_DECIMALS = CONTRACTS.ronke_token.decimals ?? 18;
 export async function deriveBadges(sql: Sql): Promise<number> {
   const aggregates = await assembleAggregates(sql);
   await sql`DELETE FROM wallet_badges`;
-  let count = 0;
+  const rows: unknown[][] = [];
   for (const agg of aggregates.values()) {
     for (const b of evaluateWallet(agg)) {
-      await sql`
-        INSERT INTO wallet_badges (address, badge_key, tier, context)
-        VALUES (${b.address}, ${b.badgeKey}, ${b.tier}, ${JSON.stringify(b.context)})
-        ON CONFLICT (address, badge_key) DO UPDATE
-          SET tier = EXCLUDED.tier, context = EXCLUDED.context
-      `;
-      count += 1;
+      rows.push([b.address, b.badgeKey, b.tier, JSON.stringify(b.context)]);
     }
   }
-  return count;
+  // Table was just cleared, so a plain batched insert suffices (no conflicts).
+  await insertMany(sql, "wallet_badges", ["address", "badge_key", "tier", "context"], rows, {
+    casts: [null, null, null, "jsonb"],
+  });
+  return rows.length;
 }
 
 export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAggregate>> {

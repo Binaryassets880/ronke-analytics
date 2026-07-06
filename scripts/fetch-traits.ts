@@ -11,7 +11,7 @@
  * Run: MORALIS_API_KEY=... DATABASE_URL=... npm run fetch-traits
  */
 
-import { requireSql, type Sql } from "@/db/client";
+import { requireSql, insertMany, type Sql } from "@/db/client";
 import { moralisApiKey } from "@/config/env";
 import { MoralisProvider } from "@/lib/ronin/moralis";
 import { contractFor } from "@/config/contracts";
@@ -45,16 +45,19 @@ export async function fetchTraits(
       continue;
     }
     allTraits.push(...norm);
-    for (const t of norm) {
-      await sql`
-        INSERT INTO nft_traits (token_id, trait_type, value, display_type, fetched_at)
-        VALUES (${t.tokenId}, ${t.traitType}, ${t.value}, ${t.displayType}, ${asOf.toISOString()})
-        ON CONFLICT (token_id, trait_type) DO UPDATE
-          SET value = EXCLUDED.value, display_type = EXCLUDED.display_type,
-              fetched_at = EXCLUDED.fetched_at
-      `;
-    }
   }
+
+  // Batched upsert of every trait row (per-row round-trips are too slow).
+  await insertMany(
+    sql,
+    "nft_traits",
+    ["token_id", "trait_type", "value", "display_type", "fetched_at"],
+    allTraits.map((t) => [t.tokenId, t.traitType, t.value, t.displayType, asOf.toISOString()]),
+    {
+      conflict:
+        "ON CONFLICT (token_id, trait_type) DO UPDATE SET value = EXCLUDED.value, display_type = EXCLUDED.display_type, fetched_at = EXCLUDED.fetched_at",
+    },
+  );
 
   const revealedSupply = new Set(allTraits.map((t) => t.tokenId)).size;
   await setMeta(sql, "revealed_supply", String(revealedSupply));

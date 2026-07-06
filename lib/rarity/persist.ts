@@ -7,7 +7,7 @@
  * transfer rebuild(), since traits are static post-reveal (KTD-8 timing note).
  */
 
-import type { Sql } from "@/db/client";
+import { insertMany, type Sql } from "@/db/client";
 import type { NormalizedTrait } from "./traits";
 import { computeTraitStats, computeRarity, METHOD_VERSION } from "./openrarity";
 
@@ -32,26 +32,22 @@ export async function persistRarity(
   const rarity = computeRarity(traits);
 
   await sql`DELETE FROM trait_stats`;
-  for (const s of stats) {
-    await sql`
-      INSERT INTO trait_stats (trait_type, value, count, probability)
-      VALUES (${s.traitType}, ${s.value}, ${s.count}, ${s.probability})
-      ON CONFLICT (trait_type, value) DO UPDATE
-        SET count = EXCLUDED.count, probability = EXCLUDED.probability
-    `;
-  }
+  await insertMany(
+    sql,
+    "trait_stats",
+    ["trait_type", "value", "count", "probability"],
+    stats.map((s) => [s.traitType, s.value, s.count, s.probability]),
+  );
 
   await sql`DELETE FROM token_rarity`;
-  for (const r of rarity) {
-    await sql`
-      INSERT INTO token_rarity
-        (token_id, info_content_score, rarity_rank, trait_freq_score,
-         trait_freq_rank, method_version, image_url)
-      VALUES (${r.tokenId}, ${r.infoContentScore}, ${r.rarityRank},
-              ${r.traitFreqScore}, ${r.traitFreqRank}, ${METHOD_VERSION},
-              ${images.get(r.tokenId) ?? null})
-    `;
-  }
+  await insertMany(
+    sql,
+    "token_rarity",
+    ["token_id", "info_content_score", "rarity_rank", "trait_freq_score", "trait_freq_rank", "method_version", "image_url"],
+    rarity.map((r) => [
+      r.tokenId, r.infoContentScore, r.rarityRank, r.traitFreqScore, r.traitFreqRank, METHOD_VERSION, images.get(r.tokenId) ?? null,
+    ]),
+  );
 
   await setMeta(sql, "rarity_computed_at", asOf.toISOString());
   return { tokens: rarity.length, traitValues: stats.length };
