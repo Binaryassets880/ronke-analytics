@@ -1,4 +1,5 @@
 import type { Asset } from "@/config/contracts";
+import { CONTRACTS } from "@/config/contracts";
 import type { OverviewData, MetaState, TokenMarketView, NftMarketView } from "@/lib/queries";
 import { StatTile } from "./StatTile";
 import { StalenessBadge } from "./StalenessBadge";
@@ -35,7 +36,7 @@ export function OverviewView({
   const supply = isNft
     ? formatCompact(Number(data.supplyHeld))
     : formatCompact(toWholeTokens(BigInt(data.supplyHeld || "0")));
-  const assetLabel = isNft ? "Ronkeverse" : "$RONKE";
+  const assetLabel = CONTRACTS[asset].label;
 
   return (
     <div className="space-y-6">

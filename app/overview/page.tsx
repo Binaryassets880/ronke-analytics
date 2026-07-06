@@ -17,7 +17,7 @@ export default async function OverviewPage({
   const [data, meta, tokenMarket, nftMarket] = await Promise.all([
     getOverview(asset),
     getMetaState(),
-    isNft ? Promise.resolve(null) : getTokenMarket(),
+    isNft ? Promise.resolve(null) : getTokenMarket(asset),
     isNft ? getNftMarket() : Promise.resolve(null),
   ]);
   return (

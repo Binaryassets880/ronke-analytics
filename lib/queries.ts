@@ -109,12 +109,12 @@ export interface TokenMarketView {
   fetchedAt: string | null;
 }
 
-export async function getTokenMarket(): Promise<TokenMarketView | null> {
+export async function getTokenMarket(asset: Asset = "ronke_token"): Promise<TokenMarketView | null> {
   const sql = getSql();
   if (!sql) return null;
   const rows = await sql`
     SELECT snapshot, fetched_at::text AS fetched_at
-    FROM market_snapshots WHERE source = 'geckoterminal' AND asset = 'ronke_token'
+    FROM market_snapshots WHERE source = 'geckoterminal' AND asset = ${asset}
   `;
   if (rows.length === 0) return null;
   const s = (rows[0].snapshot as Record<string, unknown>) ?? {};

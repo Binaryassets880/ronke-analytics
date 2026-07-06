@@ -45,11 +45,13 @@ export function parseTokenMarket(body: unknown): TokenMarket {
 }
 
 /**
- * Fetch $RONKE market data from GeckoTerminal. Returns null on any failure
- * (network, rate limit, shape change) so the caller degrades gracefully to
- * "market data unavailable" rather than failing the whole sync.
+ * Fetch a Ronin token's market data from GeckoTerminal by contract address.
+ * Returns null on any failure (network, rate limit, shape change, or a token
+ * with no indexed pool) so the caller degrades gracefully to "market data
+ * unavailable" rather than failing the whole sync. Works for any ERC-20 with a
+ * Ronin DEX pool ($RONKE, RonkeStr, ...); both are thin-liquidity DEX quotes.
  */
-export async function fetchRonkeMarket(
+export async function fetchTokenMarket(
   opts: { fetchImpl?: FetchImpl; address?: string } = {},
 ): Promise<TokenMarket | null> {
   const fetchImpl = opts.fetchImpl ?? fetch;
@@ -63,3 +65,6 @@ export async function fetchRonkeMarket(
     return null;
   }
 }
+
+/** @deprecated Back-compat alias for {@link fetchTokenMarket}. */
+export const fetchRonkeMarket = fetchTokenMarket;
