@@ -3,8 +3,8 @@ import Link from "next/link";
 import { APPS, STATUS_LABEL, type AppCard } from "@/config/apps";
 
 export const metadata: Metadata = {
-  title: "Ronke Apps",
-  description: "Games and tools in the Ronke ecosystem - Ronkeverse, Ronke Mixer, and more.",
+  title: "Apps",
+  description: "Games and tools in the Ronke ecosystem.",
 };
 
 function Thumb({ app }: { app: AppCard }) {
@@ -30,6 +30,11 @@ function AppTile({ app }: { app: AppCard }) {
       <Thumb app={app} />
       <div className="mt-3 flex items-center gap-2">
         <h2 className="font-semibold">{app.title}</h2>
+        {app.ticker ? (
+          <span className="mono rounded-md border border-[var(--border)] bg-[var(--card-2)] px-1.5 py-0.5 text-[11px] text-[var(--accent)]">
+            {app.ticker}
+          </span>
+        ) : null}
         <span
           className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
             app.status === "live"
@@ -66,7 +71,7 @@ export default function AppsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Ronke Apps</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Apps</h1>
         <p className="mt-1 text-sm text-neutral-400">
           Games and tools in the Ronke ecosystem.
         </p>

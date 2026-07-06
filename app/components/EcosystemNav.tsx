@@ -12,7 +12,7 @@ import { WalletSearch } from "./WalletSearch";
  * within it.
  */
 const SECTIONS = [
-  { href: "/overview", label: "Ronke Score", section: "rating" },
+  { href: "/#ronke-score", label: "Ronke Score", section: "rating" },
   { href: "/leaderboard", label: "Leaderboard", section: "rating" },
   { href: "/resources", label: "Resources", section: "resources" },
   { href: "/apps", label: "Apps", section: "apps" },

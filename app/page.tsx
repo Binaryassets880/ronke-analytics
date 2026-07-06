@@ -73,7 +73,7 @@ export default async function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3.5">
             <Link
-              href="/overview"
+              href="#ronke-score"
               className="rounded-2xl px-6 py-3.5 text-[15px] font-bold text-[#04121c]"
               style={{ background: "var(--accent)", boxShadow: "0 8px 30px rgba(39,185,252,0.32)" }}
             >
@@ -144,7 +144,8 @@ export default async function LandingPage() {
 
       {/* Ronke Score search - the interactive hook */}
       <section
-        className="relative overflow-hidden rounded-[28px] border border-[#1c2a3a] p-8 sm:p-11"
+        id="ronke-score"
+        className="relative scroll-mt-24 overflow-hidden rounded-[28px] border border-[#1c2a3a] p-8 sm:p-11"
         style={{ background: "linear-gradient(160deg, #0e1621, #0b0d14 55%)" }}
       >
         <div

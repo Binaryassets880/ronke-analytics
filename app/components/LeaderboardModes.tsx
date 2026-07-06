@@ -19,18 +19,25 @@ export function LeaderboardModes({
   ] as const;
 
   return (
-    <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 text-sm">
-      {modes.map((m) => (
-        <Link
-          key={m.key}
-          href={m.href}
-          className={`rounded-md px-3 py-1 ${
-            active === m.key ? "bg-white text-black" : "text-neutral-300 hover:text-white"
-          }`}
-        >
-          {m.label}
-        </Link>
-      ))}
+    <div className="inline-flex gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 text-sm">
+      {modes.map((m) => {
+        const isActive = active === m.key;
+        return (
+          <Link
+            key={m.key}
+            href={m.href}
+            aria-current={isActive ? "page" : undefined}
+            className="rounded-lg px-3.5 py-1.5 font-semibold transition-colors"
+            style={
+              isActive
+                ? { background: "var(--accent)", color: "#04121c" }
+                : { color: "var(--muted)" }
+            }
+          >
+            {m.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
