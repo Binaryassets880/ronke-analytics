@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Asset } from "@/config/contracts";
+import { CONTRACTS } from "@/config/contracts";
 import type { LeaderboardRow } from "@/lib/queries";
 import { DiamondBadge } from "./DiamondBadge";
 import { EmptyState } from "./States";
@@ -22,7 +23,7 @@ export function LeaderboardView({
 }) {
   const isNft = asset === "ronkeverse_nft";
   const assetParam = assetToParam(asset);
-  const label = isNft ? "Ronkeverse" : "$RONKE";
+  const label = CONTRACTS[asset].label;
   const href = (nextBy: "size" | "diamond", nextPage: number) =>
     `/leaderboard?asset=${assetParam}&by=${nextBy}&page=${nextPage}`;
 

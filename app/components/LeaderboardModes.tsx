@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { AssetParam } from "@/lib/format";
 
 /**
  * Shared toggle between the global Ronke Score leaderboard and the per-asset
@@ -10,7 +11,7 @@ export function LeaderboardModes({
   assetParam = "token",
 }: {
   active: "score" | "size" | "diamond";
-  assetParam?: "token" | "nft";
+  assetParam?: AssetParam;
 }) {
   const modes = [
     { key: "score", label: "Ronke Score", href: "/leaderboard?by=score" },

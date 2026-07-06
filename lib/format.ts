@@ -96,12 +96,19 @@ export function normalizeAddress(input: string): string | null {
   return /^0x[0-9a-f]{40}$/.test(trimmed) ? trimmed : null;
 }
 
+/** Short URL forms for the asset param. */
+export type AssetParam = "token" | "ronkestr" | "nft";
+
 /** URL asset param -> Asset (default token). */
 export function assetFromParam(param: string | undefined | null): Asset {
-  return param === "nft" || param === "ronkeverse_nft" ? "ronkeverse_nft" : "ronke_token";
+  if (param === "nft" || param === "ronkeverse_nft") return "ronkeverse_nft";
+  if (param === "ronkestr" || param === "ronkestr_token") return "ronkestr_token";
+  return "ronke_token";
 }
 
 /** Asset -> URL param short form. */
-export function assetToParam(asset: Asset): "token" | "nft" {
-  return asset === "ronkeverse_nft" ? "nft" : "token";
+export function assetToParam(asset: Asset): AssetParam {
+  if (asset === "ronkeverse_nft") return "nft";
+  if (asset === "ronkestr_token") return "ronkestr";
+  return "token";
 }
