@@ -1,12 +1,12 @@
 import type { Asset } from "@/config/contracts";
-import type { OverviewData, MetaState } from "@/lib/queries";
+import type { OverviewData, MetaState, TokenMarketView, NftMarketView } from "@/lib/queries";
 import { StatTile } from "./StatTile";
 import { StalenessBadge } from "./StalenessBadge";
 import { TrendChart } from "./TrendChart";
 import { BarChart } from "./BarChart";
 import { PreBackfill } from "./States";
 import { WalletSearch } from "./WalletSearch";
-import { formatCompact, formatPct, toWholeTokens } from "@/lib/format";
+import { formatCompact, formatPct, formatUsd, formatRon, toWholeTokens } from "@/lib/format";
 
 /**
  * Overview presentational component (U7). Leads with diamond-hands percent as
@@ -18,11 +18,15 @@ export function OverviewView({
   asset,
   data,
   meta,
+  tokenMarket,
+  nftMarket,
   now,
 }: {
   asset: Asset;
   data: OverviewData;
   meta: MetaState;
+  tokenMarket?: TokenMarketView | null;
+  nftMarket?: NftMarketView | null;
   now?: Date;
 }) {
   if (!meta.backfillComplete) return <PreBackfill />;
@@ -39,6 +43,34 @@ export function OverviewView({
         <h1 className="text-2xl font-semibold">{assetLabel} · Overview</h1>
         <StalenessBadge lastRebuildAt={meta.lastRebuildAt} now={now} />
       </div>
+
+      {!isNft && tokenMarket ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-neutral-300">
+            Market <span className="text-xs font-normal text-neutral-500">· DEX price (low liquidity)</span>
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile label="Price" value={formatUsd(tokenMarket.priceUsd)} />
+            <StatTile label="24h Volume" value={formatUsd(tokenMarket.volume24hUsd)} />
+            <StatTile label="Liquidity" value={formatUsd(tokenMarket.liquidityUsd)} />
+            <StatTile label="Market Cap" value={formatUsd(tokenMarket.marketCapUsd)} />
+          </div>
+        </section>
+      ) : null}
+
+      {isNft && nftMarket ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-neutral-300">
+            Market <span className="text-xs font-normal text-neutral-500">· on-chain, all venues (Seaport + Ronin Market)</span>
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile label="24h Volume" value={formatRon(nftMarket.volume24hWron)} sub={`${nftMarket.sales24h} sales`} />
+            <StatTile label="7d Volume" value={formatRon(nftMarket.volume7dWron)} />
+            <StatTile label="Last Sale" value={formatRon(nftMarket.lastSaleWron)} />
+            <StatTile label="Avg (30d)" value={formatRon(nftMarket.avgPrice30dWron)} />
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile

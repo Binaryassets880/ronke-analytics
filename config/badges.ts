@@ -18,6 +18,16 @@ export type BadgeCategory =
   | "holding_length" // tiered by current holding duration
   | "achievement"; // boolean predicates
 
+/**
+ * Which side of the ecosystem a badge belongs to, for the profile shelf (E5a).
+ * - "ronke": derived purely from $RONKE holdings/behavior.
+ * - "ronkeverse": derived purely from Ronkeverse holdings/behavior.
+ * - "both": currently cross-asset (Ecosystem group). E5b will later split some
+ *   of these into per-asset variants so each realm's badges are behaviorally
+ *   exact; until then they render under "Ecosystem".
+ */
+export type BadgeRealm = "ronke" | "ronkeverse" | "both";
+
 /** A single tier within a tiered badge. */
 export interface BadgeTier {
   /** Tier index, 0-based, ascending in prestige. */
@@ -32,6 +42,8 @@ export interface BadgeDef {
   category: BadgeCategory;
   /** Which asset the badge reads from, when asset-scoped. */
   asset?: Asset;
+  /** Which ecosystem realm the badge belongs to, for profile grouping (E5a). */
+  realm: BadgeRealm;
   label: string;
   icon: string;
   description: string;
@@ -49,6 +61,7 @@ export const BADGES: BadgeDef[] = [
     key: "bag_size",
     category: "bag_size",
     asset: "ronke_token",
+    realm: "ronke",
     label: "Bag Size",
     icon: "\u{1FAAA}", // 🪙
     description: "How much $RONKE this wallet holds.",
@@ -64,6 +77,7 @@ export const BADGES: BadgeDef[] = [
     key: "collector",
     category: "collector",
     asset: "ronkeverse_nft",
+    realm: "ronkeverse",
     label: "Collector",
     icon: "\u{1F5BC}", // 🖼
     description: "How many Ronkeverse NFTs this wallet holds.",
@@ -77,6 +91,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "holding_length",
     category: "holding_length",
+    realm: "both",
     label: "Holding Length",
     icon: "\u{23F3}", // ⏳
     description: "How long this wallet has held its oldest position.",
@@ -90,6 +105,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "diamond_hands",
     category: "achievement",
+    realm: "both",
     label: "Diamond Hands",
     icon: "\u{1F48E}", // 💎
     description: "Never sold since acquiring.",
@@ -98,6 +114,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "never_paper_handed",
     category: "achievement",
+    realm: "both",
     label: "Never Paper-handed",
     icon: "\u{1F9FB}", // 🧻 (crossed out in copy)
     description: "Never dumped a position within a day of buying it.",
@@ -106,6 +123,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "og_early",
     category: "achievement",
+    realm: "both",
     label: "OG / Early",
     icon: "\u{1F331}", // 🌱
     description: "Held since before the Ronin L2 migration.",
@@ -114,6 +132,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "whale",
     category: "achievement",
+    realm: "both",
     label: "Whale",
     icon: "\u{1F40B}", // 🐋
     description: "A top holder by concentration (top-N or >1% of supply).",
@@ -122,6 +141,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "rarity_hunter",
     category: "achievement",
+    realm: "ronkeverse",
     label: "Rarity Hunter",
     icon: "\u{1F3F9}", // 🏹
     description: "Holds a top-rarity Ronkeverse token.",
@@ -130,6 +150,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "dual_citizen",
     category: "achievement",
+    realm: "both",
     label: "Dual Citizen",
     icon: "\u{1F91D}", // 🤝
     description: "Holds both $RONKE and Ronkeverse.",
@@ -138,6 +159,7 @@ export const BADGES: BadgeDef[] = [
   {
     key: "accumulator",
     category: "achievement",
+    realm: "ronke",
     label: "Accumulator",
     icon: "\u{1F4C8}", // 📈
     description: "Net-positive balance over the trailing window (stacking).",

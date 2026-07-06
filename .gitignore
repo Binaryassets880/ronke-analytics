@@ -10,3 +10,8 @@ next-env.d.ts
 .vercel
 .DS_Store
 coverage/
+
+.vercel
+
+# Design reference artifact (not app code)
+Ronkeverse.html

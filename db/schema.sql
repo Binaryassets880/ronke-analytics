@@ -185,6 +185,82 @@ CREATE INDEX IF NOT EXISTS wallet_badges_key_idx
   ON wallet_badges (badge_key);
 
 -- ─────────────────────────────────────────────────────────────────────
+-- Derived: Ronke Score per wallet (S-series). Combined score + per-asset
+-- sub-scores + a stored breakdown so the profile explains it without recompute.
+-- Rebuilt each run from derived tables (no chain calls), after badges.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS wallet_scores (
+  address            TEXT PRIMARY KEY,
+  score              INTEGER NOT NULL DEFAULT 0,
+  ronke_subscore     INTEGER NOT NULL DEFAULT 0,
+  nft_subscore       INTEGER NOT NULL DEFAULT 0,
+  ronke_holding      INTEGER NOT NULL DEFAULT 0,
+  ronke_duration     INTEGER NOT NULL DEFAULT 0,
+  ronke_diamond_mult DOUBLE PRECISION NOT NULL DEFAULT 0,
+  nft_holding        INTEGER NOT NULL DEFAULT 0,
+  nft_duration       INTEGER NOT NULL DEFAULT 0,
+  nft_diamond_mult   DOUBLE PRECISION NOT NULL DEFAULT 0,
+  collector_points   INTEGER NOT NULL DEFAULT 0,
+  body_types_held    INTEGER NOT NULL DEFAULT 0,
+  body_types_total   INTEGER NOT NULL DEFAULT 0,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS wallet_scores_score_idx ON wallet_scores (score DESC);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Market snapshots (E6): latest external market reading per source+asset.
+-- $RONKE price/volume/liquidity from GeckoTerminal. Fetched off-Vercel during
+-- sync (KTD-7), served read-only. jsonb payload keeps the shape flexible.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS market_snapshots (
+  source     TEXT NOT NULL,       -- 'geckoterminal' | 'opensea' | ...
+  asset      TEXT NOT NULL,       -- 'ronke_token' | 'ronkeverse_nft'
+  snapshot   JSONB NOT NULL,
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (source, asset)
+);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- On-chain NFT sales (E6). Marketplace-agnostic: derived from WRON settlement
+-- legs so OpenSea Seaport AND Ronin-native marketplace sales are both captured
+-- (OpenSea's own stats miss the latter). Volume is computed at read time.
+-- price_wron is gross, in WRON base units (1e18). Bundle txs split evenly.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS nft_sales (
+  asset        TEXT        NOT NULL DEFAULT 'ronkeverse_nft',
+  tx_hash      TEXT        NOT NULL,
+  token_id     TEXT        NOT NULL,
+  block_number BIGINT      NOT NULL,
+  block_time   TIMESTAMPTZ NOT NULL,
+  seller       TEXT        NOT NULL,
+  buyer        TEXT        NOT NULL,
+  price_wron   NUMERIC     NOT NULL DEFAULT 0,
+  marketplace  TEXT,
+  PRIMARY KEY (asset, tx_hash, token_id)
+);
+
+CREATE INDEX IF NOT EXISTS nft_sales_time_idx ON nft_sales (asset, block_time);
+
+-- Cursor for the sale-indexer pass (last block scanned for WRON settlements).
+CREATE TABLE IF NOT EXISTS nft_sales_cursor (
+  asset      TEXT PRIMARY KEY,
+  last_block BIGINT      NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- RNS (.ron) name cache (E4). Reverse-resolved during sync, served read-only.
+-- name is NULL when a holder has no primary name (cached so we don't re-query
+-- every run). resolved_at drives the freshness window.
+-- ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS rns_names (
+  address     TEXT PRIMARY KEY,   -- lowercased 0x
+  name        TEXT,               -- primary .ron name, or NULL if none
+  resolved_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ─────────────────────────────────────────────────────────────────────
 -- Key/value meta: sync + rebuild timestamps, flags.
 -- ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS meta (

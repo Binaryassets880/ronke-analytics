@@ -1,18 +1,20 @@
 import type { WalletBadge } from "@/lib/queries";
-import { badgeDef } from "@/config/badges";
+import { badgeDef, type BadgeRealm } from "@/config/badges";
 
 /**
- * Earned-badge shelf on the wallet/profile page (U15). Groups badges by
- * category; each badge shows its tier (for tiered badges) and a tooltip
- * explaining how it was earned (the config description + the earning context),
- * so a holder understands why they hold a badge rather than just seeing it.
+ * Earned-badge shelf on the wallet/profile page (U15, regrouped in E5a).
+ *
+ * Badges are grouped by ecosystem realm first - $RONKE, Ronkeverse, Ecosystem -
+ * so a visitor can immediately see which token or NFT each badge belongs to.
+ * Each badge shows its tier (for tiered badges) and a tooltip explaining how it
+ * was earned. (E5b will later split the currently cross-asset "Ecosystem" badges
+ * into per-asset variants so each realm is behaviorally exact.)
  */
-const CATEGORY_ORDER = ["achievement", "bag_size", "collector", "holding_length"] as const;
-const CATEGORY_LABEL: Record<string, string> = {
-  achievement: "Achievements",
-  bag_size: "Bag size",
-  collector: "Collector",
-  holding_length: "Holding length",
+const REALM_ORDER: BadgeRealm[] = ["ronke", "ronkeverse", "both"];
+const REALM_LABEL: Record<BadgeRealm, string> = {
+  ronke: "$RONKE",
+  ronkeverse: "Ronkeverse",
+  both: "Ecosystem",
 };
 
 function tierLabel(badgeKey: string, tier: number | null): string | null {
@@ -42,23 +44,23 @@ export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
     );
   }
 
-  const byCategory = new Map<string, WalletBadge[]>();
+  const byRealm = new Map<BadgeRealm, WalletBadge[]>();
   for (const b of badges) {
-    const cat = badgeDef(b.badgeKey)?.category ?? "achievement";
-    (byCategory.get(cat) ?? byCategory.set(cat, []).get(cat)!).push(b);
+    const realm = badgeDef(b.badgeKey)?.realm ?? "both";
+    (byRealm.get(realm) ?? byRealm.set(realm, []).get(realm)!).push(b);
   }
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
       <h2 className="mb-3 text-sm font-medium text-neutral-300">Badges</h2>
       <div className="space-y-4">
-        {CATEGORY_ORDER.filter((c) => byCategory.has(c)).map((cat) => (
-          <div key={cat}>
+        {REALM_ORDER.filter((r) => byRealm.has(r)).map((realm) => (
+          <div key={realm}>
             <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
-              {CATEGORY_LABEL[cat]}
+              {REALM_LABEL[realm]}
             </h3>
             <div className="flex flex-wrap gap-2">
-              {byCategory.get(cat)!.map((b) => {
+              {byRealm.get(realm)!.map((b) => {
                 const def = badgeDef(b.badgeKey);
                 if (!def) return null;
                 const tl = tierLabel(b.badgeKey, b.tier);

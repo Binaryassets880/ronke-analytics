@@ -15,16 +15,18 @@ import { formatCompact, formatDuration, shortAddress, toWholeTokens } from "@/li
 export function WalletView({
   wallet,
   badgeShelf,
+  scoreCard,
   diamondTooltip,
 }: {
   wallet: WalletData;
   badgeShelf?: ReactNode;
+  scoreCard?: ReactNode;
   diamondTooltip?: string;
 }) {
   if (!wallet.everHeld) {
     return (
       <div className="space-y-4">
-        <WalletHeader address={wallet.address} />
+        <WalletHeader address={wallet.address} name={wallet.name} />
         <EmptyState
           title="This wallet has never held $RONKE or Ronkeverse."
           hint="Double-check the address, or paste another to look it up."
@@ -36,12 +38,14 @@ export function WalletView({
   const ronke = toWholeTokens(BigInt(wallet.ronkeBalance || "0"));
   return (
     <div className="space-y-6">
-      <WalletHeader address={wallet.address} />
+      <WalletHeader address={wallet.address} name={wallet.name} />
       {wallet.firstAcquiredAt ? (
         <p className="-mt-4 text-sm text-neutral-400">
           First acquired {wallet.firstAcquiredAt.slice(0, 10)}
         </p>
       ) : null}
+
+      {scoreCard}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="$RONKE held" value={formatCompact(ronke)} />
@@ -110,11 +114,11 @@ export function WalletView({
   );
 }
 
-function WalletHeader({ address }: { address: string }) {
+function WalletHeader({ address, name }: { address: string; name?: string | null }) {
   return (
     <div>
       <h1 className="text-2xl font-semibold" title={address}>
-        {shortAddress(address)}
+        {name && name.length > 0 ? name : shortAddress(address)}
       </h1>
       <p className="mt-1 break-all font-mono text-xs text-neutral-500">{address}</p>
     </div>

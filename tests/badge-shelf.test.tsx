@@ -25,6 +25,22 @@ describe("BadgeShelf", () => {
     expect(screen.getByText(/No badges yet/i)).toBeInTheDocument();
   });
 
+  it("groups badges by ecosystem realm ($RONKE / Ronkeverse / Ecosystem)", () => {
+    const badges: WalletBadge[] = [
+      { badgeKey: "bag_size", tier: 1, context: { balance: 200_000, tierLabel: "Holder" } }, // ronke
+      { badgeKey: "collector", tier: 0, context: { count: 2, tierLabel: "Owner" } }, // ronkeverse
+      { badgeKey: "dual_citizen", tier: null, context: {} }, // both -> Ecosystem
+    ];
+    render(<BadgeShelf badges={badges} />);
+    expect(screen.getByText("$RONKE")).toBeInTheDocument();
+    expect(screen.getByText("Ronkeverse")).toBeInTheDocument();
+    expect(screen.getByText("Ecosystem")).toBeInTheDocument();
+    // realm-scoped badges render under their realm
+    expect(screen.getByText("Bag Size: Holder")).toBeInTheDocument();
+    expect(screen.getByText("Collector: Owner")).toBeInTheDocument();
+    expect(screen.getByText("Dual Citizen")).toBeInTheDocument();
+  });
+
   it("explains the earning criterion via the badge tooltip (bag threshold context)", () => {
     const badges: WalletBadge[] = [
       { badgeKey: "bag_size", tier: 4, context: { balance: 250_000_000, tierLabel: "Leviathan" } },

@@ -3,7 +3,8 @@ import type { Asset } from "@/config/contracts";
 import type { LeaderboardRow } from "@/lib/queries";
 import { DiamondBadge } from "./DiamondBadge";
 import { EmptyState } from "./States";
-import { shortAddress, formatCompact, formatDuration, toWholeTokens, assetToParam } from "@/lib/format";
+import { LeaderboardModes } from "./LeaderboardModes";
+import { displayName, formatCompact, formatDuration, toWholeTokens, assetToParam } from "@/lib/format";
 
 /** Holder-race leaderboard (U8): rank by size or by diamond score, paginated. */
 export function LeaderboardView({
@@ -29,20 +30,7 @@ export function LeaderboardView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{label} · Holder race</h1>
-        <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 text-sm">
-          <Link
-            href={href("size", 0)}
-            className={`rounded-md px-3 py-1 ${by === "size" ? "bg-white text-black" : "text-neutral-300"}`}
-          >
-            By size
-          </Link>
-          <Link
-            href={href("diamond", 0)}
-            className={`rounded-md px-3 py-1 ${by === "diamond" ? "bg-white text-black" : "text-neutral-300"}`}
-          >
-            By diamond score
-          </Link>
-        </div>
+        <LeaderboardModes active={by} assetParam={assetParam} />
       </div>
 
       {rows.length === 0 ? (
@@ -65,7 +53,7 @@ export function LeaderboardView({
                   <td className="p-3 tabular-nums text-neutral-500">{page * pageSize + i + 1}</td>
                   <td>
                     <Link href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
-                      {shortAddress(r.address)}
+                      {displayName(r.name, r.address)}
                     </Link>
                   </td>
                   <td className="tabular-nums">
