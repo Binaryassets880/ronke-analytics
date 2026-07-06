@@ -2,21 +2,60 @@
  * Ronkeverse trait ingestion + rarity recompute (U10, local/on-demand).
  *
  * NOT part of the daily transfer sync (traits are static post-reveal - KTD-8).
- * Fetches per-token metadata from Moralis's per-token endpoint (the bulk
- * collection endpoint 500s on Ronin), reading the exact minted token_id set
- * from our own transfer_events. Resilient (skips a token that errors) and
- * resumable (skips token_ids already in nft_traits). Then recomputes + persists
- * trait_stats and token_rarity (U11) over the full trait set.
+ * Fetches per-token metadata directly from the collection's tokenURI base
+ * (S3) - Moralis only indexed ~29% of tokens on Ronin (R6), while the source
+ * has all of them. Reads the exact minted token_id set from our own
+ * transfer_events, fetches with bounded concurrency, and is resumable (skips
+ * token_ids already in nft_traits). Then recomputes + persists trait_stats and
+ * token_rarity (U11) over the full trait set.
  *
- * Run: MORALIS_API_KEY=... DATABASE_URL=... npm run fetch-traits
+ * Run: DATABASE_URL=... npm run fetch-traits
  */
 
 import { requireSql, insertMany, type Sql } from "@/db/client";
-import { moralisApiKey } from "@/config/env";
-import { MoralisProvider } from "@/lib/ronin/moralis";
-import { contractFor } from "@/config/contracts";
+import { RONKEVERSE_METADATA_BASE } from "@/config/contracts";
 import { normalizeAttributes, type NormalizedTrait, type DisplayType } from "@/lib/rarity/traits";
+import type { MoralisAttribute } from "@/lib/ronin/moralis";
 import { persistRarity } from "@/lib/rarity/persist";
+
+export interface TokenMetadata {
+  attributes: MoralisAttribute[];
+  imageUrl: string | null;
+}
+export type MetadataFetcher = (tokenId: string) => Promise<TokenMetadata | null>;
+
+/** Default fetcher: read the token's JSON from `${baseUrl}/${tokenId}`. */
+export function httpMetadataFetcher(
+  baseUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): MetadataFetcher {
+  return async (tokenId) => {
+    const res = await fetchImpl(`${baseUrl}/${tokenId}`);
+    if (!res.ok) return null;
+    const j = await res.json().catch(() => null);
+    if (!j) return null;
+    const attributes: MoralisAttribute[] = (j.attributes ?? []).map((a: any) => ({
+      trait_type: a.trait_type,
+      value: a.value,
+      display_type: a.display_type ?? null,
+    }));
+    return { attributes, imageUrl: j.image ?? null };
+  };
+}
+
+/** Run `fn` over `items` with at most `concurrency` in flight; preserves order. */
+async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const idx = next++;
+      results[idx] = await fn(items[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
+}
 
 async function setMeta(sql: Sql, key: string, value: string): Promise<void> {
   await sql`
@@ -41,52 +80,58 @@ async function flush(sql: Sql, buffer: NormalizedTrait[]): Promise<void> {
 
 export async function fetchTraits(
   sql: Sql,
-  provider: MoralisProvider,
+  fetchMetadata: MetadataFetcher,
   asOf: Date = new Date(),
+  opts: { concurrency?: number; chunkSize?: number } = {},
 ): Promise<{ revealedSupply: number; unrevealed: number }> {
-  const contract = contractFor("ronkeverse_nft");
+  const concurrency = opts.concurrency ?? 20;
+  const chunkSize = opts.chunkSize ?? 500;
 
-  // The exact minted token set, from our own ingested history.
   const idRows = await sql`
     SELECT DISTINCT token_id FROM transfer_events
     WHERE asset = 'ronkeverse_nft' AND token_id IS NOT NULL
   `;
   const allIds = idRows.map((r) => String(r.token_id));
-  // Resume: skip tokens already fetched.
   const doneRows = await sql`SELECT DISTINCT token_id FROM nft_traits`;
   const done = new Set(doneRows.map((r) => String(r.token_id)));
   const todo = allIds.filter((id) => !done.has(id));
 
   const images = new Map<string, string | null>();
-  let buffer: NormalizedTrait[] = [];
   let fetched = 0;
   let unrevealed = 0;
+  let processed = 0;
 
-  for (const tokenId of todo) {
-    let meta;
-    try {
-      meta = await provider.fetchTokenMetadata(contract, tokenId);
-    } catch {
-      unrevealed += 1; // leave for a later resync
-      continue;
-    }
-    images.set(tokenId, meta.imageUrl);
-    const norm = normalizeAttributes(tokenId, meta.attributes);
-    if (norm.length === 0) {
-      unrevealed += 1;
-      continue;
-    }
-    buffer.push(...norm);
-    fetched += 1;
-    if (buffer.length >= 1000) {
-      await flush(sql, buffer);
-      buffer = [];
-    }
-    if (fetched % 500 === 0) console.log(`traits: ${fetched}/${todo.length}`);
+  for (let start = 0; start < todo.length; start += chunkSize) {
+    const slice = todo.slice(start, start + chunkSize);
+    const metas = await mapPool(slice, concurrency, async (id) => {
+      try {
+        return await fetchMetadata(id);
+      } catch {
+        return null;
+      }
+    });
+    const buffer: NormalizedTrait[] = [];
+    slice.forEach((id, k) => {
+      processed += 1;
+      const meta = metas[k];
+      if (!meta) {
+        unrevealed += 1;
+        return;
+      }
+      images.set(id, meta.imageUrl);
+      const norm = normalizeAttributes(id, meta.attributes);
+      if (norm.length === 0) {
+        unrevealed += 1;
+        return;
+      }
+      buffer.push(...norm);
+      fetched += 1;
+    });
+    await flush(sql, buffer);
+    console.log(`traits: ${processed}/${todo.length} (revealed ${fetched}, unrevealed ${unrevealed})`);
   }
-  await flush(sql, buffer);
 
-  // Recompute rarity over the FULL trait set now in the DB (incl. prior runs).
+  // Recompute rarity over the FULL trait set now in the DB.
   const traitRows = await sql`SELECT token_id, trait_type, value, display_type FROM nft_traits`;
   const allTraits: NormalizedTrait[] = traitRows.map((r) => ({
     tokenId: String(r.token_id),
@@ -107,8 +152,8 @@ export async function fetchTraits(
 
 if (process.argv[1]?.endsWith("fetch-traits.ts")) {
   const sql = requireSql();
-  const provider = new MoralisProvider({ apiKey: moralisApiKey() });
-  fetchTraits(sql, provider)
+  const fetcher = httpMetadataFetcher(RONKEVERSE_METADATA_BASE);
+  fetchTraits(sql, fetcher)
     .then(({ revealedSupply, unrevealed }) => {
       console.log(`Traits fetched. Revealed supply: ${revealedSupply}, unrevealed: ${unrevealed}.`);
       process.exit(0);

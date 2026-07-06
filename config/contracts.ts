@@ -64,6 +64,15 @@ export const CONTRACTS: Record<Asset, ContractConfig> = {
 
 export const ASSETS: Asset[] = ["ronke_token", "ronkeverse_nft"];
 
+/**
+ * Ronkeverse tokenURI base (confirmed via on-chain tokenURI(id) over Ronin RPC):
+ * per-token metadata JSON lives at `${base}/${tokenId}`. Fetched directly for
+ * rarity because Moralis only indexed ~29% of the collection (R6). One edit if
+ * the collection ever re-hosts.
+ */
+export const RONKEVERSE_METADATA_BASE =
+  "https://ronkeverse.s3.us-east-2.amazonaws.com/metadata/ronkeverse_metadata";
+
 export function contractFor(asset: Asset): ContractConfig {
   return CONTRACTS[asset];
 }
