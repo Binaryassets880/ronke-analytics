@@ -49,6 +49,21 @@ describe("db/schema.sql (static analysis)", () => {
     }
   });
 
+  it("adds RonkeStr sub-score columns as idempotent single-statement ALTERs", () => {
+    for (const col of [
+      "ronkestr_subscore",
+      "ronkestr_holding",
+      "ronkestr_duration",
+      "ronkestr_diamond_mult",
+    ]) {
+      const stmt = statements.find(
+        (s) => /^ALTER TABLE wallet_scores/i.test(s) && s.includes(col),
+      );
+      expect(stmt, `missing ALTER for ${col}`).toBeTruthy();
+      expect(stmt!).toMatch(/ADD COLUMN IF NOT EXISTS/i);
+    }
+  });
+
   it("defines every table in the data model", () => {
     for (const table of [
       "transfer_events",
