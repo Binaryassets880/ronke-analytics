@@ -32,6 +32,21 @@ export function formatPct(share: number): string {
   return `${(share * 100).toFixed(1)}%`;
 }
 
+/** USD amount -> "$0.00029" / "$648" / "$11.2K". Null/NaN -> "—". */
+export function formatUsd(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs > 0 && abs < 1) return `$${n.toPrecision(2)}`; // sub-$1 prices keep sig figs
+  if (abs < 1000) return `$${n.toFixed(2)}`;
+  return `$${formatCompact(n)}`;
+}
+
+/** Whole-RON amount -> "235 RON" / "5.2K RON". Null/NaN -> "—". */
+export function formatRon(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return `${formatCompact(n)} RON`;
+}
+
 /** Days -> a human duration: "3d", "5mo", "1.2y". */
 export function formatDuration(days: number): string {
   if (days < 1) return "<1d";
@@ -48,6 +63,15 @@ export function formatDuration(days: number): string {
 export function shortAddress(addr: string): string {
   if (!addr || addr.length < 12) return addr;
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+}
+
+/**
+ * Preferred display label for a wallet: its primary .ron name when it has one
+ * (E4), otherwise the truncated address. Callers keep the full address in the
+ * link href / title so it stays copyable.
+ */
+export function displayName(name: string | null | undefined, address: string): string {
+  return name && name.length > 0 ? name : shortAddress(address);
 }
 
 /** ISO-ish timestamp -> a short "2026-07-05 14:10 UTC". */

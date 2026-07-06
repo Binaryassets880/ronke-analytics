@@ -179,5 +179,8 @@ export async function rebuild(sql: Sql, asOf: Date = new Date()): Promise<void> 
   // Badge derivation reads only derived tables (U14).
   const { deriveBadges } = await import("@/lib/badges/derive");
   await deriveBadges(sql);
+  // Ronke Score derivation reads only derived tables (S-series), after badges.
+  const { deriveScores } = await import("@/lib/score/derive");
+  await deriveScores(sql);
   await setMeta(sql, "last_rebuild_at", asOf.toISOString());
 }

@@ -12,6 +12,7 @@ import type { WalletData } from "@/lib/queries";
 
 const diamondHolder: WalletData = {
   address: "0x" + "a".repeat(40),
+  name: "whale.ron",
   ronkeBalance: "5000000000000000000000000", // 5,000,000
   ronkeverseCount: 3,
   holdingDurationDays: 120,
@@ -34,11 +35,13 @@ describe("WalletView", () => {
     expect(screen.getByText(/First acquired 2025-02-25/)).toBeInTheDocument();
     expect(screen.getByText(/Ronkeverse held \(2\)/)).toBeInTheDocument();
     expect(screen.getByText("rank 7")).toBeInTheDocument(); // rarity rank surfaced
+    expect(screen.getByText("whale.ron")).toBeInTheDocument(); // .ron name in header
   });
 
   it("renders a clean empty state for an address that never held (not an error)", () => {
     const never: WalletData = {
       address: "0x" + "b".repeat(40),
+      name: null,
       ronkeBalance: "0",
       ronkeverseCount: 0,
       holdingDurationDays: 0,

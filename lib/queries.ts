@@ -98,8 +98,206 @@ export async function getOverview(asset: Asset): Promise<OverviewData> {
   };
 }
 
+// ── Market data (E6) ─────────────────────────────────────────────────
+
+/** $RONKE market snapshot from GeckoTerminal (low-liquidity DEX quote). */
+export interface TokenMarketView {
+  priceUsd: number | null;
+  volume24hUsd: number | null;
+  liquidityUsd: number | null;
+  marketCapUsd: number | null;
+  fetchedAt: string | null;
+}
+
+export async function getTokenMarket(): Promise<TokenMarketView | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  const rows = await sql`
+    SELECT snapshot, fetched_at::text AS fetched_at
+    FROM market_snapshots WHERE source = 'geckoterminal' AND asset = 'ronke_token'
+  `;
+  if (rows.length === 0) return null;
+  const s = (rows[0].snapshot as Record<string, unknown>) ?? {};
+  const n = (v: unknown) => (typeof v === "number" ? v : null);
+  return {
+    priceUsd: n(s.priceUsd),
+    volume24hUsd: n(s.volume24hUsd),
+    liquidityUsd: n(s.liquidityUsd),
+    marketCapUsd: n(s.marketCapUsd),
+    fetchedAt: (rows[0].fetched_at as string | null) ?? null,
+  };
+}
+
+/** Ronkeverse on-chain market stats, in whole WRON (all venues). */
+export interface NftMarketView {
+  volume24hWron: number;
+  volume7dWron: number;
+  sales24h: number;
+  totalSales: number;
+  lastSaleWron: number | null;
+  lastSaleAt: string | null;
+  avgPrice30dWron: number | null;
+}
+
+const WRON_DIVISOR = 1e18;
+const wholeWron = (raw: unknown): number => Number(raw ?? 0) / WRON_DIVISOR;
+
+export async function getNftMarket(): Promise<NftMarketView | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  const agg = await sql`
+    SELECT
+      coalesce(sum(price_wron) FILTER (WHERE block_time > now() - interval '24 hours'), 0)::text AS vol24,
+      coalesce(sum(price_wron) FILTER (WHERE block_time > now() - interval '7 days'), 0)::text AS vol7,
+      count(*) FILTER (WHERE block_time > now() - interval '24 hours')::int AS sales24,
+      count(*)::int AS total,
+      avg(price_wron) FILTER (WHERE block_time > now() - interval '30 days')::text AS avg30
+    FROM nft_sales WHERE asset = 'ronkeverse_nft'
+  `;
+  const total = Number(agg[0]?.total ?? 0);
+  if (total === 0) return null;
+  const last = await sql`
+    SELECT price_wron::text AS p, block_time::text AS t
+    FROM nft_sales WHERE asset = 'ronkeverse_nft' ORDER BY block_time DESC LIMIT 1
+  `;
+  return {
+    volume24hWron: wholeWron(agg[0]?.vol24),
+    volume7dWron: wholeWron(agg[0]?.vol7),
+    sales24h: Number(agg[0]?.sales24 ?? 0),
+    totalSales: total,
+    lastSaleWron: last[0]?.p != null ? wholeWron(last[0].p) : null,
+    lastSaleAt: (last[0]?.t as string | null) ?? null,
+    avgPrice30dWron: agg[0]?.avg30 != null ? wholeWron(agg[0].avg30) : null,
+  };
+}
+
+/** Ecosystem-wide stats for the landing strip (E7). */
+export interface EcosystemStats {
+  ronkeHolders: number;
+  ronkePriceUsd: number | null;
+  ronkeverseHolders: number;
+  ronkeverse7dVolWron: number | null;
+  ratedWallets: number;
+  totalBadges: number;
+}
+
+export async function getEcosystemStats(): Promise<EcosystemStats> {
+  const empty: EcosystemStats = {
+    ronkeHolders: 0,
+    ronkePriceUsd: null,
+    ronkeverseHolders: 0,
+    ronkeverse7dVolWron: null,
+    ratedWallets: 0,
+    totalBadges: 0,
+  };
+  const sql = getSql();
+  if (!sql) return empty;
+  const holders = await sql`
+    SELECT asset, count(*)::int AS n
+    FROM holder_balances WHERE is_current_holder = true GROUP BY asset
+  `;
+  const byAsset = new Map(holders.map((r) => [r.asset as string, Number(r.n)]));
+  const badges = await sql`
+    SELECT count(*)::int AS total, count(DISTINCT address)::int AS wallets FROM wallet_badges
+  `;
+  const [token, nft] = await Promise.all([getTokenMarket(), getNftMarket()]);
+  return {
+    ronkeHolders: byAsset.get("ronke_token") ?? 0,
+    ronkePriceUsd: token?.priceUsd ?? null,
+    ronkeverseHolders: byAsset.get("ronkeverse_nft") ?? 0,
+    ronkeverse7dVolWron: nft?.volume7dWron ?? null,
+    ratedWallets: Number(badges[0]?.wallets ?? 0),
+    totalBadges: Number(badges[0]?.total ?? 0),
+  };
+}
+
+// ── Ronke Score (S-series) ───────────────────────────────────────────
+
+export interface ScoreLeaderboardRow {
+  address: string;
+  name: string | null;
+  score: number;
+  ronkeSubscore: number;
+  nftSubscore: number;
+  bodyTypesHeld: number;
+  bodyTypesTotal: number;
+}
+
+/** Global Ronke Score leaderboard (asset-agnostic). */
+export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<ScoreLeaderboardRow[]> {
+  const sql = getSql();
+  if (!sql) return [];
+  const rows = await sql`
+    SELECT s.address, s.score, s.ronke_subscore, s.nft_subscore,
+           s.body_types_held, s.body_types_total, n.name
+    FROM wallet_scores s
+    LEFT JOIN rns_names n ON n.address = s.address
+    ORDER BY s.score DESC, s.address ASC
+    LIMIT ${pageSize} OFFSET ${page * pageSize}
+  `;
+  return rows.map((r) => ({
+    address: r.address as string,
+    name: (r.name as string | null) ?? null,
+    score: Number(r.score),
+    ronkeSubscore: Number(r.ronke_subscore),
+    nftSubscore: Number(r.nft_subscore),
+    bodyTypesHeld: Number(r.body_types_held),
+    bodyTypesTotal: Number(r.body_types_total),
+  }));
+}
+
+export interface WalletScore {
+  score: number;
+  rank: number | null;
+  ronkeSubscore: number;
+  nftSubscore: number;
+  ronkeHolding: number;
+  ronkeDuration: number;
+  ronkeDiamondMult: number;
+  nftHolding: number;
+  nftDuration: number;
+  nftDiamondMult: number;
+  collectorPoints: number;
+  bodyTypesHeld: number;
+  bodyTypesTotal: number;
+}
+
+/** One wallet's Ronke Score + breakdown + global rank, for the profile. */
+export async function getWalletScore(address: string): Promise<WalletScore | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  const rows = await sql`
+    SELECT score, ronke_subscore, nft_subscore, ronke_holding, ronke_duration,
+           ronke_diamond_mult, nft_holding, nft_duration, nft_diamond_mult,
+           collector_points, body_types_held, body_types_total
+    FROM wallet_scores WHERE address = ${address}
+  `;
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  const rankRow = await sql`
+    SELECT count(*)::int AS above FROM wallet_scores WHERE score > ${Number(r.score)}
+  `;
+  return {
+    score: Number(r.score),
+    rank: Number(rankRow[0]?.above ?? 0) + 1,
+    ronkeSubscore: Number(r.ronke_subscore),
+    nftSubscore: Number(r.nft_subscore),
+    ronkeHolding: Number(r.ronke_holding),
+    ronkeDuration: Number(r.ronke_duration),
+    ronkeDiamondMult: Number(r.ronke_diamond_mult),
+    nftHolding: Number(r.nft_holding),
+    nftDuration: Number(r.nft_duration),
+    nftDiamondMult: Number(r.nft_diamond_mult),
+    collectorPoints: Number(r.collector_points),
+    bodyTypesHeld: Number(r.body_types_held),
+    bodyTypesTotal: Number(r.body_types_total),
+  };
+}
+
 export interface HolderRow {
   address: string;
+  /** Primary .ron name (E4), or null. */
+  name: string | null;
   balance: string;
   tokenCount: number;
   holdingDurationDays: number;
@@ -125,9 +323,11 @@ export async function getHolders(asset: Asset, limit = 100): Promise<HoldersData
     SELECT b.address, b.balance::text AS balance, b.token_count,
            coalesce(m.holding_duration_days, 0) AS dur,
            coalesce(m.diamond_bucket, 'paper') AS bucket,
-           coalesce(m.never_sold, false) AS never_sold
+           coalesce(m.never_sold, false) AS never_sold,
+           n.name AS name
     FROM holder_balances b
     LEFT JOIN holder_metrics m ON m.asset = b.asset AND m.address = b.address
+    LEFT JOIN rns_names n ON n.address = b.address
     WHERE b.asset = ${asset} AND b.is_current_holder = true
     ORDER BY (CASE WHEN b.balance > 0 THEN b.balance ELSE b.token_count END) DESC
     LIMIT ${limit}
@@ -138,6 +338,7 @@ export async function getHolders(asset: Asset, limit = 100): Promise<HoldersData
     histogram: [],
     holders: rows.map((r) => ({
       address: r.address as string,
+      name: (r.name as string | null) ?? null,
       balance: String(r.balance),
       tokenCount: Number(r.token_count),
       holdingDurationDays: Number(r.dur),
@@ -168,15 +369,18 @@ export async function getLeaderboard(
            coalesce(m.holding_duration_days, 0) AS dur,
            coalesce(m.weighted_duration_days, 0) AS wdur,
            coalesce(m.diamond_bucket, 'paper') AS bucket,
-           coalesce(m.never_sold, false) AS never_sold
+           coalesce(m.never_sold, false) AS never_sold,
+           n.name AS name
     FROM holder_balances b
     LEFT JOIN holder_metrics m ON m.asset = b.asset AND m.address = b.address
+    LEFT JOIN rns_names n ON n.address = b.address
     WHERE b.asset = ${asset} AND b.is_current_holder = true
     ORDER BY ${orderExpr}
     LIMIT ${pageSize} OFFSET ${page * pageSize}
   `;
   return rows.map((r) => ({
     address: r.address as string,
+    name: (r.name as string | null) ?? null,
     balance: String(r.balance),
     tokenCount: Number(r.token_count),
     holdingDurationDays: Number(r.dur),
@@ -194,6 +398,8 @@ export interface WalletHeldToken {
 
 export interface WalletData {
   address: string;
+  /** Primary .ron name (E4), or null. */
+  name: string | null;
   ronkeBalance: string;
   ronkeverseCount: number;
   holdingDurationDays: number;
@@ -208,6 +414,7 @@ export interface WalletData {
 export async function getWallet(address: string): Promise<WalletData> {
   const empty: WalletData = {
     address,
+    name: null,
     ronkeBalance: "0",
     ronkeverseCount: 0,
     holdingDurationDays: 0,
@@ -229,7 +436,9 @@ export async function getWallet(address: string): Promise<WalletData> {
     SELECT asset, holding_duration_days, diamond_bucket, never_sold, ever_paper_sold
     FROM holder_metrics WHERE address = ${address}
   `;
-  if (balances.length === 0 && metrics.length === 0) return empty;
+  const nameRow = await sql`SELECT name FROM rns_names WHERE address = ${address}`;
+  const name = (nameRow[0]?.name as string | null) ?? null;
+  if (balances.length === 0 && metrics.length === 0) return { ...empty, name };
 
   let ronkeBalance = "0";
   let ronkeverseCount = 0;
@@ -259,6 +468,7 @@ export async function getWallet(address: string): Promise<WalletData> {
   `;
   return {
     address,
+    name,
     ronkeBalance,
     ronkeverseCount,
     holdingDurationDays,

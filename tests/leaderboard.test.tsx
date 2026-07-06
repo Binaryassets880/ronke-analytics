@@ -11,8 +11,8 @@ import { LeaderboardView } from "@/app/components/LeaderboardView";
 import type { LeaderboardRow } from "@/lib/queries";
 
 const rows: LeaderboardRow[] = [
-  { address: "0x" + "1".repeat(40), balance: "9000000000000000000000000", tokenCount: 0, holdingDurationDays: 90, weightedDurationDays: 90, diamondBucket: "diamond", neverSold: true },
-  { address: "0x" + "2".repeat(40), balance: "1000000000000000000000000", tokenCount: 0, holdingDurationDays: 3, weightedDurationDays: 3, diamondBucket: "paper", neverSold: false },
+  { address: "0x" + "1".repeat(40), name: null, balance: "9000000000000000000000000", tokenCount: 0, holdingDurationDays: 90, weightedDurationDays: 90, diamondBucket: "diamond", neverSold: true },
+  { address: "0x" + "2".repeat(40), name: null, balance: "1000000000000000000000000", tokenCount: 0, holdingDurationDays: 3, weightedDurationDays: 3, diamondBucket: "paper", neverSold: false },
 ];
 
 describe("LeaderboardView", () => {
@@ -29,7 +29,9 @@ describe("LeaderboardView", () => {
       address: "0x" + String(i).padStart(40, "0"),
     }));
     render(<LeaderboardView asset="ronke_token" by="diamond" page={1} rows={fullPage} pageSize={50} />);
-    expect(screen.getByText("By diamond score")).toBeInTheDocument();
+    // mode toggle links (target by role: "Diamond"/"Ronke Score" text also appears in row badges)
+    expect(screen.getByRole("link", { name: "Diamond" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ronke Score" })).toHaveAttribute("href", "/leaderboard?by=score");
     expect(screen.getByText("Next →")).toBeInTheDocument();
     expect(screen.getByText("← Prev")).toBeInTheDocument();
     // page offset: first row on page 1 is rank 51

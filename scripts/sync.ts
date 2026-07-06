@@ -16,6 +16,8 @@ import { BlockscoutProvider } from "@/lib/ronin/blockscout";
 import { RoninDataClient } from "@/lib/ronin/client";
 import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
 import { rebuild } from "@/lib/analytics/rebuild";
+import { refreshRnsNames } from "@/lib/rns/refresh";
+import { refreshMarket } from "@/lib/market/refresh";
 
 export interface SyncClient {
   /** Recent tail only: transfers with block_number > sinceBlock (DESC + stop). */
@@ -70,8 +72,20 @@ if (process.argv[1]?.endsWith("sync.ts")) {
   // Blockscout for transfers: no CU cap, DESC + stop-at-cursor reads only the tail.
   const client = new RoninDataClient({ blockscout: new BlockscoutProvider() });
   sync(sql, client)
-    .then(({ appended }) => {
+    .then(async ({ appended }) => {
       console.log(`Sync complete. Appended ${appended} new events; snapshots rebuilt.`);
+      // Reverse-resolve .ron names for holders (best-effort; never fails the sync).
+      try {
+        await refreshRnsNames(sql, { log: (m) => console.log(m) });
+      } catch (err) {
+        console.warn("RNS refresh skipped:", (err as Error)?.message ?? err);
+      }
+      // Refresh market data: $RONKE snapshot + Ronkeverse on-chain sales (best-effort).
+      try {
+        await refreshMarket(sql, { log: (m) => console.log(m) });
+      } catch (err) {
+        console.warn("Market refresh skipped:", (err as Error)?.message ?? err);
+      }
       process.exit(0);
     })
     .catch((err) => {

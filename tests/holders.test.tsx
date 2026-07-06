@@ -19,8 +19,8 @@ const meta: MetaState = {
 };
 
 const rows: HolderRow[] = [
-  { address: "0x" + "1".repeat(40), balance: "300", tokenCount: 0, holdingDurationDays: 5, diamondBucket: "paper", neverSold: false },
-  { address: "0x" + "2".repeat(40), balance: "900", tokenCount: 0, holdingDurationDays: 90, diamondBucket: "diamond", neverSold: true },
+  { address: "0x" + "1".repeat(40), name: null, balance: "300", tokenCount: 0, holdingDurationDays: 5, diamondBucket: "paper", neverSold: false },
+  { address: "0x" + "2".repeat(40), name: null, balance: "900", tokenCount: 0, holdingDurationDays: 90, diamondBucket: "diamond", neverSold: true },
 ];
 
 describe("HoldersView", () => {
@@ -29,6 +29,18 @@ describe("HoldersView", () => {
     render(<HoldersView asset="ronke_token" data={data} meta={meta} now={new Date("2026-07-05T08:00:00Z")} />);
     expect(screen.getByText("0.523")).toBeInTheDocument(); // gini
     expect(screen.getByText("42.0%")).toBeInTheDocument(); // top-10
+  });
+});
+
+describe("HolderTable RNS names", () => {
+  it("shows a wallet's .ron name instead of its address when present", () => {
+    const named: HolderRow[] = [
+      { address: "0x" + "3".repeat(40), name: "ronke.ron", balance: "500", tokenCount: 0, holdingDurationDays: 10, diamondBucket: "regular", neverSold: true },
+    ];
+    render(<HolderTable rows={named} asset="ronke_token" />);
+    expect(screen.getByText("ronke.ron")).toBeInTheDocument();
+    // full address still available on the link title (copyable / OG)
+    expect(screen.getByRole("link", { name: "ronke.ron" })).toHaveAttribute("title", "0x" + "3".repeat(40));
   });
 });
 

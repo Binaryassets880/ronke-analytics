@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { HolderRow } from "@/lib/queries";
 import type { Asset } from "@/config/contracts";
 import { DiamondBadge } from "./DiamondBadge";
-import { shortAddress, formatCompact, formatDuration, toWholeTokens } from "@/lib/format";
+import { displayName, formatCompact, formatDuration, toWholeTokens } from "@/lib/format";
 
 type SortKey = "amount" | "duration";
 
@@ -47,7 +47,7 @@ export function HolderTable({ rows, asset }: { rows: HolderRow[]; asset: Asset }
             <tr key={r.address} className="border-b border-[var(--border)]/50">
               <td className="py-2">
                 <Link href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
-                  {shortAddress(r.address)}
+                  {displayName(r.name, r.address)}
                 </Link>
               </td>
               <td className="tabular-nums">
