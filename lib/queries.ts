@@ -175,6 +175,8 @@ export async function getNftMarket(): Promise<NftMarketView | null> {
 export interface EcosystemStats {
   ronkeHolders: number;
   ronkePriceUsd: number | null;
+  ronkestrHolders: number;
+  ronkestrPriceUsd: number | null;
   ronkeverseHolders: number;
   ronkeverse7dVolWron: number | null;
   ratedWallets: number;
@@ -185,6 +187,8 @@ export async function getEcosystemStats(): Promise<EcosystemStats> {
   const empty: EcosystemStats = {
     ronkeHolders: 0,
     ronkePriceUsd: null,
+    ronkestrHolders: 0,
+    ronkestrPriceUsd: null,
     ronkeverseHolders: 0,
     ronkeverse7dVolWron: null,
     ratedWallets: 0,
@@ -200,10 +204,16 @@ export async function getEcosystemStats(): Promise<EcosystemStats> {
   const badges = await sql`
     SELECT count(*)::int AS total, count(DISTINCT address)::int AS wallets FROM wallet_badges
   `;
-  const [token, nft] = await Promise.all([getTokenMarket(), getNftMarket()]);
+  const [token, ronkestr, nft] = await Promise.all([
+    getTokenMarket("ronke_token"),
+    getTokenMarket("ronkestr_token"),
+    getNftMarket(),
+  ]);
   return {
     ronkeHolders: byAsset.get("ronke_token") ?? 0,
     ronkePriceUsd: token?.priceUsd ?? null,
+    ronkestrHolders: byAsset.get("ronkestr_token") ?? 0,
+    ronkestrPriceUsd: ronkestr?.priceUsd ?? null,
     ronkeverseHolders: byAsset.get("ronkeverse_nft") ?? 0,
     ronkeverse7dVolWron: nft?.volume7dWron ?? null,
     ratedWallets: Number(badges[0]?.wallets ?? 0),
@@ -413,6 +423,7 @@ export interface WalletData {
   /** Primary .ron name (E4), or null. */
   name: string | null;
   ronkeBalance: string;
+  ronkestrBalance: string;
   ronkeverseCount: number;
   holdingDurationDays: number;
   diamondBucket: DiamondBucket | null;
@@ -428,6 +439,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     address,
     name: null,
     ronkeBalance: "0",
+    ronkestrBalance: "0",
     ronkeverseCount: 0,
     holdingDurationDays: 0,
     diamondBucket: null,
@@ -453,10 +465,12 @@ export async function getWallet(address: string): Promise<WalletData> {
   if (balances.length === 0 && metrics.length === 0) return { ...empty, name };
 
   let ronkeBalance = "0";
+  let ronkestrBalance = "0";
   let ronkeverseCount = 0;
   let firstAcquiredAt: string | null = null;
   for (const r of balances) {
     if (r.asset === "ronke_token") ronkeBalance = String(r.balance);
+    else if (r.asset === "ronkestr_token") ronkestrBalance = String(r.balance);
     else ronkeverseCount = Number(r.token_count);
     const fa = r.first_acquired_at as string | null;
     if (fa && (firstAcquiredAt === null || fa < firstAcquiredAt)) firstAcquiredAt = fa;
@@ -482,6 +496,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     address,
     name,
     ronkeBalance,
+    ronkestrBalance,
     ronkeverseCount,
     holdingDurationDays,
     diamondBucket,

@@ -28,14 +28,15 @@ export function WalletView({
       <div className="space-y-4">
         <WalletHeader address={wallet.address} name={wallet.name} />
         <EmptyState
-          title="This wallet has never held $RONKE or Ronkeverse."
+          title="This wallet has never held $RONKE, RonkeStr, or Ronkeverse."
           hint="Double-check the address, or paste another to look it up."
         />
       </div>
     );
   }
 
-  const ronke = toWholeTokens(BigInt(wallet.ronkeBalance || "0"));
+  const ronke = toWholeTokens(BigInt(wallet.ronkeBalance || "0"), "ronke_token");
+  const ronkestr = toWholeTokens(BigInt(wallet.ronkestrBalance || "0"), "ronkestr_token");
   return (
     <div className="space-y-6">
       <WalletHeader address={wallet.address} name={wallet.name} />
@@ -47,8 +48,9 @@ export function WalletView({
 
       {scoreCard}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatTile label="$RONKE held" value={formatCompact(ronke)} />
+        <StatTile label="RonkeStr held" value={formatCompact(ronkestr)} />
         <StatTile label="Ronkeverse held" value={String(wallet.ronkeverseCount)} />
         <StatTile label="Held for" value={formatDuration(wallet.holdingDurationDays)} />
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">

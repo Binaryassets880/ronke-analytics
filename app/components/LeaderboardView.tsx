@@ -58,7 +58,7 @@ export function LeaderboardView({
                     </Link>
                   </td>
                   <td className="tabular-nums">
-                    {isNft ? r.tokenCount : formatCompact(toWholeTokens(BigInt(r.balance)))}
+                    {isNft ? r.tokenCount : formatCompact(toWholeTokens(BigInt(r.balance), asset))}
                   </td>
                   <td className="tabular-nums text-neutral-300">{formatDuration(r.holdingDurationDays)}</td>
                   <td>

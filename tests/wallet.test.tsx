@@ -14,6 +14,7 @@ const diamondHolder: WalletData = {
   address: "0x" + "a".repeat(40),
   name: "whale.ron",
   ronkeBalance: "5000000000000000000000000", // 5,000,000
+  ronkestrBalance: "250000000000000000000000", // 250,000 RonkeStr
   ronkeverseCount: 3,
   holdingDurationDays: 120,
   diamondBucket: "diamond",
@@ -36,6 +37,8 @@ describe("WalletView", () => {
     expect(screen.getByText(/Ronkeverse held \(2\)/)).toBeInTheDocument();
     expect(screen.getByText("rank 7")).toBeInTheDocument(); // rarity rank surfaced
     expect(screen.getByText("whale.ron")).toBeInTheDocument(); // .ron name in header
+    expect(screen.getByText("RonkeStr held")).toBeInTheDocument(); // RonkeStr balance tile
+    expect(screen.getByText("250K")).toBeInTheDocument(); // 250,000 RonkeStr, compacted
   });
 
   it("renders a clean empty state for an address that never held (not an error)", () => {
@@ -43,6 +46,7 @@ describe("WalletView", () => {
       address: "0x" + "b".repeat(40),
       name: null,
       ronkeBalance: "0",
+      ronkestrBalance: "0",
       ronkeverseCount: 0,
       holdingDurationDays: 0,
       diamondBucket: null,

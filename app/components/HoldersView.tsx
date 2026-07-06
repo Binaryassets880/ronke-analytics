@@ -1,4 +1,5 @@
 import type { Asset } from "@/config/contracts";
+import { CONTRACTS } from "@/config/contracts";
 import type { HoldersData, MetaState } from "@/lib/queries";
 import { StatTile } from "./StatTile";
 import { StalenessBadge } from "./StalenessBadge";
@@ -20,7 +21,7 @@ export function HoldersView({
   now?: Date;
 }) {
   if (!meta.backfillComplete) return <PreBackfill />;
-  const assetLabel = asset === "ronkeverse_nft" ? "Ronkeverse" : "$RONKE";
+  const assetLabel = CONTRACTS[asset].label;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">

@@ -51,7 +51,7 @@ export function HolderTable({ rows, asset }: { rows: HolderRow[]; asset: Asset }
                 </Link>
               </td>
               <td className="tabular-nums">
-                {isNft ? r.tokenCount : formatCompact(toWholeTokens(BigInt(r.balance), "ronke_token"))}
+                {isNft ? r.tokenCount : formatCompact(toWholeTokens(BigInt(r.balance), asset))}
               </td>
               <td className="tabular-nums text-neutral-300">{formatDuration(r.holdingDurationDays)}</td>
               <td>
