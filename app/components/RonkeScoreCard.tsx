@@ -36,7 +36,7 @@ export function RonkeScoreCard({ score }: { score: WalletScore }) {
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-[var(--border)] bg-black/20 p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium">$RONKE</span>
@@ -46,6 +46,18 @@ export function RonkeScoreCard({ score }: { score: WalletScore }) {
           <Row
             label={`Duration ${mult(score.ronkeDiamondMult)} diamond`}
             value={formatCompact(score.ronkeDuration)}
+          />
+        </div>
+
+        <div className="rounded-xl border border-[var(--border)] bg-black/20 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium">RonkeStr</span>
+            <span className="tabular-nums text-sm font-semibold">{formatCompact(score.ronkestrSubscore)}</span>
+          </div>
+          <Row label="Holding" value={formatCompact(score.ronkestrHolding)} />
+          <Row
+            label={`Duration ${mult(score.ronkestrDiamondMult)} diamond`}
+            value={formatCompact(score.ronkestrDuration)}
           />
         </div>
 

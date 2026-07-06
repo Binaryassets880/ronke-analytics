@@ -218,6 +218,7 @@ export interface ScoreLeaderboardRow {
   name: string | null;
   score: number;
   ronkeSubscore: number;
+  ronkestrSubscore: number;
   nftSubscore: number;
   bodyTypesHeld: number;
   bodyTypesTotal: number;
@@ -228,7 +229,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
   const sql = getSql();
   if (!sql) return [];
   const rows = await sql`
-    SELECT s.address, s.score, s.ronke_subscore, s.nft_subscore,
+    SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore,
            s.body_types_held, s.body_types_total, n.name
     FROM wallet_scores s
     LEFT JOIN rns_names n ON n.address = s.address
@@ -240,6 +241,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
     name: (r.name as string | null) ?? null,
     score: Number(r.score),
     ronkeSubscore: Number(r.ronke_subscore),
+    ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
     bodyTypesHeld: Number(r.body_types_held),
     bodyTypesTotal: Number(r.body_types_total),
@@ -250,10 +252,14 @@ export interface WalletScore {
   score: number;
   rank: number | null;
   ronkeSubscore: number;
+  ronkestrSubscore: number;
   nftSubscore: number;
   ronkeHolding: number;
   ronkeDuration: number;
   ronkeDiamondMult: number;
+  ronkestrHolding: number;
+  ronkestrDuration: number;
+  ronkestrDiamondMult: number;
   nftHolding: number;
   nftDuration: number;
   nftDiamondMult: number;
@@ -267,8 +273,10 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
   const sql = getSql();
   if (!sql) return null;
   const rows = await sql`
-    SELECT score, ronke_subscore, nft_subscore, ronke_holding, ronke_duration,
-           ronke_diamond_mult, nft_holding, nft_duration, nft_diamond_mult,
+    SELECT score, ronke_subscore, ronkestr_subscore, nft_subscore,
+           ronke_holding, ronke_duration, ronke_diamond_mult,
+           ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
+           nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total
     FROM wallet_scores WHERE address = ${address}
   `;
@@ -281,10 +289,14 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     score: Number(r.score),
     rank: Number(rankRow[0]?.above ?? 0) + 1,
     ronkeSubscore: Number(r.ronke_subscore),
+    ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
     ronkeHolding: Number(r.ronke_holding),
     ronkeDuration: Number(r.ronke_duration),
     ronkeDiamondMult: Number(r.ronke_diamond_mult),
+    ronkestrHolding: Number(r.ronkestr_holding),
+    ronkestrDuration: Number(r.ronkestr_duration),
+    ronkestrDiamondMult: Number(r.ronkestr_diamond_mult),
     nftHolding: Number(r.nft_holding),
     nftDuration: Number(r.nft_duration),
     nftDiamondMult: Number(r.nft_diamond_mult),
