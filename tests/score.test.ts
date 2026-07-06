@@ -5,6 +5,8 @@ import { SCORE_CONFIG as C } from "@/config/score";
 const base = (over: Partial<ScoreInput> = {}): ScoreInput => ({
   ronkeBalanceWhole: 0,
   ronkeHold: null,
+  ronkestrBalanceWhole: 0,
+  ronkestrHold: null,
   nftRarityFactors: [],
   nftHold: null,
   bodyTypesHeld: 0,
@@ -34,9 +36,11 @@ describe("diamondMultiplier", () => {
 });
 
 describe("computeScore", () => {
-  it("combined score is the sum of the two sub-scores", () => {
-    const r = computeScore(base({ ronkeBalanceWhole: 1_000_000, nftRarityFactors: [0.9] }));
-    expect(r.score).toBe(r.ronkeSubscore + r.nftSubscore);
+  it("combined score is the sum of the three sub-scores", () => {
+    const r = computeScore(
+      base({ ronkeBalanceWhole: 1_000_000, ronkestrBalanceWhole: 50_000, nftRarityFactors: [0.9] }),
+    );
+    expect(r.score).toBe(r.ronkeSubscore + r.ronkestrSubscore + r.nftSubscore);
   });
 
   it("gates duration: a dust wallet below the minimum earns no duration points", () => {
@@ -99,5 +103,65 @@ describe("computeScore", () => {
     const r = computeScore(base({ ronkeBalanceWhole: 1_000_000, ronkeHold: null }));
     expect(r.breakdown.ronkeDurationPoints).toBe(0);
     expect(r.breakdown.ronkeHoldingPoints).toBeGreaterThan(0); // holding still counts
+  });
+
+  it("scores a RonkeStr-only wallet with a positive RonkeStr sub-score and nothing else", () => {
+    const r = computeScore(
+      base({
+        ronkestrBalanceWhole: 100_000,
+        ronkestrHold: { durationDays: 200, neverSold: true, everPaperSold: false },
+      }),
+    );
+    expect(r.ronkestrSubscore).toBeGreaterThan(0);
+    expect(r.ronkeSubscore).toBe(0);
+    expect(r.nftSubscore).toBe(0);
+    expect(r.score).toBe(r.ronkestrSubscore);
+  });
+
+  it("RonkeStr holding follows the diminishing log curve (10x balance != 10x points)", () => {
+    const small = computeScore(base({ ronkestrBalanceWhole: 10_000 })).breakdown.ronkestrHoldingPoints;
+    const big = computeScore(base({ ronkestrBalanceWhole: 100_000 })).breakdown.ronkestrHoldingPoints;
+    expect(big).toBeGreaterThan(small);
+    expect(big).toBeLessThan(small * 10); // sub-linear
+    // +1 decade of balance adds ~holdWeight points.
+    expect(big - small).toBeCloseTo(C.ronkestr.holdWeight, 0);
+  });
+
+  it("gates RonkeStr duration below gate.minRonkestr", () => {
+    const belowGate = C.gate.minRonkestr - 1;
+    const dust = computeScore(
+      base({
+        ronkestrBalanceWhole: belowGate,
+        ronkestrHold: { durationDays: 700, neverSold: true, everPaperSold: false },
+      }),
+    );
+    expect(dust.breakdown.ronkestrDurationPoints).toBe(0);
+    const gated = computeScore(
+      base({
+        ronkestrBalanceWhole: C.gate.minRonkestr,
+        ronkestrHold: { durationDays: 700, neverSold: true, everPaperSold: false },
+      }),
+    );
+    expect(gated.breakdown.ronkestrDurationPoints).toBeGreaterThan(0);
+  });
+
+  it("applies the diamond multiplier to RonkeStr duration (never-sold out-earns paper)", () => {
+    const held = computeScore(
+      base({
+        ronkestrBalanceWhole: 100_000,
+        ronkestrHold: { durationDays: 365, neverSold: true, everPaperSold: false },
+      }),
+    );
+    const paper = computeScore(
+      base({
+        ronkestrBalanceWhole: 100_000,
+        ronkestrHold: { durationDays: 365, neverSold: false, everPaperSold: true },
+      }),
+    );
+    expect(held.breakdown.ronkestrDurationPoints).toBeGreaterThan(
+      paper.breakdown.ronkestrDurationPoints,
+    );
+    expect(held.breakdown.ronkestrDiamondMult).toBe(C.diamond.neverSold);
+    expect(paper.breakdown.ronkestrDiamondMult).toBe(C.diamond.everPaperSold);
   });
 });
