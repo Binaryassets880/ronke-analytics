@@ -77,15 +77,22 @@ export function OverviewView({
       {/* Hero metric (diamond-hands share) beside a 2x2 of supporting KPIs -
           fills the block cleanly instead of wrapping 5 tiles into a 4-col grid. */}
       <section className="grid gap-3 lg:grid-cols-2">
-        <div className="rv-card relative overflow-hidden p-5">
-          <div
-            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-20 blur-2xl"
-            style={{ background: "var(--diamond)" }}
-          />
+        {/* NOT overflow-hidden: that would clip the InfoTip bubble. The decorative
+            glow gets its own clipping layer instead. */}
+        <div className="rv-card relative p-5">
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+            <div
+              className="absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-20 blur-2xl"
+              style={{ background: "var(--diamond)" }}
+            />
+          </div>
           <div className="relative flex h-full flex-col justify-between gap-4">
             <div className="flex items-center text-xs uppercase tracking-wide text-[var(--muted-2)]">
               <span>Diamond Hands</span>
-              <InfoTip text="Share of current holders with true diamond hands: a real (non-dust) position held 30+ days without ever selling 10%+ of their holdings in one go. Small trims are forgiven." />
+              <InfoTip
+                placement="bottom"
+                text="Share of current holders with true diamond hands: a real (non-dust) position held 30+ days without ever selling 10%+ of their holdings in one go. Small trims are forgiven."
+              />
             </div>
             <div>
               <div className="mono text-5xl font-bold tracking-tight text-[var(--diamond)]">{formatPct(data.diamondPct)}</div>
