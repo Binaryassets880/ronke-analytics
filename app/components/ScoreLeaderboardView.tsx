@@ -31,6 +31,14 @@ export function ScoreLeaderboardView({
         multiplied), and collector progress. Higher is stronger.
       </p>
 
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-4 py-2.5 text-sm">
+        <span aria-hidden>💡</span>
+        <span className="text-[var(--muted)]">New to the score?</span>
+        <Link href="/resources#ronke-score" className="font-medium text-[var(--accent)] hover:underline">
+          How the Ronke Score works →
+        </Link>
+      </div>
+
       {rows.length === 0 ? (
         <EmptyState title="No scored wallets yet." hint="Scores populate after the next rebuild." />
       ) : (

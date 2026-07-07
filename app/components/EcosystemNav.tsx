@@ -8,17 +8,20 @@ import { Tip } from "./Tip";
 
 /**
  * Ecosystem-level top bar. The sticky, blurred Ronkeverse header that frames the
- * whole site into three sections. "Ronke Score" is the analytics app (every route
- * that isn't Resources or Apps); its section-scoped sub-nav (Nav) renders only
- * within it.
+ * whole site. "Ronke Score" jumps to the score lookup on the landing page;
+ * "Analytics" is the stats app (every route that isn't Resources or Apps), whose
+ * section-scoped sub-nav (Nav) renders only within it.
  */
 const SECTIONS = [
-  // Ronke Score and Leaderboard both live in the analytics ("rating") section;
-  // `path` narrows the active highlight so only the matching one lights up.
-  { href: "/overview", label: "Ronke Score", section: "rating", path: "/overview" },
+  // "Ronke Score" is the score entry point: it jumps to the score lookup on the
+  // landing page (section: null = an action link, never section-highlighted; the
+  // Home link covers "/"). The token/holder analytics live under "Analytics" so
+  // the score name is never spent on a page of $RONKE stats.
+  { href: "/#ronke-score", label: "Ronke Score", section: null, path: null },
+  { href: "/overview", label: "Analytics", section: "rating", path: "/overview" },
   { href: "/leaderboard", label: "Leaderboard", section: "rating", path: "/leaderboard" },
-  { href: "/resources", label: "Resources", section: "resources" },
-  { href: "/apps", label: "Apps", section: "apps" },
+  { href: "/resources", label: "Resources", section: "resources", path: null },
+  { href: "/apps", label: "Apps", section: "apps", path: null },
 ] as const;
 
 export type Section = "home" | "rating" | "resources" | "apps";
@@ -59,14 +62,15 @@ export function EcosystemNav() {
           </Link>
           {SECTIONS.map((s) => {
             // Within the rating section, disambiguate Leaderboard vs the rest so
-            // both analytics links don't highlight at once.
+            // both analytics links don't highlight at once. Action links
+            // (section: null) never highlight.
             const onLeaderboard = pathname.startsWith("/leaderboard");
             const isActive =
-              "path" in s && s.path === "/leaderboard"
+              s.path === "/leaderboard"
                 ? onLeaderboard
-                : "path" in s && s.path === "/overview"
+                : s.path === "/overview"
                   ? active === "rating" && !onLeaderboard
-                  : active === s.section;
+                  : s.section != null && active === s.section;
             return (
               <Link
                 key={s.label}
