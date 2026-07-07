@@ -135,6 +135,88 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
   return map;
 }
 
+/**
+ * Assemble the ScoreInput for ONE wallet (the score-simulator prefill path).
+ * Mirrors assembleScoreInputs exactly - same tables, same weighted duration,
+ * same rarity-factor math - but scoped to a single address so the calculator
+ * API doesn't scan every holder.
+ */
+export async function assembleScoreInputForWallet(sql: Sql, address: string): Promise<ScoreInput> {
+  const revRow = await sql`SELECT count(*)::int AS n FROM token_rarity WHERE rarity_rank IS NOT NULL`;
+  const revealedSupply = Number(revRow[0]?.n ?? 0);
+  const bodyTotalRow = await sql`
+    SELECT count(DISTINCT value)::int AS n FROM nft_traits WHERE trait_type = ${SCORE_CONFIG.collector.bodyTrait}
+  `;
+  const input: ScoreInput = {
+    ronkeBalanceWhole: 0,
+    ronkeHold: null,
+    ronkestrBalanceWhole: 0,
+    ronkestrHold: null,
+    nftRarityFactors: [],
+    nftHold: null,
+    bodyTypesHeld: 0,
+    bodyTypesTotal: Number(bodyTotalRow[0]?.n ?? 0),
+    oneOfOneCount: 0,
+  };
+
+  const balances = await sql`
+    SELECT asset, balance FROM holder_balances
+    WHERE address = ${address} AND is_current_holder = true
+      AND asset IN ('ronke_token', 'ronkestr_token')
+  `;
+  for (const r of balances) {
+    const whole = Number(BigInt(r.balance as string));
+    if (r.asset === "ronke_token") input.ronkeBalanceWhole = whole / 10 ** TOKEN_DECIMALS;
+    else input.ronkestrBalanceWhole = whole / 10 ** RONKESTR_DECIMALS;
+  }
+
+  const metrics = await sql`
+    SELECT asset, weighted_duration_days, never_sold, ever_paper_sold
+    FROM holder_metrics WHERE address = ${address}
+  `;
+  for (const r of metrics) {
+    const hold = {
+      durationDays: Number(r.weighted_duration_days),
+      neverSold: r.never_sold as boolean,
+      everPaperSold: r.ever_paper_sold as boolean,
+    };
+    if (r.asset === "ronke_token") input.ronkeHold = hold;
+    else if (r.asset === "ronkestr_token") input.ronkestrHold = hold;
+    else input.nftHold = hold;
+  }
+
+  if (revealedSupply > 0) {
+    const nftRows = await sql`
+      SELECT tr.rarity_rank, tr.tier
+      FROM holder_lots l
+      JOIN token_rarity tr ON tr.token_id = l.token_id
+      WHERE l.address = ${address} AND l.asset = 'ronkeverse_nft' AND l.quantity_remaining > 0
+    `;
+    for (const r of nftRows) {
+      const tier = (r.tier as string) ?? "standard";
+      if (tier === "standard") {
+        if (r.rarity_rank == null) continue;
+        input.nftRarityFactors.push((revealedSupply - Number(r.rarity_rank) + 1) / revealedSupply);
+      } else {
+        input.nftRarityFactors.push(1);
+        input.oneOfOneCount += 1;
+      }
+    }
+  }
+
+  if (input.bodyTypesTotal > 0) {
+    const bodyRows = await sql`
+      SELECT count(DISTINCT nt.value)::int AS bodies
+      FROM holder_lots l
+      JOIN nft_traits nt ON nt.token_id = l.token_id AND nt.trait_type = ${SCORE_CONFIG.collector.bodyTrait}
+      WHERE l.address = ${address} AND l.asset = 'ronkeverse_nft' AND l.quantity_remaining > 0
+    `;
+    input.bodyTypesHeld = Number(bodyRows[0]?.bodies ?? 0);
+  }
+
+  return input;
+}
+
 /** Compute + persist wallet_scores. Returns the number of scored wallets. */
 export async function deriveScores(sql: Sql): Promise<number> {
   const inputs = await assembleScoreInputs(sql);

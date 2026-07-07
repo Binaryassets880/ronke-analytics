@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CopyAddress } from "../components/CopyAddress";
+import { ScoreSimulator } from "../components/ScoreSimulator";
 import {
   VERIFIED_ADDRESSES,
   MARKET_LINKS,
@@ -133,6 +135,22 @@ export default function ResourcesPage() {
           </ul>
         </div>
         <p className="mt-3 text-xs text-[var(--muted-2)]">{SCORE_EXPLAINER.note}</p>
+        <p className="mt-2 text-sm">
+          <Link href="#score-calculator" className="font-medium text-[var(--accent)] hover:underline">
+            Try it yourself in the score calculator ↓
+          </Link>
+        </p>
+      </Card>
+
+      <Card title="Ronke Score calculator" id="score-calculator">
+        <p className="mb-4 text-sm text-[var(--muted)]">
+          Load your wallet and play with the knobs: buy more, hold longer, complete the body set -
+          and see exactly how your score would move, with the reasons spelled out. It runs the real
+          scoring formula, thresholds and all.
+        </p>
+        <Suspense fallback={<p className="text-sm text-[var(--muted-2)]">Loading calculator…</p>}>
+          <ScoreSimulator />
+        </Suspense>
       </Card>
 
       <Card title="Glossary">

@@ -65,7 +65,7 @@ export default async function WalletPage({
     <WalletView
       wallet={walletWithName}
       diamondTooltip={DIAMOND_TOOLTIP}
-      scoreCard={wallet.everHeld && score ? <RonkeScoreCard score={score} /> : undefined}
+      scoreCard={wallet.everHeld && score ? <RonkeScoreCard score={score} address={normalized} /> : undefined}
       historySection={wallet.everHeld ? <WalletHistoryChart history={history} /> : undefined}
       badgeShelf={wallet.everHeld ? <BadgeShelf badges={badges} /> : undefined}
     />
