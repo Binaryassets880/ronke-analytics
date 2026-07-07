@@ -119,11 +119,12 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Diamond hands",
     definition:
-      "Held a real (non-dust) position for at least 30 days without ever selling. Because $RONKE has no reliable price, this is behavioral (did units actually leave as a genuine sell), not profit-based.",
+      "Held a real (non-dust) position for at least 30 days without ever selling 10% or more of holdings in one go - small trims are forgiven. Selling 10%+ also resets the holding clock. Because $RONKE has no reliable price, this is behavioral, not profit-based.",
   },
   {
     term: "Paper hands",
-    definition: "Sold a position within a day of buying it. The opposite of diamond hands.",
+    definition:
+      "Dumped 10% or more of holdings within a day of buying. The opposite of diamond hands.",
   },
   {
     term: "OG / Early",

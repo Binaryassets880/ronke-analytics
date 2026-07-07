@@ -4,7 +4,6 @@ import {
   ASSETS,
   MIGRATION_BLOCK,
   DIAMOND_THRESHOLDS,
-  diamondBucketFor,
   assetForAddress,
   isBurnAddress,
   ZERO_ADDRESS,
@@ -34,13 +33,9 @@ describe("config/contracts", () => {
     );
   });
 
-  it("buckets durations against the thresholds", () => {
-    expect(diamondBucketFor(0)).toBe("paper");
-    expect(diamondBucketFor(6)).toBe("paper");
-    expect(diamondBucketFor(7)).toBe("regular");
-    expect(diamondBucketFor(29)).toBe("regular");
-    expect(diamondBucketFor(30)).toBe("diamond");
-    expect(diamondBucketFor(400)).toBe("diamond");
+  it("keeps the sell tolerance a sane fraction (0 < pct < 1)", () => {
+    expect(DIAMOND_THRESHOLDS.sellTolerancePct).toBeGreaterThan(0);
+    expect(DIAMOND_THRESHOLDS.sellTolerancePct).toBeLessThan(1);
   });
 
   it("resolves an address back to its asset (case-insensitive)", () => {

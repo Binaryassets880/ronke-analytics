@@ -10,11 +10,13 @@ import { DIAMOND_THRESHOLDS } from "@/config/contracts";
 export const dynamic = "force-dynamic";
 
 const DIAMOND_TOOLTIP =
-  `Bucket by how long the oldest still-held position has been held: ` +
-  `Paper < ${DIAMOND_THRESHOLDS.regularDays}d, ` +
-  `Regular ${DIAMOND_THRESHOLDS.regularDays}-${DIAMOND_THRESHOLDS.diamondDays}d, ` +
-  `Diamond >= ${DIAMOND_THRESHOLDS.diamondDays}d. ` +
-  `Moves to staking/bridge/game do not reset the clock or count as sells.`;
+  `Matches the Diamond Hands badge: Diamond = a real (non-dust) position held ` +
+  `${DIAMOND_THRESHOLDS.diamondDays}+ days without ever selling ` +
+  `${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ of holdings in one go (small trims are forgiven). ` +
+  `Paper = dumped within ${DIAMOND_THRESHOLDS.paperSellWindowDays}d of buying, or a fresh position ` +
+  `(< ${DIAMOND_THRESHOLDS.regularDays}d). Regular = everything else. Selling ` +
+  `${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ also resets the holding clock; ` +
+  `moves to staking/bridge/game never count as sells.`;
 
 export default async function WalletPage({
   params,

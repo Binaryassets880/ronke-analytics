@@ -109,7 +109,7 @@ export const BADGES: BadgeDef[] = [
     realm: "both",
     label: "Diamond Hands",
     icon: "\u{1F48E}", // 💎
-    description: "Held a real position for 30+ days and never sold.",
+    description: "Held a real position for 30+ days and never sold 10%+ of it.",
     predicate: "never_sold",
   },
   {
@@ -118,7 +118,7 @@ export const BADGES: BadgeDef[] = [
     realm: "both",
     label: "Never Paper-handed",
     icon: "\u{1F9FB}", // 🧻 (crossed out in copy)
-    description: "Never dumped a position within a day of buying it.",
+    description: "Never dumped 10%+ of holdings within a day of buying.",
     predicate: "never_paper_sold",
   },
   {
@@ -226,9 +226,9 @@ export function badgeThresholdHint(def: BadgeDef): string | null {
     case "rarity_hunter":
       return `Holds a Ronkeverse token ranked in the rarest ${(RARITY_HUNTER_TOP_FRACTION * 100).toFixed(0)}% of the collection.`;
     case "diamond_hands":
-      return `Held a real position (at least ${DIAMOND_BADGE_MIN.ronke.toLocaleString()} $RONKE, ${DIAMOND_BADGE_MIN.ronkestr.toLocaleString()} RonkeStr, or 1 Ronkeverse) for ${DIAMOND_BADGE_MIN.minDays}+ days and never made a genuine sell. Moves to staking, bridge, or games don't count as sells.`;
+      return `Held a real position (at least ${DIAMOND_BADGE_MIN.ronke.toLocaleString()} $RONKE, ${DIAMOND_BADGE_MIN.ronkestr.toLocaleString()} RonkeStr, or 1 Ronkeverse) for ${DIAMOND_BADGE_MIN.minDays}+ days and never sold ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ of holdings in one go. Trims under ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}% are forgiven; moves to staking, bridge, or games don't count as sells.`;
     case "never_paper_handed":
-      return `Never sold a position within ${DIAMOND_THRESHOLDS.paperSellWindowDays} day of buying it.`;
+      return `Never dumped ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ of holdings within ${DIAMOND_THRESHOLDS.paperSellWindowDays} day of buying.`;
     case "og_early":
       return `Held since before the Ronin L2 migration (${MIGRATION_DATE.toISOString().slice(0, 10)}).`;
     case "dual_citizen":

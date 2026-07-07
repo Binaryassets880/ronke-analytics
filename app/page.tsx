@@ -18,8 +18,8 @@ export const metadata: Metadata = {
 const SECTIONS = [
   {
     href: "/overview",
-    title: "Ronke Score",
-    blurb: "Holder ratings, diamond-hands stats, badges, and Ronkeverse rarity.",
+    title: "Analytics",
+    blurb: "Holder stats, diamond-hands data, leaderboards, and Ronkeverse rarity.",
     emoji: "\u{1F4CA}", // 📊
   },
   {
@@ -156,6 +156,11 @@ export default async function LandingPage() {
           <div className="mt-5 max-w-xl">
             <WalletSearch />
           </div>
+          <p className="mt-4 text-sm">
+            <Link href="/resources#ronke-score" className="font-medium text-[var(--accent)] hover:underline">
+              How the Ronke Score works →
+            </Link>
+          </p>
         </div>
       </section>
 

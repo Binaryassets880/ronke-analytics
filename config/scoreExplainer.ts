@@ -43,15 +43,18 @@ export const SCORE_EXPLAINER = {
       body:
         "The longer you hold, the more your duration points grow. This only starts counting once " +
         "you hold a meaningful amount, so nobody can farm it with a dust wallet. Recent top-ups pull " +
-        "your clock toward the new coins, so the score reflects how long you have really been in.",
+        "your clock toward the new coins, and selling 10% or more of your holdings in one go resets " +
+        "the clock entirely - the score reflects how long you have really been in.",
     },
     {
       emoji: "💎",
       title: "Diamond hands",
       body:
-        "Never selling multiplies your duration points. Selling reduces them, and dumping a position " +
-        "right after buying (paper hands) reduces them the most. Moving coins to staking, a bridge, or " +
-        "a game does not count as selling - you still own them.",
+        "Never selling multiplies your duration points. Small trims are forgiven - selling under 10% " +
+        "of your holdings does not break your streak - but selling 10% or more counts as a real sell: " +
+        "it reduces your multiplier and resets your holding clock. Dumping right after buying (paper " +
+        "hands) reduces the multiplier the most. Moving coins to staking, a bridge, or a game never " +
+        "counts as selling - you still own them.",
     },
     {
       emoji: "🖼️",
@@ -59,7 +62,8 @@ export const SCORE_EXPLAINER = {
       body:
         "On the Ronkeverse side, holding more of the 10 body types earns a collector bonus, with an " +
         "extra kicker for completing the full set. Owning hand-made 1-of-1 pieces (community or official) " +
-        "adds a dedicated showpiece bonus on top.",
+        "adds a dedicated showpiece bonus on top - one 1/1 is tuned to be worth roughly as much as " +
+        "bulk-buying 40 common pieces.",
     },
   ] as ScoreFactor[],
 
