@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   CONTRACTS,
+  ASSETS,
   MIGRATION_BLOCK,
   DIAMOND_THRESHOLDS,
   diamondBucketFor,
@@ -49,6 +50,18 @@ describe("config/contracts", () => {
       "ronkeverse_nft",
     );
     expect(assetForAddress("0xdeadbeef")).toBeNull();
+  });
+
+  it("registers RonkeStr as an ERC-20 with 18 decimals (case-insensitive resolve)", () => {
+    const c = CONTRACTS.ronkestr_token;
+    expect(c.address).toBe("0x404533a09bf281199ce6b0ef60b7eff7123ff8dc");
+    expect(c.standard).toBe("erc20");
+    expect(c.decimals).toBe(18);
+    expect(assetForAddress(c.address.toUpperCase())).toBe("ronkestr_token");
+  });
+
+  it("lists all three assets in ASSETS", () => {
+    expect(ASSETS).toEqual(["ronke_token", "ronkestr_token", "ronkeverse_nft"]);
   });
 
   it("recognizes burn addresses", () => {

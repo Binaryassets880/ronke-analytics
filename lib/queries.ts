@@ -109,12 +109,12 @@ export interface TokenMarketView {
   fetchedAt: string | null;
 }
 
-export async function getTokenMarket(): Promise<TokenMarketView | null> {
+export async function getTokenMarket(asset: Asset = "ronke_token"): Promise<TokenMarketView | null> {
   const sql = getSql();
   if (!sql) return null;
   const rows = await sql`
     SELECT snapshot, fetched_at::text AS fetched_at
-    FROM market_snapshots WHERE source = 'geckoterminal' AND asset = 'ronke_token'
+    FROM market_snapshots WHERE source = 'geckoterminal' AND asset = ${asset}
   `;
   if (rows.length === 0) return null;
   const s = (rows[0].snapshot as Record<string, unknown>) ?? {};
@@ -175,6 +175,8 @@ export async function getNftMarket(): Promise<NftMarketView | null> {
 export interface EcosystemStats {
   ronkeHolders: number;
   ronkePriceUsd: number | null;
+  ronkestrHolders: number;
+  ronkestrPriceUsd: number | null;
   ronkeverseHolders: number;
   ronkeverse7dVolWron: number | null;
   ratedWallets: number;
@@ -185,6 +187,8 @@ export async function getEcosystemStats(): Promise<EcosystemStats> {
   const empty: EcosystemStats = {
     ronkeHolders: 0,
     ronkePriceUsd: null,
+    ronkestrHolders: 0,
+    ronkestrPriceUsd: null,
     ronkeverseHolders: 0,
     ronkeverse7dVolWron: null,
     ratedWallets: 0,
@@ -200,10 +204,16 @@ export async function getEcosystemStats(): Promise<EcosystemStats> {
   const badges = await sql`
     SELECT count(*)::int AS total, count(DISTINCT address)::int AS wallets FROM wallet_badges
   `;
-  const [token, nft] = await Promise.all([getTokenMarket(), getNftMarket()]);
+  const [token, ronkestr, nft] = await Promise.all([
+    getTokenMarket("ronke_token"),
+    getTokenMarket("ronkestr_token"),
+    getNftMarket(),
+  ]);
   return {
     ronkeHolders: byAsset.get("ronke_token") ?? 0,
     ronkePriceUsd: token?.priceUsd ?? null,
+    ronkestrHolders: byAsset.get("ronkestr_token") ?? 0,
+    ronkestrPriceUsd: ronkestr?.priceUsd ?? null,
     ronkeverseHolders: byAsset.get("ronkeverse_nft") ?? 0,
     ronkeverse7dVolWron: nft?.volume7dWron ?? null,
     ratedWallets: Number(badges[0]?.wallets ?? 0),
@@ -218,6 +228,7 @@ export interface ScoreLeaderboardRow {
   name: string | null;
   score: number;
   ronkeSubscore: number;
+  ronkestrSubscore: number;
   nftSubscore: number;
   bodyTypesHeld: number;
   bodyTypesTotal: number;
@@ -228,7 +239,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
   const sql = getSql();
   if (!sql) return [];
   const rows = await sql`
-    SELECT s.address, s.score, s.ronke_subscore, s.nft_subscore,
+    SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore,
            s.body_types_held, s.body_types_total, n.name
     FROM wallet_scores s
     LEFT JOIN rns_names n ON n.address = s.address
@@ -240,6 +251,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
     name: (r.name as string | null) ?? null,
     score: Number(r.score),
     ronkeSubscore: Number(r.ronke_subscore),
+    ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
     bodyTypesHeld: Number(r.body_types_held),
     bodyTypesTotal: Number(r.body_types_total),
@@ -250,10 +262,14 @@ export interface WalletScore {
   score: number;
   rank: number | null;
   ronkeSubscore: number;
+  ronkestrSubscore: number;
   nftSubscore: number;
   ronkeHolding: number;
   ronkeDuration: number;
   ronkeDiamondMult: number;
+  ronkestrHolding: number;
+  ronkestrDuration: number;
+  ronkestrDiamondMult: number;
   nftHolding: number;
   nftDuration: number;
   nftDiamondMult: number;
@@ -267,8 +283,10 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
   const sql = getSql();
   if (!sql) return null;
   const rows = await sql`
-    SELECT score, ronke_subscore, nft_subscore, ronke_holding, ronke_duration,
-           ronke_diamond_mult, nft_holding, nft_duration, nft_diamond_mult,
+    SELECT score, ronke_subscore, ronkestr_subscore, nft_subscore,
+           ronke_holding, ronke_duration, ronke_diamond_mult,
+           ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
+           nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total
     FROM wallet_scores WHERE address = ${address}
   `;
@@ -281,10 +299,14 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     score: Number(r.score),
     rank: Number(rankRow[0]?.above ?? 0) + 1,
     ronkeSubscore: Number(r.ronke_subscore),
+    ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
     ronkeHolding: Number(r.ronke_holding),
     ronkeDuration: Number(r.ronke_duration),
     ronkeDiamondMult: Number(r.ronke_diamond_mult),
+    ronkestrHolding: Number(r.ronkestr_holding),
+    ronkestrDuration: Number(r.ronkestr_duration),
+    ronkestrDiamondMult: Number(r.ronkestr_diamond_mult),
     nftHolding: Number(r.nft_holding),
     nftDuration: Number(r.nft_duration),
     nftDiamondMult: Number(r.nft_diamond_mult),
@@ -401,6 +423,7 @@ export interface WalletData {
   /** Primary .ron name (E4), or null. */
   name: string | null;
   ronkeBalance: string;
+  ronkestrBalance: string;
   ronkeverseCount: number;
   holdingDurationDays: number;
   diamondBucket: DiamondBucket | null;
@@ -416,6 +439,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     address,
     name: null,
     ronkeBalance: "0",
+    ronkestrBalance: "0",
     ronkeverseCount: 0,
     holdingDurationDays: 0,
     diamondBucket: null,
@@ -441,10 +465,12 @@ export async function getWallet(address: string): Promise<WalletData> {
   if (balances.length === 0 && metrics.length === 0) return { ...empty, name };
 
   let ronkeBalance = "0";
+  let ronkestrBalance = "0";
   let ronkeverseCount = 0;
   let firstAcquiredAt: string | null = null;
   for (const r of balances) {
     if (r.asset === "ronke_token") ronkeBalance = String(r.balance);
+    else if (r.asset === "ronkestr_token") ronkestrBalance = String(r.balance);
     else ronkeverseCount = Number(r.token_count);
     const fa = r.first_acquired_at as string | null;
     if (fa && (firstAcquiredAt === null || fa < firstAcquiredAt)) firstAcquiredAt = fa;
@@ -470,6 +496,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     address,
     name,
     ronkeBalance,
+    ronkestrBalance,
     ronkeverseCount,
     holdingDurationDays,
     diamondBucket,

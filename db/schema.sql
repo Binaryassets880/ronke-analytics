@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS wallet_scores (
 
 CREATE INDEX IF NOT EXISTS wallet_scores_score_idx ON wallet_scores (score DESC);
 
+-- RonkeStr ($RONKE Strategy) sub-score columns. Added via ALTER (not baked into
+-- the CREATE above) so existing wallet_scores tables gain them idempotently -
+-- CREATE TABLE IF NOT EXISTS does not add columns to a table that already exists.
+-- Mirrors the ronke_* column shapes exactly.
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_subscore INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_holding INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_duration INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_diamond_mult DOUBLE PRECISION NOT NULL DEFAULT 0;
+
 -- ─────────────────────────────────────────────────────────────────────
 -- Market snapshots (E6): latest external market reading per source+asset.
 -- $RONKE price/volume/liquidity from GeckoTerminal. Fetched off-Vercel during

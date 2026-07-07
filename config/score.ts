@@ -18,6 +18,14 @@ export const SCORE_CONFIG = {
     /** Holding points = holdWeight * log10(1 + balanceWhole). Diminishing. */
     holdWeight: 150,
   },
+  ronkestr: {
+    /**
+     * RonkeStr ($RONKE Strategy) holding points = holdWeight * log10(1 + balanceWhole).
+     * Mirrors the $RONKE curve so a long-term diamond mid-holder still out-scores a
+     * passive whale. Tune independently once RonkeStr's holder distribution is known.
+     */
+    holdWeight: 150,
+  },
   nft: {
     /** Count points = base * count^countExp (sub-linear, dampens quantity). */
     base: 25,
@@ -40,6 +48,13 @@ export const SCORE_CONFIG = {
   /** Duration only accrues while the wallet holds at least this much (anti-farm gate). */
   gate: {
     minRonke: 100_000, // whole $RONKE
+    /**
+     * Whole RonkeStr required for duration to accrue. RonkeStr supply differs from
+     * $RONKE, so this is NOT a copy of minRonke - set relative to RonkeStr's own
+     * circulating supply / a mid-holder percentile. Placeholder default; tune after
+     * seeing the real holder distribution (KTD-5).
+     */
+    minRonkestr: 1_000,
     minNftCount: 1,
   },
   collector: {

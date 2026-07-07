@@ -42,6 +42,7 @@ export function ScoreLeaderboardView({
                 <th>Wallet</th>
                 <th className="text-right">Total Score</th>
                 <th className="text-right">$RONKE Score</th>
+                <th className="text-right">RonkeStr Score</th>
                 <th className="text-right">Ronkeverse Score</th>
                 <th className="text-right">Bodies</th>
               </tr>
@@ -57,6 +58,7 @@ export function ScoreLeaderboardView({
                   </td>
                   <td className="text-right font-semibold tabular-nums">{formatCompact(r.score)}</td>
                   <td className="text-right tabular-nums text-neutral-300">{formatCompact(r.ronkeSubscore)}</td>
+                  <td className="text-right tabular-nums text-neutral-300">{formatCompact(r.ronkestrSubscore)}</td>
                   <td className="text-right tabular-nums text-neutral-300">{formatCompact(r.nftSubscore)}</td>
                   <td className="text-right tabular-nums text-neutral-400">
                     {r.bodyTypesTotal > 0 ? `${r.bodyTypesHeld}/${r.bodyTypesTotal}` : "—"}

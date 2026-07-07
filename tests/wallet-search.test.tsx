@@ -20,7 +20,7 @@ describe("WalletSearch", () => {
     fireEvent.change(input, {
       target: { value: "0x" + "AbCdEf0000000000000000000000000000000001".slice(0, 40) },
     });
-    fireEvent.click(screen.getByText("Look up"));
+    fireEvent.click(screen.getByText("Get Score →"));
     expect(pushMock).toHaveBeenCalledWith("/wallet/0xabcdef0000000000000000000000000000000001");
   });
 
@@ -28,7 +28,7 @@ describe("WalletSearch", () => {
     pushMock.mockClear();
     render(<WalletSearch />);
     fireEvent.change(screen.getByLabelText(LABEL), { target: { value: "Ronke.RON" } });
-    fireEvent.click(screen.getByText("Look up"));
+    fireEvent.click(screen.getByText("Get Score →"));
     expect(pushMock).toHaveBeenCalledWith("/wallet/ronke.ron");
   });
 
@@ -36,7 +36,7 @@ describe("WalletSearch", () => {
     pushMock.mockClear();
     render(<WalletSearch />);
     fireEvent.change(screen.getByLabelText(LABEL), { target: { value: "nope" } });
-    fireEvent.click(screen.getByText("Look up"));
+    fireEvent.click(screen.getByText("Get Score →"));
     expect(screen.getByRole("alert")).toHaveTextContent(/0x wallet address or a \.ron name/i);
     expect(pushMock).not.toHaveBeenCalled();
   });

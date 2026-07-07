@@ -6,6 +6,7 @@ import {
   shortAddress,
   normalizeAddress,
   assetFromParam,
+  assetToParam,
   hoursSince,
   toWholeTokens,
 } from "@/lib/format";
@@ -37,6 +38,13 @@ describe("format helpers", () => {
     expect(assetFromParam("nft")).toBe("ronkeverse_nft");
     expect(assetFromParam(undefined)).toBe("ronke_token");
     expect(assetFromParam("token")).toBe("ronke_token");
+    expect(assetFromParam("ronkestr")).toBe("ronkestr_token");
+    expect(assetFromParam("ronkestr_token")).toBe("ronkestr_token");
+  });
+  it("round-trips every asset through its URL param short form", () => {
+    for (const p of ["token", "ronkestr", "nft"] as const) {
+      expect(assetToParam(assetFromParam(p))).toBe(p);
+    }
   });
   it("computes hours since a timestamp", () => {
     const now = new Date("2026-07-05T12:00:00Z");

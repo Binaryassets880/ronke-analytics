@@ -18,6 +18,10 @@ export interface ScoreInput {
   ronkeBalanceWhole: number;
   /** $RONKE holder_metrics, or null if never a token holder. */
   ronkeHold: AssetHold | null;
+  /** Whole RonkeStr held (0 if none). */
+  ronkestrBalanceWhole: number;
+  /** RonkeStr holder_metrics, or null if never a RonkeStr holder. */
+  ronkestrHold: AssetHold | null;
   /** One rarity factor per held Ronkeverse NFT, in (0,1]; rarer = higher. */
   nftRarityFactors: number[];
   /** Ronkeverse holder_metrics, or null if never an NFT holder. */
@@ -30,11 +34,15 @@ export interface ScoreInput {
 export interface ScoreResult {
   score: number; // combined, rounded
   ronkeSubscore: number;
+  ronkestrSubscore: number;
   nftSubscore: number;
   breakdown: {
     ronkeHoldingPoints: number;
     ronkeDurationPoints: number; // after diamond multiplier
     ronkeDiamondMult: number;
+    ronkestrHoldingPoints: number;
+    ronkestrDurationPoints: number; // after diamond multiplier
+    ronkestrDiamondMult: number;
     nftHoldingPoints: number;
     nftDurationPoints: number; // after diamond multiplier
     nftDiamondMult: number;
@@ -69,6 +77,16 @@ export function computeScore(input: ScoreInput): ScoreResult {
   const ronkeDurationPoints = ronkeDurationRaw * ronkeDiamondMult;
   const ronkeSubscore = ronkeHoldingPoints + ronkeDurationPoints;
 
+  // ── RonkeStr sub-score (mirrors the $RONKE token math) ────────────
+  const ronkestrHoldingPoints =
+    input.ronkestrBalanceWhole > 0 ? C.ronkestr.holdWeight * Math.log10(1 + input.ronkestrBalanceWhole) : 0;
+  const ronkestrDiamondMult = input.ronkestrHold ? diamondMultiplier(input.ronkestrHold) : 0;
+  const ronkestrGated = input.ronkestrBalanceWhole >= C.gate.minRonkestr;
+  const ronkestrDurationRaw =
+    input.ronkestrHold && ronkestrGated ? durationPoints(input.ronkestrHold.durationDays) : 0;
+  const ronkestrDurationPoints = ronkestrDurationRaw * ronkestrDiamondMult;
+  const ronkestrSubscore = ronkestrHoldingPoints + ronkestrDurationPoints;
+
   // ── Ronkeverse sub-score ──────────────────────────────────────────
   const count = input.nftRarityFactors.length;
   const nftCountPoints = count > 0 ? C.nft.base * Math.pow(count, C.nft.countExp) : 0;
@@ -87,13 +105,17 @@ export function computeScore(input: ScoreInput): ScoreResult {
   const nftSubscore = nftHoldingPoints + nftDurationPoints + collectorPoints;
 
   return {
-    score: round(ronkeSubscore + nftSubscore),
+    score: round(ronkeSubscore + ronkestrSubscore + nftSubscore),
     ronkeSubscore: round(ronkeSubscore),
+    ronkestrSubscore: round(ronkestrSubscore),
     nftSubscore: round(nftSubscore),
     breakdown: {
       ronkeHoldingPoints: round(ronkeHoldingPoints),
       ronkeDurationPoints: round(ronkeDurationPoints),
       ronkeDiamondMult,
+      ronkestrHoldingPoints: round(ronkestrHoldingPoints),
+      ronkestrDurationPoints: round(ronkestrDurationPoints),
+      ronkestrDiamondMult,
       nftHoldingPoints: round(nftHoldingPoints),
       nftDurationPoints: round(nftDurationPoints),
       nftDiamondMult,

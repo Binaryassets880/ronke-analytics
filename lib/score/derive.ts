@@ -11,6 +11,7 @@ import { SCORE_CONFIG } from "@/config/score";
 import { computeScore, type ScoreInput } from "./compute";
 
 const TOKEN_DECIMALS = CONTRACTS.ronke_token.decimals ?? 18;
+const RONKESTR_DECIMALS = CONTRACTS.ronkestr_token.decimals ?? 18;
 
 /** Assemble a ScoreInput per wallet from the derived tables. */
 export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreInput>> {
@@ -29,6 +30,8 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
       a = {
         ronkeBalanceWhole: 0,
         ronkeHold: null,
+        ronkestrBalanceWhole: 0,
+        ronkestrHold: null,
         nftRarityFactors: [],
         nftHold: null,
         bodyTypesHeld: 0,
@@ -49,6 +52,16 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     ensure(r.address as string).ronkeBalanceWhole = Number(BigInt(r.balance as string)) / divisor;
   }
 
+  // RonkeStr balances (current holders).
+  const ronkestrDivisor = 10 ** RONKESTR_DECIMALS;
+  const ronkestrBalances = await sql`
+    SELECT address, balance FROM holder_balances
+    WHERE asset = 'ronkestr_token' AND is_current_holder = true
+  `;
+  for (const r of ronkestrBalances) {
+    ensure(r.address as string).ronkestrBalanceWhole = Number(BigInt(r.balance as string)) / ronkestrDivisor;
+  }
+
   // Per-asset metrics -> per-asset hold behavior.
   const metrics = await sql`
     SELECT asset, address, holding_duration_days, never_sold, ever_paper_sold FROM holder_metrics
@@ -61,6 +74,7 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     };
     const a = ensure(r.address as string);
     if (r.asset === "ronke_token") a.ronkeHold = hold;
+    else if (r.asset === "ronkestr_token") a.ronkestrHold = hold;
     else a.nftHold = hold;
   }
 
@@ -107,8 +121,9 @@ export async function deriveScores(sql: Sql): Promise<number> {
     if (r.score <= 0) continue;
     const b = r.breakdown;
     rows.push([
-      address, r.score, r.ronkeSubscore, r.nftSubscore,
+      address, r.score, r.ronkeSubscore, r.ronkestrSubscore, r.nftSubscore,
       b.ronkeHoldingPoints, b.ronkeDurationPoints, b.ronkeDiamondMult,
+      b.ronkestrHoldingPoints, b.ronkestrDurationPoints, b.ronkestrDiamondMult,
       b.nftHoldingPoints, b.nftDurationPoints, b.nftDiamondMult,
       b.collectorPoints, b.bodyTypesHeld, b.bodyTypesTotal,
     ]);
@@ -117,8 +132,9 @@ export async function deriveScores(sql: Sql): Promise<number> {
     sql,
     "wallet_scores",
     [
-      "address", "score", "ronke_subscore", "nft_subscore",
+      "address", "score", "ronke_subscore", "ronkestr_subscore", "nft_subscore",
       "ronke_holding", "ronke_duration", "ronke_diamond_mult",
+      "ronkestr_holding", "ronkestr_duration", "ronkestr_diamond_mult",
       "nft_holding", "nft_duration", "nft_diamond_mult",
       "collector_points", "body_types_held", "body_types_total",
     ],

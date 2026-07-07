@@ -51,6 +51,22 @@ export const KNOWN_CONTINUITY: Partial<Record<Asset, { pre: KnownTransfer; post:
   // RONKE continuity was verified in U13 (genesis block 41,986,352 is pre-migration
   // and returns via Moralis); no per-tx fixture was recorded, so it is not
   // asserted at runtime here.
+  //
+  // RonkeStr genesis is block 50,472,022 (2025-11-16) - PRE-migration, contra the
+  // 2026-07-06 probe that read Blockscout's earliest post-L2 transfer (55,604,078)
+  // as "genesis" and skipped the GoldRush stitch. Its pre-L2 history (~28k events,
+  // Nov 2025 -> May 2026) was recovered via `backfill:prel2` on 2026-07-07. Fixtures
+  // recorded so any future single-pass backfill asserts the L2 boundary is spanned.
+  ronkestr_token: {
+    pre: {
+      txHash: "0xe15fbd1e3a15bafc320049442a9256e2f4c0830d0ebd046b3f52008c8fd3ea63",
+      blockNumber: 50_472_022,
+    },
+    post: {
+      txHash: "0xf14fa0dca317dc81a02fb0a848328b11ac7f106765d8618905bc04271e672541",
+      blockNumber: 55_604_078,
+    },
+  },
 };
 
 /**
@@ -87,11 +103,16 @@ export async function backfill(
      *  Blockscout is the canonical Ronin index, so it inherently spans the L2
      *  boundary and no assertion is needed. */
     assertContinuityFor?: Asset[];
+    /** Restrict the pull to these assets (default: all ASSETS). Lets a newly
+     *  registered asset be backfilled without re-streaming the others' full
+     *  history. The final rebuild always spans every asset regardless. */
+    only?: Asset[];
   } = {},
 ): Promise<{ appended: number }> {
   const asOf = opts.asOf ?? new Date();
   const rebuildFn = opts.rebuildFn ?? rebuild;
   const source = opts.source ?? "blockscout";
+  const assets = opts.only ?? ASSETS;
 
   // Optional continuity gate (KTD-4) - only if explicitly requested.
   for (const asset of opts.assertContinuityFor ?? []) {
@@ -102,7 +123,7 @@ export async function backfill(
   await setMeta(sql, "backfill_source", source);
 
   let appended = 0;
-  for (const asset of ASSETS) {
+  for (const asset of assets) {
     const r = await backfillAsset(sql, client, asset, source);
     appended += r.appended;
   }
@@ -113,9 +134,14 @@ export async function backfill(
 
 if (process.argv[1]?.endsWith("backfill.ts")) {
   const sql = requireSql();
+  // Optional asset filter: `npm run backfill -- ronkestr_token`. Unknown keys
+  // are ignored; empty selection falls back to all assets.
+  const requested = process.argv.slice(2).filter((a): a is Asset => (ASSETS as string[]).includes(a));
+  const only = requested.length ? requested : undefined;
+  if (only) console.log(`Backfilling only: ${only.join(", ")} (rebuild still spans all assets).`);
   // Blockscout needs no API key; no CU cap; full history in one run.
   const client = new RoninDataClient({ blockscout: new BlockscoutProvider() });
-  backfill(sql, client)
+  backfill(sql, client, { only })
     .then(({ appended }) => {
       console.log(`Backfill complete. Appended ${appended} events; snapshots rebuilt.`);
       process.exit(0);

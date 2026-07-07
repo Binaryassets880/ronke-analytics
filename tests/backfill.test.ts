@@ -76,4 +76,22 @@ describe("backfill (continuity gate)", () => {
     expect(rebuilt).toBe(1);
     expect(meta.get("backfill_complete")).toBe("true");
   });
+
+  it("only-filter backfills the named asset but still rebuilds once (all assets)", async () => {
+    const { sql, meta } = makeFakeDb();
+    const client = makeFakeClient({
+      ronke_token: [tx("ronke_token", { from: ADDR.external, to: ADDR.wallet, quantity: 5n, blockNumber: 3, txHash: "0xr", blockTime: day(1) })],
+      ronkestr_token: [tx("ronkestr_token", { from: ADDR.external, to: ADDR.wallet, quantity: 9n, blockNumber: 7, txHash: "0xs", blockTime: day(1) })],
+    }) as unknown as RoninDataClient;
+    let rebuilt = 0;
+    const res = await backfill(sql, client, {
+      only: ["ronkestr_token"],
+      rebuildFn: async () => void (rebuilt += 1),
+      assertContinuityFor: [],
+    });
+    // Only RonkeStr was pulled (the ronke_token event was not), but rebuild ran.
+    expect(res.appended).toBe(1);
+    expect(rebuilt).toBe(1);
+    expect(meta.get("backfill_complete")).toBe("true");
+  });
 });

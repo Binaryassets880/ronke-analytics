@@ -9,7 +9,7 @@
  * contract-address correction (R1) is a one-line edit here.
  */
 
-export type Asset = "ronke_token" | "ronkeverse_nft";
+export type Asset = "ronke_token" | "ronkestr_token" | "ronkeverse_nft";
 
 export interface ContractConfig {
   /** Internal asset key used as the partition key across every table. */
@@ -42,7 +42,7 @@ export const MIGRATION_BLOCK = 55_577_490;
 export const MIGRATION_DATE = new Date("2026-05-12T00:00:00.000Z");
 
 /**
- * $RONKE (ERC-20) and Ronkeverse (ERC-721).
+ * $RONKE (ERC-20), RonkeStr / Ronke Strategy (ERC-20), and Ronkeverse (ERC-721).
  * R1: spot-confirm on app.roninchain.com before trusting for production;
  * a correction is a single edit here.
  */
@@ -54,6 +54,13 @@ export const CONTRACTS: Record<Asset, ContractConfig> = {
     label: "$RONKE",
     decimals: 18,
   },
+  ronkestr_token: {
+    asset: "ronkestr_token",
+    address: "0x404533a09bf281199ce6b0ef60b7eff7123ff8dc",
+    standard: "erc20",
+    label: "RonkeStr",
+    decimals: 18,
+  },
   ronkeverse_nft: {
     asset: "ronkeverse_nft",
     address: "0x810b6d1374ac7ba0e83612e7d49f49a13f1de019",
@@ -62,7 +69,7 @@ export const CONTRACTS: Record<Asset, ContractConfig> = {
   },
 };
 
-export const ASSETS: Asset[] = ["ronke_token", "ronkeverse_nft"];
+export const ASSETS: Asset[] = ["ronke_token", "ronkestr_token", "ronkeverse_nft"];
 
 /**
  * Ronkeverse tokenURI base (confirmed via on-chain tokenURI(id) over Ronin RPC):
