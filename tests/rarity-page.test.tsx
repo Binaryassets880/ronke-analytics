@@ -11,7 +11,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { RarityView } from "@/app/components/RarityView";
 import { TokenDetailView } from "@/app/components/TokenDetailView";
 import { TraitFilter } from "@/app/components/TraitFilter";
-import type { RarityRow, TraitDistribution, MetaState, TokenDetail } from "@/lib/queries";
+import type {
+  RarityRow,
+  TraitDistribution,
+  MetaState,
+  TokenDetail,
+  OneOfOneToken,
+} from "@/lib/queries";
 
 const meta: MetaState = { lastSyncAt: null, lastRebuildAt: null, backfillComplete: true, revealedSupply: 3 };
 const rows: RarityRow[] = [
@@ -37,6 +43,71 @@ describe("RarityView", () => {
     const { container } = render(<RarityView rows={rows} distributions={distributions} meta={meta} />);
     // no asset toggle tablist is rendered by the rarity view itself
     expect(container.querySelector('[role="tablist"]')).toBeNull();
+  });
+});
+
+describe("RarityView - tabs & 1/1 slices", () => {
+  const community: OneOfOneToken[] = Array.from({ length: 15 }, (_, i) => ({
+    tokenId: String(1001 + i),
+    imageUrl: null,
+    name: `Community piece ${i}`,
+  }));
+  const official: OneOfOneToken[] = Array.from({ length: 3 }, (_, i) => ({
+    tokenId: String(2001 + i),
+    imageUrl: null,
+    name: null,
+  }));
+  const counts = { community: 15, official: 3 };
+  const communityLinks = () =>
+    screen.getAllByRole("link").filter((a) => /^\/rarity\/10\d\d$/.test(a.getAttribute("href") ?? ""));
+
+  it("renders a segmented nav (not a tablist) with view tabs", () => {
+    render(
+      <RarityView rows={rows} distributions={distributions} meta={meta} view="all" counts={counts} />,
+    );
+    expect(screen.getByRole("navigation", { name: /rarity views/i })).toBeInTheDocument();
+    const { container } = render(
+      <RarityView rows={rows} distributions={distributions} meta={meta} view="all" counts={counts} />,
+    );
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+  });
+
+  it('caps the 1/1 preview and offers "View all" in the "all" view, keeping the standard grid', () => {
+    render(
+      <RarityView
+        rows={rows}
+        distributions={distributions}
+        meta={meta}
+        view="all"
+        counts={counts}
+        communityOneOfOnes={community}
+        officialOneOfOnes={official}
+      />,
+    );
+    // only the first 12 of the 15 community pieces are shown as a preview
+    expect(communityLinks()).toHaveLength(12);
+    expect(screen.getByText(/View all 15 Community 1\/1s/)).toBeInTheDocument();
+    // the standard ranked grid still renders alongside the previews
+    expect(screen.getByText("rank 1")).toBeInTheDocument();
+  });
+
+  it("shows a 1/1 bucket in full and hides the standard grid in its own tab", () => {
+    render(
+      <RarityView
+        rows={[]}
+        distributions={distributions}
+        meta={meta}
+        view="community"
+        counts={counts}
+        communityOneOfOnes={community}
+      />,
+    );
+    // all 15 shown, no preview cap, no "View all" link
+    expect(communityLinks()).toHaveLength(15);
+    expect(screen.queryByText(/View all/)).not.toBeInTheDocument();
+    // standard ladder is not rendered in a 1/1 tab
+    expect(screen.queryByText("rank 1")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Standard collection ranked by OpenRarity/i)).not.toBeInTheDocument();
   });
 });
 
