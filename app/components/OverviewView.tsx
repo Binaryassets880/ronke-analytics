@@ -2,6 +2,7 @@ import type { Asset } from "@/config/contracts";
 import { CONTRACTS } from "@/config/contracts";
 import type { OverviewData, MetaState, TokenMarketView, NftMarketView } from "@/lib/queries";
 import { StatTile } from "./StatTile";
+import { InfoTip } from "./Tip";
 import { StalenessBadge } from "./StalenessBadge";
 import { TrendChart } from "./TrendChart";
 import { BarChart } from "./BarChart";
@@ -52,9 +53,9 @@ export function OverviewView({
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile label="Price" value={formatUsd(tokenMarket.priceUsd)} />
-            <StatTile label="24h Volume" value={formatUsd(tokenMarket.volume24hUsd)} />
-            <StatTile label="Liquidity" value={formatUsd(tokenMarket.liquidityUsd)} />
-            <StatTile label="Market Cap" value={formatUsd(tokenMarket.marketCapUsd)} />
+            <StatTile label="24h Volume" value={formatUsd(tokenMarket.volume24hUsd)} hint="Total value of $RONKE traded on the DEX in the last 24 hours." />
+            <StatTile label="Liquidity" value={formatUsd(tokenMarket.liquidityUsd)} hint="Value sitting in the DEX pool backing $RONKE. Low liquidity means the price moves a lot on small trades." />
+            <StatTile label="Market Cap" value={formatUsd(tokenMarket.marketCapUsd)} hint="Price times circulating supply. Thin liquidity makes this a rough estimate." />
           </div>
         </section>
       ) : null}
@@ -82,7 +83,10 @@ export function OverviewView({
             style={{ background: "var(--diamond)" }}
           />
           <div className="relative flex h-full flex-col justify-between gap-4">
-            <div className="text-xs uppercase tracking-wide text-[var(--muted-2)]">Diamond Hands</div>
+            <div className="flex items-center text-xs uppercase tracking-wide text-[var(--muted-2)]">
+              <span>Diamond Hands</span>
+              <InfoTip text="Share of current holders whose oldest position is 30+ days old and who have never made a genuine sell." />
+            </div>
             <div>
               <div className="mono text-5xl font-bold tracking-tight text-[var(--diamond)]">{formatPct(data.diamondPct)}</div>
               <div className="mt-2 text-sm text-[var(--muted)]">
@@ -92,10 +96,10 @@ export function OverviewView({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Holders" value={formatCompact(data.holderCount)} />
-          <StatTile label="Whales" value={formatCompact(data.whaleCount)} sub=">1% of supply" />
-          <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supply} />
-          <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" />
+          <StatTile label="Holders" value={formatCompact(data.holderCount)} hint="Number of wallets currently holding, excluding contracts, bridges, and known non-holder addresses." />
+          <StatTile label="Whales" value={formatCompact(data.whaleCount)} sub=">1% of supply" hint="Wallets among the largest holders, or holding more than 1% of supply." />
+          <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supply} hint="Total currently held across all tracked holders." />
+          <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" hint="Share of current holders who have never made a genuine sell since acquiring." />
         </div>
       </section>
 

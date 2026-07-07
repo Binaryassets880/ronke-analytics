@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { RonkeMark } from "./RonkeMark";
 import { WalletSearch } from "./WalletSearch";
+import { Tip } from "./Tip";
 
 /**
  * Ecosystem-level top bar. The sticky, blurred Ronkeverse header that frames the
@@ -85,19 +86,24 @@ export function EcosystemNav() {
           <div className="hidden lg:block lg:w-64">
             <WalletSearch compact />
           </div>
-          <a
-            href="https://www.geckoterminal.com/ronin/pools/0x75ae353997242927c701d4d6c2722ebef43fd2d3"
-            target="_blank"
-            rel="noreferrer"
-            className="mono flex items-center gap-2 rounded-full border border-[var(--border)] bg-[#0e1119] px-3 py-1.5 text-[12.5px]"
+          <Tip
+            placement="bottom"
+            text="Live $RONKE price from GeckoTerminal (low-liquidity DEX quote). Opens the RONKE/WRON pool."
           >
-            <span
-              className="rv-glow h-[7px] w-[7px] rounded-full"
-              style={{ background: "var(--diamond)", boxShadow: "0 0 8px var(--diamond)" }}
-            />
-            <span className="text-[var(--muted)]">$RONKE</span>
-            <span className="font-bold text-[var(--foreground)]">live ↗</span>
-          </a>
+            <a
+              href="https://www.geckoterminal.com/ronin/pools/0x75ae353997242927c701d4d6c2722ebef43fd2d3"
+              target="_blank"
+              rel="noreferrer"
+              className="mono flex items-center gap-2 rounded-full border border-[var(--border)] bg-[#0e1119] px-3 py-1.5 text-[12.5px]"
+            >
+              <span
+                className="rv-glow h-[7px] w-[7px] rounded-full"
+                style={{ background: "var(--diamond)", boxShadow: "0 0 8px var(--diamond)" }}
+              />
+              <span className="text-[var(--muted)]">$RONKE</span>
+              <span className="font-bold text-[var(--foreground)]">live ↗</span>
+            </a>
+          </Tip>
         </div>
       </div>
     </header>

@@ -44,13 +44,13 @@ export function TokenDetailView({ token }: { token: TokenDetail }) {
             </div>
           ) : isOneOfOne ? (
             <div className="grid grid-cols-2 gap-3">
-              <StatTile label="Rarity tier" value={oneOfOneLabel} />
-              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} />
+              <StatTile label="Rarity tier" value={oneOfOneLabel} hint="A one-of-one piece, shown in its own showcase bucket rather than ranked on the standard 1..N ladder." />
+              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} hint="OpenRarity information-content score - how surprising this token's trait mix is. Higher = rarer overall." />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              <StatTile label="OpenRarity rank" value={`#${token.rarityRank}`} />
-              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} />
+              <StatTile label="OpenRarity rank" value={`#${token.rarityRank}`} hint="Rarity rank by the OpenRarity method (industry standard). #1 is the rarest standard token; lower rank = rarer." />
+              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} hint="OpenRarity information-content score - how surprising this token's trait mix is. Higher = rarer overall." />
             </div>
           )}
 

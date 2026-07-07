@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { BADGES, tierHint, badgeThresholdHint, type BadgeRealm } from "@/config/badges";
+import { Tip } from "./Tip";
 
 /**
  * The full badge catalog (E7) - every badge a wallet can earn, grouped by realm.
@@ -15,21 +15,6 @@ const REALM_LABEL: Record<BadgeRealm, string> = {
   ronkeverse: "Ronkeverse",
   both: "Ecosystem",
 };
-
-/** CSS-only hover tooltip (no client JS) with a native-title fallback. */
-function Tip({ text, children }: { text: string; children: ReactNode }) {
-  return (
-    <span className="group/tip relative inline-flex" title={text}>
-      {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden w-max max-w-[220px] -translate-x-1/2 whitespace-normal rounded-md border border-[var(--border-strong)] bg-[var(--card-2)] px-2 py-1 text-xs font-normal leading-snug text-[var(--foreground)] shadow-lg group-hover/tip:block"
-      >
-        {text}
-      </span>
-    </span>
-  );
-}
 
 export function BadgeCatalog() {
   return (
