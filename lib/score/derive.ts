@@ -63,13 +63,16 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     ensure(r.address as string).ronkestrBalanceWhole = Number(BigInt(r.balance as string)) / ronkestrDivisor;
   }
 
-  // Per-asset metrics -> per-asset hold behavior.
+  // Per-asset metrics -> per-asset hold behavior. Duration uses the QUANTITY-
+  // WEIGHTED holding age (not the oldest-lot age): a wallet that topped up recently
+  // has its clock pulled toward the fresh units, so you can't reactivate an old dust
+  // lot into instant max-duration, and sustained size is rewarded over a token stub.
   const metrics = await sql`
-    SELECT asset, address, holding_duration_days, never_sold, ever_paper_sold FROM holder_metrics
+    SELECT asset, address, weighted_duration_days, never_sold, ever_paper_sold FROM holder_metrics
   `;
   for (const r of metrics) {
     const hold = {
-      durationDays: Number(r.holding_duration_days),
+      durationDays: Number(r.weighted_duration_days),
       neverSold: r.never_sold as boolean,
       everPaperSold: r.ever_paper_sold as boolean,
     };

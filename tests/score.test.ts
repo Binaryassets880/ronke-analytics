@@ -89,6 +89,17 @@ describe("computeScore", () => {
     expect(diamond.score).toBeGreaterThan(whale.score);
   });
 
+  it("dampens NFT rarity points sub-linearly (a mega-bag can't farm rarity linearly)", () => {
+    // Same per-token rarity, 10x the count: rarity points must grow, but far less
+    // than 10x (the sub-linear rarityExp guard against whale skew).
+    const few = computeScore(base({ nftRarityFactors: Array.from({ length: 10 }, () => 0.5) }));
+    const many = computeScore(base({ nftRarityFactors: Array.from({ length: 100 }, () => 0.5) }));
+    const fewRarity = few.breakdown.nftHoldingPoints;
+    const manyRarity = many.breakdown.nftHoldingPoints;
+    expect(manyRarity).toBeGreaterThan(fewRarity); // more still helps
+    expect(manyRarity).toBeLessThan(fewRarity * 10); // but with diminishing returns
+  });
+
   it("awards the collector kicker only for a complete body set", () => {
     const partial = computeScore(base({ nftRarityFactors: [0.5], bodyTypesHeld: 9, bodyTypesTotal: 10 }));
     const full = computeScore(base({ nftRarityFactors: [0.5], bodyTypesHeld: 10, bodyTypesTotal: 10 }));

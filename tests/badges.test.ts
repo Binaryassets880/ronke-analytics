@@ -5,6 +5,7 @@ function agg(over: Partial<WalletAggregate>): WalletAggregate {
   return {
     address: "0xw",
     ronkeBalanceWhole: 0,
+    ronkestrBalanceWhole: 0,
     ronkeverseCount: 0,
     holdingDurationDays: 0,
     neverSold: true,
@@ -38,14 +39,39 @@ describe("evaluateWallet - achievements", () => {
   });
 
   it("Diamond Hands iff never_sold; Never Paper-handed iff !ever_paper_sold (independent)", () => {
+    // A real, seasoned, never-sold position (baseline for the diamond checks below).
+    const seasoned = { ronkeBalanceWhole: 5_000, holdingDurationDays: 120 };
     // sold but never within a day: diamond no, never-paper yes
-    const soldClean = agg({ neverSold: false, everPaperSold: false });
+    const soldClean = agg({ ...seasoned, neverSold: false, everPaperSold: false });
     expect(keys(soldClean)).not.toContain("diamond_hands");
     expect(keys(soldClean)).toContain("never_paper_handed");
     // never sold but (hypothetically) flagged paper: diamond yes, never-paper no
-    const heldButPaper = agg({ neverSold: true, everPaperSold: true });
+    const heldButPaper = agg({ ...seasoned, neverSold: true, everPaperSold: true });
     expect(keys(heldButPaper)).toContain("diamond_hands");
     expect(keys(heldButPaper)).not.toContain("never_paper_handed");
+  });
+
+  it("Diamond Hands requires a real (non-dust) position held past the diamond window", () => {
+    // Never sold, but a dust bag -> no diamond.
+    expect(keys(agg({ neverSold: true, ronkeBalanceWhole: 5, holdingDurationDays: 400 }))).not.toContain(
+      "diamond_hands",
+    );
+    // Never sold, real bag, but held only a few days -> no diamond.
+    expect(keys(agg({ neverSold: true, ronkeBalanceWhole: 50_000, holdingDurationDays: 10 }))).not.toContain(
+      "diamond_hands",
+    );
+    // Real bag, seasoned, never sold -> diamond.
+    expect(keys(agg({ neverSold: true, ronkeBalanceWhole: 2_000, holdingDurationDays: 60 }))).toContain(
+      "diamond_hands",
+    );
+    // Any Ronkeverse NFT counts as a real position (seasoned + never sold).
+    expect(keys(agg({ neverSold: true, ronkeverseCount: 1, holdingDurationDays: 60 }))).toContain(
+      "diamond_hands",
+    );
+    // A seasoned RonkeStr-only holder qualifies too.
+    expect(keys(agg({ neverSold: true, ronkestrBalanceWhole: 1_000, holdingDurationDays: 60 }))).toContain(
+      "diamond_hands",
+    );
   });
 
   it("Rarity Hunter only when holding a top-rarity token", () => {

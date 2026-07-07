@@ -30,13 +30,26 @@ export const SCORE_CONFIG = {
     /** Count points = base * count^countExp (sub-linear, dampens quantity). */
     base: 25,
     countExp: 0.6,
-    /** Rarity points = rarityWeight * sum(rarityFactor), rarer tokens worth more. */
+    /**
+     * Rarity points = rarityWeight * (sum rarityFactor)^rarityExp. rarer tokens
+     * worth more. rarityExp < 1 dampens the sum so a mega-bag of NFTs can't farm
+     * unbounded rarity points - buying more NFTs helps with diminishing returns,
+     * matching the count curve, instead of scaling linearly. (Was linear: rarityExp
+     * effectively 1.0, which let the biggest NFT bag dominate the whole leaderboard.)
+     */
     rarityWeight: 60,
+    rarityExp: 0.6,
   },
   duration: {
-    /** Duration points = base * growthPerMonth ^ min(months, capMonths). Exponential. */
-    base: 40,
-    growthPerMonth: 1.25,
+    /**
+     * Duration points = base * growthPerMonth ^ min(months, capMonths). Still
+     * exponential (longevity should compound) but far gentler than the original
+     * 1.25/mo, which hockey-sticked to ~8,470 at the cap and made duration ~36% of
+     * ALL points on the NFT side. At 1.15/mo the cap is ~1,430, so long holders are
+     * clearly rewarded without a single old token dwarfing everything else.
+     */
+    base: 50,
+    growthPerMonth: 1.15,
     capMonths: 24,
   },
   /** Diamond-hands multiplier applied to duration points (amplifies longevity). */
@@ -47,12 +60,20 @@ export const SCORE_CONFIG = {
   },
   /** Duration only accrues while the wallet holds at least this much (anti-farm gate). */
   gate: {
-    minRonke: 100_000, // whole $RONKE
     /**
-     * Whole RonkeStr required for duration to accrue. RonkeStr supply differs from
-     * $RONKE, so this is NOT a copy of minRonke - set relative to RonkeStr's own
-     * circulating supply / a mid-holder percentile. Placeholder default; tune after
-     * seeing the real holder distribution (KTD-5).
+     * Whole $RONKE required for $RONKE duration to accrue. Lowered 100k -> 50k
+     * (2026-07-07): 100k credited loyalty to only the top ~4.5% of holders while
+     * the median holder holds ~4 tokens; 50k reaches ~6.3% and, crucially, pairs
+     * with minRonkestr below at the SAME supply share (~0.006% of held supply) so
+     * both token communities clear an equivalent skin-in-the-game bar.
+     */
+    minRonke: 50_000,
+    /**
+     * Whole RonkeStr required for RonkeStr duration to accrue. Kept at 1,000 (NOT
+     * halved): against the real 230-holder distribution 1,000 already passes ~71%
+     * of holders (it only excludes sub-1,000 dust / fresh flippers), and 50k RONKE
+     * / 1,000 RONKESTR sit at the same ~0.006% share of each token's held supply.
+     * Dropping to 500 would make RonkeStr loyalty cheaper to earn than $RONKE's.
      */
     minRonkestr: 1_000,
     minNftCount: 1,

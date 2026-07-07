@@ -8,6 +8,7 @@ import {
   GLOSSARY,
   explorerTokenUrl,
 } from "@/config/resources";
+import { SCORE_EXPLAINER } from "@/config/scoreExplainer";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -15,9 +16,12 @@ export const metadata: Metadata = {
     "Verified $RONKE and Ronkeverse contract addresses, where to buy and trade, official links, and a plain-English glossary.",
 };
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+    <section
+      id={id}
+      className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 scroll-mt-24"
+    >
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
         {title}
       </h2>
@@ -103,6 +107,32 @@ export default function ResourcesPage() {
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card title={SCORE_EXPLAINER.headline} id={SCORE_EXPLAINER.anchor}>
+        <p className="mb-4 text-sm text-[var(--muted)]">{SCORE_EXPLAINER.intro}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {SCORE_EXPLAINER.factors.map((f) => (
+            <div key={f.title} className="rounded-lg border border-[var(--border)] bg-[var(--card-2)] p-3">
+              <div className="mb-1 text-sm font-semibold text-[var(--foreground)]">
+                <span className="mr-1.5">{f.emoji}</span>
+                {f.title}
+              </div>
+              <p className="text-sm text-[var(--muted)]">{f.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-lg border border-[var(--border-soft)] bg-[var(--card-2)] p-3">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted-2)]">
+            How to raise your score
+          </div>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--muted)]">
+            {SCORE_EXPLAINER.howToRaise.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        </div>
+        <p className="mt-3 text-xs text-[var(--muted-2)]">{SCORE_EXPLAINER.note}</p>
       </Card>
 
       <Card title="Glossary">
