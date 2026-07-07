@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { WalletScore } from "@/lib/queries";
 import { formatCompact } from "@/lib/format";
+import { SCORE_EXPLAINER } from "@/config/scoreExplainer";
 
 /**
  * The wallet's Ronke Score, front and center on the profile (S-series), with a
@@ -79,10 +81,28 @@ export function RonkeScoreCard({ score }: { score: WalletScore }) {
         </Panel>
       </div>
 
-      <p className="mt-3 text-xs text-[var(--muted-2)]">
-        Duration points are scaled by a diamond-hands multiplier (shown as ×) - the longer you hold without
-        selling, the higher it climbs.
-      </p>
+      <details className="group mt-3 rounded-xl border border-[var(--border-soft)] bg-[var(--card-2)] px-3.5 py-2.5">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-[var(--foreground)]">
+          <span>How is this calculated?</span>
+          <span className="text-[var(--muted-2)] transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <div className="mt-2.5 space-y-2 border-t border-[var(--border-soft)] pt-2.5">
+          {SCORE_EXPLAINER.factors.map((f) => (
+            <p key={f.title} className="text-xs leading-relaxed text-[var(--muted)]">
+              <span className="font-semibold text-[var(--foreground)]">
+                {f.emoji} {f.title}.
+              </span>{" "}
+              {f.body}
+            </p>
+          ))}
+          <Link
+            href={`/resources#${SCORE_EXPLAINER.anchor}`}
+            className="inline-block pt-1 text-xs font-medium text-[var(--accent)] hover:underline"
+          >
+            Learn more about the Ronke Score →
+          </Link>
+        </div>
+      </details>
     </section>
   );
 }

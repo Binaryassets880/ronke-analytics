@@ -114,12 +114,12 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Ronke Score",
     definition:
-      "The analytics section of Ronkeverse - a wallet's holdings, badges, and behavior across $RONKE and Ronkeverse, plus collection-wide stats.",
+      "A single number per wallet rewarding how much you hold, how long you have held, and never selling - across $RONKE, RonkeStr, and Ronkeverse. See \"How the Ronke Score works\" above for the full breakdown.",
   },
   {
     term: "Diamond hands",
     definition:
-      "Held without ever selling since acquiring. Because $RONKE has no reliable price, this is behavioral (did units actually leave as a genuine sell), not profit-based.",
+      "Held a real (non-dust) position for at least 30 days without ever selling. Because $RONKE has no reliable price, this is behavioral (did units actually leave as a genuine sell), not profit-based.",
   },
   {
     term: "Paper hands",

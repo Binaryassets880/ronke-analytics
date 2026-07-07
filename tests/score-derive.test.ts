@@ -13,7 +13,7 @@ function makeScoreFakeDb(fixtures: {
   metrics?: {
     asset: string;
     address: string;
-    holding_duration_days: number;
+    weighted_duration_days: number;
     never_sold: boolean;
     ever_paper_sold: boolean;
   }[];
@@ -47,9 +47,9 @@ describe("assembleScoreInputs (RonkeStr)", () => {
   it("routes holder_metrics three ways with no cross-contamination", async () => {
     const sql = makeScoreFakeDb({
       metrics: [
-        { asset: "ronke_token", address: "0xw", holding_duration_days: 10, never_sold: true, ever_paper_sold: false },
-        { asset: "ronkestr_token", address: "0xw", holding_duration_days: 20, never_sold: false, ever_paper_sold: true },
-        { asset: "ronkeverse_nft", address: "0xw", holding_duration_days: 30, never_sold: true, ever_paper_sold: false },
+        { asset: "ronke_token", address: "0xw", weighted_duration_days: 10, never_sold: true, ever_paper_sold: false },
+        { asset: "ronkestr_token", address: "0xw", weighted_duration_days: 20, never_sold: false, ever_paper_sold: true },
+        { asset: "ronkeverse_nft", address: "0xw", weighted_duration_days: 30, never_sold: true, ever_paper_sold: false },
       ],
     });
     const map = await assembleScoreInputs(sql);
@@ -63,7 +63,7 @@ describe("assembleScoreInputs (RonkeStr)", () => {
   it("leaves ronkestrHold null for a wallet with no RonkeStr metrics", async () => {
     const sql = makeScoreFakeDb({
       metrics: [
-        { asset: "ronke_token", address: "0xr", holding_duration_days: 42, never_sold: true, ever_paper_sold: false },
+        { asset: "ronke_token", address: "0xr", weighted_duration_days: 42, never_sold: true, ever_paper_sold: false },
       ],
     });
     const map = await assembleScoreInputs(sql);

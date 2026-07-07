@@ -109,7 +109,7 @@ export const BADGES: BadgeDef[] = [
     realm: "both",
     label: "Diamond Hands",
     icon: "\u{1F48E}", // 💎
-    description: "Never sold since acquiring.",
+    description: "Held a real position for 30+ days and never sold.",
     predicate: "never_sold",
   },
   {
@@ -173,6 +173,26 @@ export const WHALE_SUPPLY_SHARE = 0.01;
 /** Rarity Hunter: holds a token within this top fraction of the collection. */
 export const RARITY_HUNTER_TOP_FRACTION = 0.05;
 
+/**
+ * Diamond Hands qualification floor (2026-07-07). Previously the badge was pure
+ * `never_sold`, so a wallet holding 5 dust tokens - or one that bought an hour ago -
+ * earned 💎. That diluted the badge (75% of $RONKE diamond badges went to sub-1,000
+ * token wallets). Now it also requires (a) a NON-DUST position on at least one asset
+ * and (b) having held through the diamond window, so 💎 means "held a real stake,
+ * over time, without selling." Floors are dust filters, deliberately far below the
+ * score's duration gate - the badge should reach loyal small holders, not just whales.
+ */
+export const DIAMOND_BADGE_MIN = {
+  /** Whole $RONKE that counts as a real (non-dust) position. */
+  ronke: 1_000,
+  /** Whole RonkeStr that counts as a real position. */
+  ronkestr: 500,
+  /** Any Ronkeverse NFT is a real position. */
+  nftCount: 1,
+  /** Must have held its oldest position at least this many days (the diamond bucket). */
+  minDays: 30,
+};
+
 export function badgeDef(key: string): BadgeDef | undefined {
   return BADGES.find((b) => b.key === key);
 }
@@ -206,7 +226,7 @@ export function badgeThresholdHint(def: BadgeDef): string | null {
     case "rarity_hunter":
       return `Holds a Ronkeverse token ranked in the rarest ${(RARITY_HUNTER_TOP_FRACTION * 100).toFixed(0)}% of the collection.`;
     case "diamond_hands":
-      return `Never made a genuine sell since acquiring. Moves to staking, bridge, or games don't count as sells.`;
+      return `Held a real position (at least ${DIAMOND_BADGE_MIN.ronke.toLocaleString()} $RONKE, ${DIAMOND_BADGE_MIN.ronkestr.toLocaleString()} RonkeStr, or 1 Ronkeverse) for ${DIAMOND_BADGE_MIN.minDays}+ days and never made a genuine sell. Moves to staking, bridge, or games don't count as sells.`;
     case "never_paper_handed":
       return `Never sold a position within ${DIAMOND_THRESHOLDS.paperSellWindowDays} day of buying it.`;
     case "og_early":

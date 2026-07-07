@@ -17,7 +17,7 @@ describe("BadgeShelf", () => {
     expect(bag.closest("[title]")).toHaveAttribute("title", expect.stringContaining("How much $RONKE"));
     // achievement badge with earning explanation
     const diamond = screen.getByText("Diamond Hands");
-    expect(diamond.closest("[title]")).toHaveAttribute("title", expect.stringContaining("Never sold"));
+    expect(diamond.closest("[title]")).toHaveAttribute("title", expect.stringContaining("Held a real position"));
   });
 
   it("shows a graceful empty state for a wallet with no badges", () => {

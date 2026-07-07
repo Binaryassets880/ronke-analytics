@@ -94,7 +94,10 @@ export function computeScore(input: ScoreInput): ScoreResult {
   // ── Ronkeverse sub-score ──────────────────────────────────────────
   const count = input.nftRarityFactors.length;
   const nftCountPoints = count > 0 ? C.nft.base * Math.pow(count, C.nft.countExp) : 0;
-  const nftRarityPoints = C.nft.rarityWeight * input.nftRarityFactors.reduce((s, f) => s + f, 0);
+  // Dampen the rarity sum sub-linearly (rarityExp < 1) so a huge NFT bag earns
+  // rarity points with diminishing returns instead of scaling linearly with count.
+  const raritySum = input.nftRarityFactors.reduce((s, f) => s + f, 0);
+  const nftRarityPoints = raritySum > 0 ? C.nft.rarityWeight * Math.pow(raritySum, C.nft.rarityExp) : 0;
   const nftHoldingPoints = nftCountPoints + nftRarityPoints;
 
   const nftDiamondMult = input.nftHold ? diamondMultiplier(input.nftHold) : 0;

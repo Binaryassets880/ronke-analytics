@@ -15,6 +15,7 @@ import {
   BADGES,
   highestTier,
   badgeDef,
+  DIAMOND_BADGE_MIN,
   RARITY_HUNTER_TOP_FRACTION,
   WHALE_SUPPLY_SHARE,
 } from "@/config/badges";
@@ -25,6 +26,8 @@ export interface WalletAggregate {
   address: string;
   /** $RONKE balance in whole tokens (raw / 10^decimals). */
   ronkeBalanceWhole: number;
+  /** RonkeStr balance in whole tokens (raw / 10^decimals). */
+  ronkestrBalanceWhole: number;
   /** Ronkeverse tokens held. */
   ronkeverseCount: number;
   /** Max current holding duration across assets (days). */
@@ -73,9 +76,17 @@ export function evaluateWallet(agg: WalletAggregate): EarnedBadge[] {
         if (t) add(def.key, t.tier, { days: agg.holdingDurationDays, tierLabel: t.label });
         break;
       }
-      case "diamond_hands":
-        if (agg.neverSold) add(def.key, null, {});
+      case "diamond_hands": {
+        // Never sold AND a real (non-dust) position held through the diamond window.
+        const meaningfulStake =
+          agg.ronkeBalanceWhole >= DIAMOND_BADGE_MIN.ronke ||
+          agg.ronkestrBalanceWhole >= DIAMOND_BADGE_MIN.ronkestr ||
+          agg.ronkeverseCount >= DIAMOND_BADGE_MIN.nftCount;
+        if (agg.neverSold && agg.holdingDurationDays >= DIAMOND_BADGE_MIN.minDays && meaningfulStake) {
+          add(def.key, null, {});
+        }
         break;
+      }
       case "never_paper_handed":
         if (!agg.everPaperSold) add(def.key, null, {});
         break;
@@ -128,6 +139,7 @@ export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAg
       a = {
         address,
         ronkeBalanceWhole: 0,
+        ronkestrBalanceWhole: 0,
         ronkeverseCount: 0,
         holdingDurationDays: 0,
         neverSold: true,
@@ -148,10 +160,13 @@ export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAg
     FROM holder_balances WHERE is_current_holder = true
   `;
   const divisor = 10 ** TOKEN_DECIMALS;
+  const ronkestrDivisor = 10 ** (CONTRACTS.ronkestr_token.decimals ?? 18);
   for (const r of balances) {
     const a = ensure(r.address as string);
     if (r.asset === "ronke_token") {
       a.ronkeBalanceWhole = Number(BigInt(r.balance as string)) / divisor;
+    } else if (r.asset === "ronkestr_token") {
+      a.ronkestrBalanceWhole = Number(BigInt(r.balance as string)) / ronkestrDivisor;
     } else {
       a.ronkeverseCount = Number(r.token_count);
     }
