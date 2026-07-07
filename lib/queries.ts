@@ -733,6 +733,33 @@ export async function getOneOfOneBucket(tier: OneOfOneTier): Promise<OneOfOneTok
   }));
 }
 
+export interface OneOfOneCounts {
+  community: number;
+  official: number;
+}
+
+/**
+ * How many 1/1s exist in each bucket, for the rarity-page tab labels. Cheap
+ * (a single grouped count) so it can be fetched on every view without pulling
+ * the token rows themselves.
+ */
+export async function getOneOfOneCounts(): Promise<OneOfOneCounts> {
+  const sql = getSql();
+  if (!sql) return { community: 0, official: 0 };
+  const rows = await sql`
+    SELECT tier, count(*)::int AS n FROM token_rarity
+    WHERE tier IN ('community_1of1', 'official_1of1')
+    GROUP BY tier
+  `;
+  let community = 0;
+  let official = 0;
+  for (const r of rows) {
+    if (r.tier === "community_1of1") community = Number(r.n);
+    else if (r.tier === "official_1of1") official = Number(r.n);
+  }
+  return { community, official };
+}
+
 export interface DailyToken {
   tokenId: string;
   rarityRank: number | null;
