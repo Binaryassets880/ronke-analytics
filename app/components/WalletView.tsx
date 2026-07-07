@@ -3,6 +3,7 @@ import type { WalletData, WalletAssetHolding } from "@/lib/queries";
 import { DiamondBadge } from "./DiamondBadge";
 import { EmptyState } from "./States";
 import { HeldTokenGrid } from "./HeldTokenGrid";
+import { Tip } from "./Tip";
 import { formatCompact, formatDuration, shortAddress, toWholeTokens } from "@/lib/format";
 
 /**
@@ -115,20 +116,24 @@ function AssetHoldingCard({ h, diamondTooltip }: { h: WalletAssetHolding; diamon
       {(h.neverSold || !h.everPaperSold) ? (
         <div className="mt-3 flex flex-wrap gap-1 text-xs">
           {h.neverSold ? (
-            <span
-              className="rounded px-1.5 py-0.5 text-[var(--accent)]"
-              style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)" }}
-            >
-              Never sold
-            </span>
+            <Tip text={`Never made a genuine sell of ${h.label} since acquiring. Moves to staking, bridge, or games don't count.`}>
+              <span
+                className="cursor-help rounded px-1.5 py-0.5 text-[var(--accent)]"
+                style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)" }}
+              >
+                Never sold
+              </span>
+            </Tip>
           ) : null}
           {!h.everPaperSold ? (
-            <span
-              className="rounded px-1.5 py-0.5 text-[var(--diamond)]"
-              style={{ background: "color-mix(in srgb, var(--diamond) 15%, transparent)" }}
-            >
-              Never paper-handed
-            </span>
+            <Tip text={`Never sold ${h.label} within a day of buying it.`}>
+              <span
+                className="cursor-help rounded px-1.5 py-0.5 text-[var(--diamond)]"
+                style={{ background: "color-mix(in srgb, var(--diamond) 15%, transparent)" }}
+              >
+                Never paper-handed
+              </span>
+            </Tip>
           ) : null}
         </div>
       ) : null}
