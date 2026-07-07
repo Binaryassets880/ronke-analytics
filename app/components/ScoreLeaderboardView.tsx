@@ -37,6 +37,10 @@ export function ScoreLeaderboardView({
         <Link href="/resources#ronke-score" className="font-medium text-[var(--accent)] hover:underline">
           How the Ronke Score works →
         </Link>
+        <span aria-hidden className="text-[var(--muted-3)]">·</span>
+        <Link href="/resources#score-calculator" className="font-medium text-[var(--accent)] hover:underline">
+          Try the score calculator →
+        </Link>
       </div>
 
       {rows.length === 0 ? (

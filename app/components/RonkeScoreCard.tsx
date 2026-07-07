@@ -35,7 +35,7 @@ function Panel({ title, subscore, children }: { title: string; subscore: string;
   );
 }
 
-export function RonkeScoreCard({ score }: { score: WalletScore }) {
+export function RonkeScoreCard({ score, address }: { score: WalletScore; address?: string }) {
   return (
     <section
       className="rounded-2xl border border-[var(--border)] p-5"
@@ -95,12 +95,24 @@ export function RonkeScoreCard({ score }: { score: WalletScore }) {
               {f.body}
             </p>
           ))}
-          <Link
-            href={`/resources#${SCORE_EXPLAINER.anchor}`}
-            className="inline-block pt-1 text-xs font-medium text-[var(--accent)] hover:underline"
-          >
-            Learn more about the Ronke Score →
-          </Link>
+          <div className="flex flex-wrap gap-x-4 pt-1">
+            <Link
+              href={`/resources#${SCORE_EXPLAINER.anchor}`}
+              className="inline-block text-xs font-medium text-[var(--accent)] hover:underline"
+            >
+              Learn more about the Ronke Score →
+            </Link>
+            <Link
+              href={
+                address
+                  ? `/resources?sim=${address}#score-calculator`
+                  : "/resources#score-calculator"
+              }
+              className="inline-block text-xs font-medium text-[var(--accent)] hover:underline"
+            >
+              Simulate improvements in the calculator →
+            </Link>
+          </div>
         </div>
       </details>
     </section>
