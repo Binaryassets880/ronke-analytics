@@ -51,6 +51,22 @@ export const KNOWN_CONTINUITY: Partial<Record<Asset, { pre: KnownTransfer; post:
   // RONKE continuity was verified in U13 (genesis block 41,986,352 is pre-migration
   // and returns via Moralis); no per-tx fixture was recorded, so it is not
   // asserted at runtime here.
+  //
+  // RonkeStr genesis is block 50,472,022 (2025-11-16) - PRE-migration, contra the
+  // 2026-07-06 probe that read Blockscout's earliest post-L2 transfer (55,604,078)
+  // as "genesis" and skipped the GoldRush stitch. Its pre-L2 history (~28k events,
+  // Nov 2025 -> May 2026) was recovered via `backfill:prel2` on 2026-07-07. Fixtures
+  // recorded so any future single-pass backfill asserts the L2 boundary is spanned.
+  ronkestr_token: {
+    pre: {
+      txHash: "0xe15fbd1e3a15bafc320049442a9256e2f4c0830d0ebd046b3f52008c8fd3ea63",
+      blockNumber: 50_472_022,
+    },
+    post: {
+      txHash: "0xf14fa0dca317dc81a02fb0a848328b11ac7f106765d8618905bc04271e672541",
+      blockNumber: 55_604_078,
+    },
+  },
 };
 
 /**
