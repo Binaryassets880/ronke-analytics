@@ -93,12 +93,18 @@ export function assetForAddress(address: string): Asset | null {
 }
 
 /**
- * Diamond-hands thresholds (KTD-6). Days.
+ * Diamond-hands thresholds (KTD-6). Days, plus the sell-tolerance fraction.
  *
- * `diamondBucket` is exhaustive over the wallet's current holding duration
- * (age of oldest still-held lot/token): paper < regularDays <= regular <
- * diamondDays <= diamond. `paperSellWindowDays` is the orthogonal behavioral
- * window: a sell within this many days of acquiring flags `ever_paper_sold`.
+ * `diamondBucket` matches the Diamond Hands badge engine (2026-07-07): diamond =
+ * never made a significant sell AND non-dust position AND held >= diamondDays;
+ * paper = paper-handed behavior or a fresh (< regularDays) position; regular =
+ * everything else. `paperSellWindowDays` is the behavioral window: a significant
+ * sell within this many days of acquiring flags `ever_paper_sold`.
+ *
+ * `sellTolerancePct`: a genuine sell of LESS than this fraction of the wallet's
+ * holdings at that moment is a trim - it consumes units but keeps never-sold
+ * status and the holding clock. A sell of this fraction or more is significant:
+ * it breaks never-sold AND resets the holding clock on everything still held.
  *
  * Kept here so they can be tuned without touching analytics code.
  */
@@ -109,16 +115,11 @@ export const DIAMOND_THRESHOLDS = {
   diamondDays: 30,
   /** Selling within < this many days of acquiring flags ever_paper_sold. */
   paperSellWindowDays: 1,
+  /** Sells below this fraction of current holdings are forgiven trims. */
+  sellTolerancePct: 0.1,
 } as const;
 
 export type DiamondBucket = "paper" | "regular" | "diamond";
-
-/** Bucket a holding duration (in days) per DIAMOND_THRESHOLDS. */
-export function diamondBucketFor(durationDays: number): DiamondBucket {
-  if (durationDays >= DIAMOND_THRESHOLDS.diamondDays) return "diamond";
-  if (durationDays >= DIAMOND_THRESHOLDS.regularDays) return "regular";
-  return "paper";
-}
 
 /** Zero address = mint source / burn sink. */
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";

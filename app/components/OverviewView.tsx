@@ -85,12 +85,12 @@ export function OverviewView({
           <div className="relative flex h-full flex-col justify-between gap-4">
             <div className="flex items-center text-xs uppercase tracking-wide text-[var(--muted-2)]">
               <span>Diamond Hands</span>
-              <InfoTip text="Share of current holders whose oldest position is 30+ days old and who have never made a genuine sell." />
+              <InfoTip text="Share of current holders with true diamond hands: a real (non-dust) position held 30+ days without ever selling 10%+ of their holdings in one go. Small trims are forgiven." />
             </div>
             <div>
               <div className="mono text-5xl font-bold tracking-tight text-[var(--diamond)]">{formatPct(data.diamondPct)}</div>
               <div className="mt-2 text-sm text-[var(--muted)]">
-                {formatCompact(data.diamondDistribution.diamond)} holders have held 30+ days
+                {formatCompact(data.diamondDistribution.diamond)} holders — real stake, 30+ days, never sold
               </div>
             </div>
           </div>
@@ -116,9 +116,9 @@ export function OverviewView({
         <BarChart
           label="diamond distribution"
           bars={[
-            { label: "\u{1F48E} Diamond (30d+)", count: data.diamondDistribution.diamond, color: "var(--diamond)" },
-            { label: "\u{270B} Regular (7-30d)", count: data.diamondDistribution.regular, color: "var(--regular)" },
-            { label: "\u{1F9FB} Paper (<7d)", count: data.diamondDistribution.paper, color: "var(--paper)" },
+            { label: "\u{1F48E} Diamond (never sold, 30d+)", count: data.diamondDistribution.diamond, color: "var(--diamond)" },
+            { label: "\u{270B} Regular", count: data.diamondDistribution.regular, color: "var(--regular)" },
+            { label: "\u{1F9FB} Paper (dumped fast / fresh)", count: data.diamondDistribution.paper, color: "var(--paper)" },
           ]}
         />
       </section>

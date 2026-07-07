@@ -3,28 +3,74 @@
  *
  * RONKE is unpriced, so "diamond hands" is behavioral, not basis-driven. Two
  * orthogonal, fully-partitioned classifications are produced:
- *  - diamondBucket: exhaustive over the wallet's current holding duration
- *    (age of its oldest still-held lot/token): paper < 7d, regular [7,30), diamond >= 30d.
- *  - everPaperSold: true if the wallet ever sold units within < 1 day of
- *    acquiring them, independent of current bucket.
+ *  - diamondBucket: matches the Diamond Hands BADGE engine (2026-07-07):
+ *    diamond = never made a significant sell AND holds a non-dust position AND
+ *    has held >= diamondDays; paper = paper-handed or fresh (< regularDays);
+ *    regular = everything else. (Previously age-only, which saturated at ~98%
+ *    "diamond" once the collection grew older than the 30d cutoff.)
+ *  - everPaperSold: true if the wallet ever SIGNIFICANTLY sold units within
+ *    < 1 day of acquiring them, independent of current bucket.
+ *
+ * Sell tolerance (2026-07-07): a genuine sell of less than
+ * DIAMOND_THRESHOLDS.sellTolerancePct (10%) of the wallet's holdings at that
+ * moment is a TRIM - units leave FIFO, but never-sold status and the holding
+ * clock survive. A sell of 10%+ is significant: it increments sellCount (so
+ * never_sold flips false) AND resets the holding clock on everything still
+ * held (all remaining lots re-date to the sell moment).
  *
  * Behavioral ownership model (documented divergence from raw on-chain balance):
- *  - A genuine sell (labels.isSell) is the ONLY event that consumes FIFO lots
- *    for the diamond clock, increments sellCount, and can set everPaperSold.
+ *  - Only genuine sells (labels.isSell) can be significant; burns consume lots
+ *    (units gone) but are not sells and never reset the clock.
  *  - Moves to/from staking/bridge/team retain ownership: they neither create
  *    nor consume a lot, so the diamond clock is preserved.
- *  - Burns consume lots (units gone) but are not sells.
  *  - Mints and genuine buys create lots (acquisitions).
  */
 
 import type { Asset, DiamondBucket } from "@/config/contracts";
-import { contractFor, diamondBucketFor, DIAMOND_THRESHOLDS } from "@/config/contracts";
+import { contractFor, DIAMOND_THRESHOLDS } from "@/config/contracts";
+import { DIAMOND_BADGE_MIN } from "@/config/badges";
 import type { NormalizedTransfer } from "@/lib/types";
 import type { Labels } from "./labels";
 import type { HolderLot, HolderMetric } from "./types";
 import { daysBetween, MS_PER_DAY } from "./types";
 
 const PAPER_WINDOW_MS = DIAMOND_THRESHOLDS.paperSellWindowDays * MS_PER_DAY;
+/** Sell tolerance as an integer per-mille ratio so bigint math stays exact. */
+const TOLERANCE_MILLI = BigInt(Math.round(DIAMOND_THRESHOLDS.sellTolerancePct * 1000));
+
+/** True when selling `quantity` out of `balanceBefore` crosses the tolerance. */
+function isSignificantSell(quantity: bigint, balanceBefore: bigint): boolean {
+  if (balanceBefore <= 0n) return false;
+  return quantity * 1000n >= balanceBefore * TOLERANCE_MILLI;
+}
+
+/**
+ * Badge-parity bucket: diamond only for a never-sold, non-dust position held
+ * past the diamond window; paper for paper-handed or fresh positions.
+ */
+function bucketFor(
+  flags: { neverSold: boolean; everPaperSold: boolean },
+  durationDays: number,
+  hasHoldings: boolean,
+  nonDust: boolean,
+): DiamondBucket {
+  if (!hasHoldings) return "paper";
+  if (flags.neverSold && nonDust && durationDays >= DIAMOND_THRESHOLDS.diamondDays) return "diamond";
+  if (flags.everPaperSold || durationDays < DIAMOND_THRESHOLDS.regularDays) return "paper";
+  return "regular";
+}
+
+/** Non-dust floor for a token asset, in raw base units. */
+function dustFloorRaw(asset: Asset): bigint {
+  const whole =
+    asset === "ronke_token"
+      ? DIAMOND_BADGE_MIN.ronke
+      : asset === "ronkestr_token"
+        ? DIAMOND_BADGE_MIN.ronkestr
+        : 0;
+  const decimals = contractFor(asset).decimals ?? 18;
+  return BigInt(whole) * 10n ** BigInt(decimals);
+}
 
 export interface DiamondResult {
   lots: HolderLot[];
@@ -51,6 +97,8 @@ interface Lot {
 }
 interface TokenState {
   queue: Lot[];
+  /** Running tracked balance (sum of lot remainders), kept for tolerance math. */
+  balance: bigint;
   originalStack: bigint;
   firstLot: Lot | null;
   sellCount: number;
@@ -64,12 +112,14 @@ function computeToken(
   labels: Labels,
   asOf: Date,
 ): DiamondResult {
+  const floorRaw = dustFloorRaw(asset);
   const state = new Map<string, TokenState>();
   const ensure = (a: string): TokenState => {
     let s = state.get(a);
     if (!s) {
       s = {
         queue: [],
+        balance: 0n,
         originalStack: 0n,
         firstLot: null,
         sellCount: 0,
@@ -95,6 +145,7 @@ function computeToken(
         quantityRemaining: e.quantity,
       };
       s.queue.push(lot);
+      s.balance += e.quantity;
       s.everAcquired = true;
       if (s.firstLot === null) {
         s.firstLot = lot;
@@ -108,12 +159,23 @@ function computeToken(
       if (!retain) {
         // Consume FIFO (burn or sell both remove units); retain moves do not.
         const s = ensure(e.from);
+        const balanceBefore = s.balance;
         const consumed = consumeFifo(s.queue, e.quantity);
-        if (sell) {
+        for (const c of consumed) s.balance -= c.consumed;
+        // A sell below the tolerance is a trim: units leave, but never-sold
+        // status and the holding clock survive. At/above it, the sell counts
+        // and the clock resets on everything still held.
+        if (sell && isSignificantSell(e.quantity, balanceBefore)) {
           s.sellCount += 1;
           for (const c of consumed) {
             if (e.blockTime.getTime() - c.acquiredAt.getTime() < PAPER_WINDOW_MS) {
               s.everPaperSold = true;
+            }
+          }
+          for (const lot of s.queue) {
+            if (lot.quantityRemaining > 0n) {
+              lot.acquiredAt = e.blockTime;
+              lot.acquiredBlock = e.blockNumber;
             }
           }
         }
@@ -150,14 +212,15 @@ function computeToken(
       s.originalStack > 0n
         ? Number((firstRemaining * 1_000_000n) / s.originalStack) / 1_000_000
         : 0;
+    const flags = { neverSold: s.sellCount === 0, everPaperSold: s.everPaperSold };
     metrics.push({
       asset,
       address,
       holdingDurationDays,
       weightedDurationDays: totalQty > 0 ? weightedNum / totalQty : 0,
-      diamondBucket: bucketOrNone(holdingDurationDays, totalQty > 0),
+      diamondBucket: bucketFor(flags, holdingDurationDays, totalQty > 0, s.balance >= floorRaw),
       everPaperSold: s.everPaperSold,
-      neverSold: s.sellCount === 0,
+      neverSold: flags.neverSold,
       sellCount: s.sellCount,
       pctOriginalHeld,
     });
@@ -203,6 +266,8 @@ function computeNft(
 ): DiamondResult {
   // token_id -> current owner + when the current owner acquired it.
   const owner = new Map<string, { address: string; acquiredAt: Date }>();
+  // address -> the token_ids it currently owns (for tolerance + clock resets).
+  const ownedBy = new Map<string, Set<string>>();
   const state = new Map<string, NftState>();
   const ensure = (a: string): NftState => {
     let s = state.get(a);
@@ -212,28 +277,52 @@ function computeNft(
     }
     return s;
   };
+  const removeOwned = (address: string, tokenId: string) => {
+    ownedBy.get(address)?.delete(tokenId);
+  };
+  const addOwned = (address: string, tokenId: string) => {
+    let set = ownedBy.get(address);
+    if (!set) {
+      set = new Set();
+      ownedBy.set(address, set);
+    }
+    set.add(tokenId);
+  };
 
   for (const e of events) {
     if (e.tokenId == null) continue;
     const prev = owner.get(e.tokenId);
     const sell = labels.isSell(e.from, e.to);
 
-    // Seller side: record a genuine sell + paper-sell detection.
+    // Seller side: selling 1 token out of N held is significant only when it
+    // crosses the tolerance (1/N >= sellTolerancePct). A trim out of a big
+    // collection keeps never-sold status and the clock on the rest.
     if (prev && !labels.excludeFromHolders(prev.address) && sell) {
-      const s = ensure(prev.address);
-      s.sellCount += 1;
-      if (e.blockTime.getTime() - prev.acquiredAt.getTime() < PAPER_WINDOW_MS) {
-        s.everPaperSold = true;
+      const countBefore = BigInt(ownedBy.get(prev.address)?.size ?? 0);
+      if (isSignificantSell(1n, countBefore)) {
+        const s = ensure(prev.address);
+        s.sellCount += 1;
+        if (e.blockTime.getTime() - prev.acquiredAt.getTime() < PAPER_WINDOW_MS) {
+          s.everPaperSold = true;
+        }
+        // Reset the holding clock on everything the seller still holds.
+        for (const heldId of ownedBy.get(prev.address) ?? []) {
+          if (heldId === e.tokenId) continue;
+          const o = owner.get(heldId);
+          if (o) o.acquiredAt = e.blockTime;
+        }
       }
     }
 
     // Receiver side: becomes owner. Retain-ownership returns preserve the
     // prior acquiredAt; otherwise the holding clock resets to now.
+    if (prev) removeOwned(prev.address, e.tokenId);
     if (!labels.excludeFromHolders(e.to)) {
       const retainReturn =
         labels.isRetainOwnership(e.from) && prev?.address === e.to;
       const acquiredAt = retainReturn ? prev!.acquiredAt : e.blockTime;
       owner.set(e.tokenId, { address: e.to, acquiredAt });
+      addOwned(e.to, e.tokenId);
       if (!retainReturn) ensure(e.to).everAcquiredCount += 1;
     } else {
       owner.delete(e.tokenId);
@@ -268,14 +357,20 @@ function computeNft(
     // Emit one lot row per currently-held token (for provenance).
     // (token_id association is reconstructed in rebuild persistence.)
     const holdingDurationDays = oldest ? daysBetween(oldest, asOf) : 0;
+    const flags = { neverSold: s.sellCount === 0, everPaperSold: s.everPaperSold };
     metrics.push({
       asset,
       address,
       holdingDurationDays,
       weightedDurationDays: held.length > 0 ? weightedSum / held.length : 0,
-      diamondBucket: bucketOrNone(holdingDurationDays, held.length > 0),
+      diamondBucket: bucketFor(
+        flags,
+        holdingDurationDays,
+        held.length > 0,
+        held.length >= DIAMOND_BADGE_MIN.nftCount,
+      ),
       everPaperSold: s.everPaperSold,
-      neverSold: s.sellCount === 0,
+      neverSold: flags.neverSold,
       sellCount: s.sellCount,
       pctOriginalHeld:
         s.everAcquiredCount > 0 ? held.length / s.everAcquiredCount : 0,
@@ -296,10 +391,4 @@ function computeNft(
   }
 
   return { lots, metrics };
-}
-
-/** A holder with no current holdings is bucketed paper (duration 0). */
-function bucketOrNone(durationDays: number, hasHoldings: boolean): DiamondBucket {
-  if (!hasHoldings) return "paper";
-  return diamondBucketFor(durationDays);
 }

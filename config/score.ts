@@ -91,8 +91,13 @@ export const SCORE_CONFIG = {
    * 107 community + 52 official 1/1s are the collection's hand-made showpieces;
    * additive OpenRarity buries them (only 1-2 trait slots), so they earn this
    * dedicated bonus instead of relying on the rarity curve. Tunable.
+   *
+   * Calibrated 2026-07-07 (founder): one 1/1 standalone = 25 (count) + 60
+   * (rarity factor 1.0) + 235 = 320 pts ~= the value of bulk-buying ~40 commons
+   * (40 commons at factor ~0.05: 25*40^0.6 + 60*(0.05*40)^0.6 ~= 320). Was 500,
+   * which priced a 1/1 at ~110 commons.
    */
   oneOfOne: {
-    bonus: 500,
+    bonus: 235,
   },
 } as const;
