@@ -11,11 +11,19 @@ describe("BadgeShelf", () => {
       { badgeKey: "dual_citizen", tier: null, context: {} },
     ];
     render(<BadgeShelf badges={badges} />);
-    // tiered badge shows "Label: Tier"
+    // tiered badge shows "Label: Tier"; tooltip states the tier's threshold AND
+    // what this wallet actually holds (Believer = 1,000,000+ $RONKE).
     const bag = screen.getByText("Bag Size: Believer");
     expect(bag).toBeInTheDocument();
-    expect(bag.closest("[title]")).toHaveAttribute("title", expect.stringContaining("How much $RONKE"));
-    // achievement badge with earning explanation
+    expect(bag.closest("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("Hold at least 1,000,000 $RONKE"),
+    );
+    expect(bag.closest("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("this wallet holds 5,000,000"),
+    );
+    // achievement badge tooltip states the exact earning criteria
     const diamond = screen.getByText("Diamond Hands");
     expect(diamond.closest("[title]")).toHaveAttribute("title", expect.stringContaining("Held a real position"));
   });
@@ -47,6 +55,9 @@ describe("BadgeShelf", () => {
     ];
     render(<BadgeShelf badges={badges} />);
     const badge = screen.getByText("Bag Size: Leviathan");
-    expect(badge.closest("[title]")).toHaveAttribute("title", expect.stringContaining("Balance 250,000,000"));
+    expect(badge.closest("[title]")).toHaveAttribute(
+      "title",
+      expect.stringContaining("Hold at least 100,000,000 $RONKE — this wallet holds 250,000,000"),
+    );
   });
 });

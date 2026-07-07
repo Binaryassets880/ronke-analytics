@@ -1,5 +1,5 @@
 import type { WalletBadge } from "@/lib/queries";
-import { badgeDef, type BadgeRealm } from "@/config/badges";
+import { badgeDef, tierHint, badgeThresholdHint, type BadgeDef, type BadgeRealm } from "@/config/badges";
 
 /**
  * Earned-badge shelf on the wallet/profile page (U15, regrouped in E5a).
@@ -23,15 +23,28 @@ function tierLabel(badgeKey: string, tier: number | null): string | null {
   return def?.tiers?.find((t) => t.tier === tier)?.label ?? null;
 }
 
-function earnedDetail(badge: WalletBadge): string {
+/**
+ * Tooltip = the badge's exact threshold + what this wallet actually has, so a
+ * visitor learns what earns the badge without hunting down the badge catalog.
+ * e.g. "Hold at least 1,000,000 $RONKE — this wallet holds 3,000,000."
+ */
+function tooltipFor(badge: WalletBadge, def: BadgeDef): string {
   const ctx = badge.context ?? {};
-  if (typeof ctx.tierLabel === "string") {
-    if (typeof ctx.balance === "number") return `Balance ${Math.round(ctx.balance).toLocaleString()}`;
-    if (typeof ctx.count === "number") return `${ctx.count} held`;
-    if (typeof ctx.days === "number") return `${Math.floor(ctx.days)} days held`;
+  const tier = def.tiers?.find((t) => t.tier === badge.tier);
+  if (tier) {
+    const requirement = tierHint(def, tier);
+    let actual = "";
+    if (typeof ctx.balance === "number")
+      actual = `this wallet holds ${Math.round(ctx.balance).toLocaleString()}`;
+    else if (typeof ctx.count === "number")
+      actual = `this wallet holds ${ctx.count}`;
+    else if (typeof ctx.days === "number")
+      actual = `this wallet is at ${Math.floor(ctx.days).toLocaleString()} days`;
+    return actual ? `${requirement} — ${actual}.` : `${requirement}.`;
   }
-  if (typeof ctx.lots === "number") return `${ctx.lots} acquisitions, never sold`;
-  return "";
+  const requirement = badgeThresholdHint(def) ?? def.description;
+  const extra = typeof ctx.lots === "number" ? ` — ${ctx.lots} buys, never sold.` : "";
+  return `${requirement}${extra}`;
 }
 
 export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
@@ -64,8 +77,7 @@ export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
                 const def = badgeDef(b.badgeKey);
                 if (!def) return null;
                 const tl = tierLabel(b.badgeKey, b.tier);
-                const detail = earnedDetail(b);
-                const tooltip = `${def.description}${detail ? ` — ${detail}` : ""}`;
+                const tooltip = tooltipFor(b, def);
                 return (
                   <span
                     key={b.badgeKey}
