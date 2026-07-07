@@ -16,13 +16,13 @@ export default async function LeaderboardPage({
   const page = Math.max(0, Number(sp.page ?? "0") || 0);
 
   // Ronke Score is the default, headline leaderboard (global, asset-agnostic).
-  const by = sp.by === "size" ? "size" : sp.by === "diamond" ? "diamond" : "score";
-  if (by === "score") {
+  // The only other mode is per-asset Holdings.
+  if (sp.by !== "size") {
     const rows = await getScoreLeaderboard(page, PAGE_SIZE);
     return <ScoreLeaderboardView page={page} rows={rows} pageSize={PAGE_SIZE} />;
   }
 
   const asset = assetFromParam(sp.asset);
-  const rows = await getLeaderboard(asset, by, page, PAGE_SIZE);
-  return <LeaderboardView asset={asset} by={by} page={page} rows={rows} pageSize={PAGE_SIZE} />;
+  const rows = await getLeaderboard(asset, page, PAGE_SIZE);
+  return <LeaderboardView asset={asset} page={page} rows={rows} pageSize={PAGE_SIZE} />;
 }

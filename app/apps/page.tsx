@@ -38,14 +38,14 @@ function AppTile({ app }: { app: AppCard }) {
         <span
           className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
             app.status === "live"
-              ? "bg-emerald-500/20 text-emerald-300"
-              : "bg-neutral-500/20 text-neutral-400"
+              ? "bg-[color-mix(in_srgb,var(--diamond)_18%,transparent)] text-[var(--diamond)]"
+              : "bg-[var(--card-2)] text-[var(--muted-2)]"
           }`}
         >
           {STATUS_LABEL[app.status]}
         </span>
       </div>
-      <p className="mt-1 text-sm text-neutral-400">{app.blurb}</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">{app.blurb}</p>
     </>
   );
 
@@ -72,7 +72,7 @@ export default function AppsPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">Apps</h1>
-        <p className="mt-1 text-sm text-neutral-400">
+        <p className="mt-1 text-sm text-[var(--muted)]">
           Games and tools in the Ronke ecosystem.
         </p>
       </header>
@@ -81,7 +81,7 @@ export default function AppsPage() {
           <AppTile key={app.key} app={app} />
         ))}
       </div>
-      <p className="text-sm text-neutral-500">More official Ronke apps coming soon.</p>
+      <p className="text-sm text-[var(--muted-2)]">More official Ronke apps coming soon.</p>
     </div>
   );
 }

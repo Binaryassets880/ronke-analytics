@@ -54,7 +54,7 @@ describe("ScoreLeaderboardView", () => {
 
   it("renders a RonkeStr Score column with the row's RonkeStr sub-score", () => {
     render(<ScoreLeaderboardView page={0} rows={rows} pageSize={50} />);
-    expect(screen.getByRole("columnheader", { name: "RonkeStr Score" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "RonkeStr" })).toBeInTheDocument();
     const bodyRow = screen.getAllByRole("row")[1];
     // The RonkeStr sub-score value appears in the row.
     expect(within(bodyRow).getByText("511")).toBeInTheDocument();

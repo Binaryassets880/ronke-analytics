@@ -21,12 +21,12 @@ export function CopyAddress({ address }: { address: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <code className="break-all font-mono text-xs text-neutral-300">{address}</code>
+      <code className="break-all font-mono text-xs text-[var(--muted)]">{address}</code>
       <button
         type="button"
         onClick={copy}
         aria-label="Copy address"
-        className="shrink-0 rounded-md border border-[var(--border)] px-2 py-1 text-xs text-neutral-300 hover:text-white"
+        className="shrink-0 rounded-md border border-[var(--border)] px-2 py-1 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
       >
         {copied ? "Copied" : "Copy"}
       </button>

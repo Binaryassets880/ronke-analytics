@@ -21,23 +21,29 @@ const diamondHolder: WalletData = {
   neverSold: true,
   everPaperSold: false,
   firstAcquiredAt: "2025-02-25T00:00:00.000Z",
+  assetHoldings: [
+    { asset: "ronke_token", label: "$RONKE", balance: "5000000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 120, diamondBucket: "diamond", firstAcquiredAt: "2025-02-25T00:00:00.000Z", neverSold: true, everPaperSold: false },
+    { asset: "ronkestr_token", label: "RonkeStr", balance: "250000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 90, diamondBucket: "regular", firstAcquiredAt: "2025-03-01T00:00:00.000Z", neverSold: true, everPaperSold: false },
+    { asset: "ronkeverse_nft", label: "Ronkeverse", balance: "0", tokenCount: 3, isHeld: true, holdingDurationDays: 60, diamondBucket: "diamond", firstAcquiredAt: "2025-04-01T00:00:00.000Z", neverSold: true, everPaperSold: false },
+  ],
   heldTokens: [
-    { tokenId: "42", rarityRank: 7, imageUrl: null },
-    { tokenId: "99", rarityRank: null, imageUrl: null },
+    { tokenId: "42", rarityRank: 7, imageUrl: null, tier: "standard" },
+    { tokenId: "99", rarityRank: null, imageUrl: null, tier: "community_1of1" },
   ],
   everHeld: true,
 };
 
 describe("WalletView", () => {
-  it("shows bucket, never-sold, first-acquired, and held tokens for a diamond holder", () => {
+  it("shows per-asset bucket, never-sold, first-buy, and held tokens for a diamond holder", () => {
     render(<WalletView wallet={diamondHolder} />);
-    expect(screen.getByText("Diamond")).toBeInTheDocument();
-    expect(screen.getByText("Never sold")).toBeInTheDocument();
-    expect(screen.getByText(/First acquired 2025-02-25/)).toBeInTheDocument();
+    expect(screen.getByText("Holdings by asset")).toBeInTheDocument();
+    expect(screen.getAllByText("Diamond").length).toBeGreaterThan(0); // per-asset hands badge
+    expect(screen.getAllByText("Never sold").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("First buy").length).toBeGreaterThan(0); // per-asset first buy
     expect(screen.getByText(/Ronkeverse held \(2\)/)).toBeInTheDocument();
     expect(screen.getByText("rank 7")).toBeInTheDocument(); // rarity rank surfaced
     expect(screen.getByText("whale.ron")).toBeInTheDocument(); // .ron name in header
-    expect(screen.getByText("RonkeStr held")).toBeInTheDocument(); // RonkeStr balance tile
+    expect(screen.getByText("RonkeStr")).toBeInTheDocument(); // RonkeStr asset card
     expect(screen.getByText("250K")).toBeInTheDocument(); // 250,000 RonkeStr, compacted
   });
 
@@ -53,6 +59,7 @@ describe("WalletView", () => {
       neverSold: false,
       everPaperSold: false,
       firstAcquiredAt: null,
+      assetHoldings: [],
       heldTokens: [],
       everHeld: false,
     };

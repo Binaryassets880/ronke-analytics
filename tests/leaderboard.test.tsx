@@ -17,20 +17,20 @@ const rows: LeaderboardRow[] = [
 
 describe("LeaderboardView", () => {
   it("renders ranks in the order provided (rank 1 first) with a working page offset", () => {
-    render(<LeaderboardView asset="ronke_token" by="size" page={0} rows={rows} pageSize={50} />);
+    render(<LeaderboardView asset="ronke_token" page={0} rows={rows} pageSize={50} />);
     const bodyRows = screen.getAllByRole("row").slice(1);
     expect(bodyRows[0].textContent).toContain("1"); // rank column
     expect(bodyRows[0].textContent).toContain("0x1111");
   });
 
-  it("shows the diamond-score toggle and paginates when a full page is returned", () => {
+  it("shows the mode toggle and paginates when a full page is returned", () => {
     const fullPage = Array.from({ length: 50 }, (_, i) => ({
       ...rows[0],
       address: "0x" + String(i).padStart(40, "0"),
     }));
-    render(<LeaderboardView asset="ronke_token" by="diamond" page={1} rows={fullPage} pageSize={50} />);
-    // mode toggle links (target by role: "Diamond"/"Ronke Score" text also appears in row badges)
-    expect(screen.getByRole("link", { name: "Diamond" })).toBeInTheDocument();
+    render(<LeaderboardView asset="ronke_token" page={1} rows={fullPage} pageSize={50} />);
+    // mode toggle links (Holdings is the active per-asset mode; Ronke Score is global)
+    expect(screen.getByRole("link", { name: "Holdings" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ronke Score" })).toHaveAttribute("href", "/leaderboard?by=score");
     expect(screen.getByText("Next →")).toBeInTheDocument();
     expect(screen.getByText("← Prev")).toBeInTheDocument();

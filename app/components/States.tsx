@@ -6,7 +6,7 @@ export function PreBackfill() {
         {"\u{1F6F0}"}
       </div>
       <h2 className="mt-2 text-lg font-semibold">Gathering on-chain history…</h2>
-      <p className="mt-1 text-sm text-neutral-400">
+      <p className="mt-1 text-sm text-[var(--muted)]">
         The full transfer history is being ingested. Holder stats appear once the
         one-time backfill completes.
       </p>
@@ -18,8 +18,8 @@ export function PreBackfill() {
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-center">
-      <p className="text-neutral-300">{title}</p>
-      {hint ? <p className="mt-1 text-sm text-neutral-500">{hint}</p> : null}
+      <p className="text-[var(--muted)]">{title}</p>
+      {hint ? <p className="mt-1 text-sm text-[var(--muted-2)]">{hint}</p> : null}
     </div>
   );
 }

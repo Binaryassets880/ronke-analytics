@@ -58,6 +58,7 @@ describe("TokenDetailView", () => {
       infoContentScore: 1.834,
       imageUrl: null,
       traits: [{ traitType: "Background", value: "Pink", probability: 0.196 }],
+      owner: null,
     };
     render(<TokenDetailView token={token} />);
     expect(screen.getByText("#1")).toBeInTheDocument();
@@ -73,6 +74,7 @@ describe("TokenDetailView", () => {
       infoContentScore: 0,
       imageUrl: null,
       traits: [],
+      owner: null,
     };
     render(<TokenDetailView token={token} />);
     expect(screen.getByText(/unrevealed/i)).toBeInTheDocument();
@@ -87,6 +89,7 @@ describe("TokenDetailView", () => {
       infoContentScore: 0.86,
       imageUrl: null,
       traits: [{ traitType: "Community 1/1", value: "Ronke Joker", probability: 0.0001 }],
+      owner: null,
     };
     render(<TokenDetailView token={token} />);
     // The tier badge (label "Rarity tier") shows the bucket name; the trait row

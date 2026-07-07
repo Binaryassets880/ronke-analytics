@@ -22,16 +22,16 @@ function OneOfOneBucket({
     <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--card)] p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
-          {emoji} {title} <span className="text-neutral-500">· {tokens.length}</span>
+          {emoji} {title} <span className="text-[var(--muted-2)]">· {tokens.length}</span>
         </h2>
-        <p className="text-xs text-neutral-400">{blurb}</p>
+        <p className="text-xs text-[var(--muted)]">{blurb}</p>
       </div>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {tokens.map((t) => (
           <Link
             key={t.tokenId}
             href={`/rarity/${t.tokenId}`}
-            className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-center hover:border-[var(--accent)]"
+            className="rounded-lg border border-[var(--border)] bg-[var(--card-2)] p-2 text-center transition-colors hover:border-[var(--accent)]"
           >
             {t.imageUrl ? (
               <Image
@@ -43,14 +43,14 @@ function OneOfOneBucket({
                 unoptimized
               />
             ) : (
-              <div className="mx-auto flex aspect-square w-full items-center justify-center rounded bg-[var(--border)] text-xs text-neutral-500">
+              <div className="mx-auto flex aspect-square w-full items-center justify-center rounded bg-[var(--border)] text-xs text-[var(--muted-2)]">
                 #{t.tokenId}
               </div>
             )}
             <div className="mt-1 truncate text-xs font-medium text-[var(--accent)]" title={t.name ?? undefined}>
               {t.name ?? `#${t.tokenId}`}
             </div>
-            <div className="text-xs text-neutral-500">#{t.tokenId}</div>
+            <div className="text-xs text-[var(--muted-2)]">#{t.tokenId}</div>
           </Link>
         ))}
       </div>
@@ -102,7 +102,7 @@ export function RarityView({
         <TraitFilter distributions={distributions} active={filter} />
       </div>
       {meta.revealedSupply != null ? (
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-[var(--muted)]">
           Standard collection ranked by OpenRarity information content. One-of-ones are
           showcased in their own buckets below.
         </p>
@@ -123,13 +123,13 @@ export function RarityView({
             tokens={officialOneOfOnes}
           />
           {(communityOneOfOnes.length > 0 || officialOneOfOnes.length > 0) ? (
-            <h2 className="pt-2 text-sm font-semibold text-neutral-300">Standard collection · ranked</h2>
+            <h2 className="pt-2 text-sm font-semibold text-[var(--muted)]">Standard collection · ranked</h2>
           ) : null}
         </>
       ) : null}
 
       {filter ? (
-        <p className="text-sm text-neutral-300">
+        <p className="text-sm text-[var(--muted)]">
           Filtered to <span className="text-[var(--accent)]">{filter.traitType}: {filter.value}</span>{" "}
           — {rows.length} shown.{" "}
           <Link href="/rarity" className="text-[var(--accent)] hover:underline">
@@ -146,7 +146,7 @@ export function RarityView({
             <Link
               key={r.tokenId}
               href={`/rarity/${r.tokenId}`}
-              className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 text-center hover:border-[var(--accent)]"
+              className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 text-center transition-colors hover:border-[var(--accent)]"
             >
               {r.imageUrl ? (
                 <Image
@@ -158,11 +158,11 @@ export function RarityView({
                   unoptimized
                 />
               ) : (
-                <div className="mx-auto flex aspect-square w-full items-center justify-center rounded bg-[var(--border)] text-xs text-neutral-500">
+                <div className="mx-auto flex aspect-square w-full items-center justify-center rounded bg-[var(--border)] text-xs text-[var(--muted-2)]">
                   #{r.tokenId}
                 </div>
               )}
-              <div className="mt-1 text-xs text-neutral-400">#{r.tokenId}</div>
+              <div className="mt-1 text-xs text-[var(--muted)]">#{r.tokenId}</div>
               <div className="text-xs font-medium text-[var(--accent)]">rank {r.rarityRank}</div>
             </Link>
           ))}
@@ -188,11 +188,11 @@ export function RarityView({
 
       {distributions.length > 0 ? (
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <h2 className="mb-3 text-sm font-medium text-neutral-300">Trait distribution</h2>
+          <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Trait distribution</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {distributions.map((d) => (
               <div key={d.traitType}>
-                <h3 className="mb-1 text-xs uppercase tracking-wide text-neutral-500">{d.traitType}</h3>
+                <h3 className="mb-1 text-xs uppercase tracking-wide text-[var(--muted-2)]">{d.traitType}</h3>
                 <BarChart
                   bars={d.values.slice(0, 8).map((v) => ({ label: v.value, count: v.count }))}
                   label={`${d.traitType} distribution`}

@@ -1,9 +1,10 @@
 import { normalizeAddress } from "@/lib/format";
-import { getWallet, getWalletBadges, getWalletScore } from "@/lib/queries";
+import { getWallet, getWalletBadges, getWalletScore, getWalletHistory } from "@/lib/queries";
 import { resolveNameLive } from "@/lib/rns/resolve";
 import { WalletView } from "@/app/components/WalletView";
 import { BadgeShelf } from "@/app/components/BadgeShelf";
 import { RonkeScoreCard } from "@/app/components/RonkeScoreCard";
+import { WalletHistoryChart } from "@/app/components/WalletHistoryChart";
 import { DIAMOND_THRESHOLDS } from "@/config/contracts";
 
 export const dynamic = "force-dynamic";
@@ -50,10 +51,11 @@ export default async function WalletPage({
     );
   }
 
-  const [wallet, badges, score] = await Promise.all([
+  const [wallet, badges, score, history] = await Promise.all([
     getWallet(normalized),
     getWalletBadges(normalized),
     getWalletScore(normalized),
+    getWalletHistory(normalized),
   ]);
   // Prefer the cached reverse name; fall back to the name the user searched by.
   const walletWithName = wallet.name ? wallet : { ...wallet, name: rnsName };
@@ -62,6 +64,7 @@ export default async function WalletPage({
       wallet={walletWithName}
       diamondTooltip={DIAMOND_TOOLTIP}
       scoreCard={wallet.everHeld && score ? <RonkeScoreCard score={score} /> : undefined}
+      historySection={wallet.everHeld ? <WalletHistoryChart history={history} /> : undefined}
       badgeShelf={wallet.everHeld ? <BadgeShelf badges={badges} /> : undefined}
     />
   );
