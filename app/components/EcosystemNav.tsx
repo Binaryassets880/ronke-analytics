@@ -12,7 +12,10 @@ import { WalletSearch } from "./WalletSearch";
  * within it.
  */
 const SECTIONS = [
-  { href: "/overview", label: "Ronke Score", section: "rating" },
+  // Ronke Score and Leaderboard both live in the analytics ("rating") section;
+  // `path` narrows the active highlight so only the matching one lights up.
+  { href: "/overview", label: "Ronke Score", section: "rating", path: "/overview" },
+  { href: "/leaderboard", label: "Leaderboard", section: "rating", path: "/leaderboard" },
   { href: "/resources", label: "Resources", section: "resources" },
   { href: "/apps", label: "Apps", section: "apps" },
 ] as const;
@@ -53,18 +56,29 @@ export function EcosystemNav() {
           >
             Home
           </Link>
-          {SECTIONS.map((s) => (
-            <Link
-              key={s.label}
-              href={s.href}
-              aria-current={active === s.section ? "page" : undefined}
-              className={`whitespace-nowrap text-sm font-medium ${
-                active === s.section ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {s.label}
-            </Link>
-          ))}
+          {SECTIONS.map((s) => {
+            // Within the rating section, disambiguate Leaderboard vs the rest so
+            // both analytics links don't highlight at once.
+            const onLeaderboard = pathname.startsWith("/leaderboard");
+            const isActive =
+              "path" in s && s.path === "/leaderboard"
+                ? onLeaderboard
+                : "path" in s && s.path === "/overview"
+                  ? active === "rating" && !onLeaderboard
+                  : active === s.section;
+            return (
+              <Link
+                key={s.label}
+                href={s.href}
+                aria-current={isActive ? "page" : undefined}
+                className={`whitespace-nowrap text-sm font-medium ${
+                  isActive ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3">

@@ -11,6 +11,7 @@
  */
 
 import type { Asset } from "./contracts";
+import { DIAMOND_THRESHOLDS, MIGRATION_DATE } from "./contracts";
 
 export type BadgeCategory =
   | "bag_size" // tiered by $RONKE balance
@@ -174,6 +175,49 @@ export const RARITY_HUNTER_TOP_FRACTION = 0.05;
 
 export function badgeDef(key: string): BadgeDef | undefined {
   return BADGES.find((b) => b.key === key);
+}
+
+/**
+ * Human-readable threshold for a tier, e.g. "Hold at least 100,000 $RONKE".
+ * Drives the hover tooltips in the badge catalog so the pill labels (Shrimp,
+ * Curator, ...) explain exactly what earns them.
+ */
+export function tierHint(def: BadgeDef, tier: BadgeTier): string {
+  switch (def.category) {
+    case "bag_size":
+      return `Hold at least ${tier.min.toLocaleString()} $RONKE`;
+    case "collector":
+      return `Hold at least ${tier.min} Ronkeverse NFT${tier.min === 1 ? "" : "s"}`;
+    case "holding_length":
+      return `Hold your oldest position for ${tier.min}+ days`;
+    default:
+      return tier.label;
+  }
+}
+
+/**
+ * Exact threshold detail for the non-tiered (achievement) badges whose numbers
+ * are otherwise hidden - surfaced as a hover tooltip in the catalog.
+ */
+export function badgeThresholdHint(def: BadgeDef): string | null {
+  switch (def.key) {
+    case "whale":
+      return `Ranks among the top holders, or holds more than ${(WHALE_SUPPLY_SHARE * 100).toFixed(0)}% of supply.`;
+    case "rarity_hunter":
+      return `Holds a Ronkeverse token ranked in the rarest ${(RARITY_HUNTER_TOP_FRACTION * 100).toFixed(0)}% of the collection.`;
+    case "diamond_hands":
+      return `Never made a genuine sell since acquiring. Moves to staking, bridge, or games don't count as sells.`;
+    case "never_paper_handed":
+      return `Never sold a position within ${DIAMOND_THRESHOLDS.paperSellWindowDays} day of buying it.`;
+    case "og_early":
+      return `Held since before the Ronin L2 migration (${MIGRATION_DATE.toISOString().slice(0, 10)}).`;
+    case "dual_citizen":
+      return `Holds a positive balance of both $RONKE and at least one Ronkeverse NFT.`;
+    case "accumulator":
+      return `Net-positive $RONKE balance over the trailing window - stacking, not distributing.`;
+    default:
+      return null;
+  }
 }
 
 /** Resolve the highest tier reached for a tiered badge, or null. */
