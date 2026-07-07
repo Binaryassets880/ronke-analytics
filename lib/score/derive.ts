@@ -36,6 +36,7 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
         nftHold: null,
         bodyTypesHeld: 0,
         bodyTypesTotal,
+        oneOfOneCount: 0,
       };
       map.set(address, a);
     }
@@ -78,18 +79,39 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     else a.nftHold = hold;
   }
 
-  // Held NFTs -> rarity factors (rarer rank => higher factor in (0,1]).
+  // Held NFTs -> rarity factors (rarer rank => higher factor in (0,1]). Standard
+  // tokens use their rank; 1/1s (null rank, bucketed) are top-tier so they take
+  // the max factor of 1.0 rather than being dropped by the old rank filter.
   if (revealedSupply > 0) {
     const nftRows = await sql`
-      SELECT l.address, tr.rarity_rank
+      SELECT l.address, tr.rarity_rank, tr.tier
       FROM holder_lots l
       JOIN token_rarity tr ON tr.token_id = l.token_id
-      WHERE l.asset = 'ronkeverse_nft' AND l.quantity_remaining > 0 AND tr.rarity_rank IS NOT NULL
+      WHERE l.asset = 'ronkeverse_nft' AND l.quantity_remaining > 0
     `;
     for (const r of nftRows) {
-      const rank = Number(r.rarity_rank);
-      const factor = (revealedSupply - rank + 1) / revealedSupply;
+      const tier = (r.tier as string) ?? "standard";
+      let factor: number;
+      if (tier === "standard") {
+        if (r.rarity_rank == null) continue; // standard token still awaiting a rank
+        factor = (revealedSupply - Number(r.rarity_rank) + 1) / revealedSupply;
+      } else {
+        factor = 1; // community/official 1/1 - rarest tier
+      }
       ensure(r.address as string).nftRarityFactors.push(factor);
+    }
+
+    // Count 1/1s held per wallet for the flat one-of-one bonus.
+    const oneOfOneRows = await sql`
+      SELECT l.address, count(*)::int AS n
+      FROM holder_lots l
+      JOIN token_rarity tr ON tr.token_id = l.token_id
+      WHERE l.asset = 'ronkeverse_nft' AND l.quantity_remaining > 0
+        AND tr.tier IN ('community_1of1', 'official_1of1')
+      GROUP BY l.address
+    `;
+    for (const r of oneOfOneRows) {
+      ensure(r.address as string).oneOfOneCount = Number(r.n);
     }
   }
 
@@ -126,6 +148,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       b.ronkestrHoldingPoints, b.ronkestrDurationPoints, b.ronkestrDiamondMult,
       b.nftHoldingPoints, b.nftDurationPoints, b.nftDiamondMult,
       b.collectorPoints, b.bodyTypesHeld, b.bodyTypesTotal,
+      b.oneOfOnePoints, b.oneOfOneCount,
     ]);
   }
   await insertMany(
@@ -137,6 +160,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       "ronkestr_holding", "ronkestr_duration", "ronkestr_diamond_mult",
       "nft_holding", "nft_duration", "nft_diamond_mult",
       "collector_points", "body_types_held", "body_types_total",
+      "oneofone_points", "oneofone_count",
     ],
     rows,
   );

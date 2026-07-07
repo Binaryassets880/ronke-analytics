@@ -1,14 +1,68 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { RarityRow, TraitDistribution, MetaState } from "@/lib/queries";
+import type { RarityRow, TraitDistribution, MetaState, OneOfOneToken } from "@/lib/queries";
 import { TraitFilter } from "./TraitFilter";
 import { BarChart } from "./BarChart";
 import { EmptyState } from "./States";
 
+/** A 1/1 showcase bucket rendered above the standard ranked grid. */
+function OneOfOneBucket({
+  title,
+  emoji,
+  blurb,
+  tokens,
+}: {
+  title: string;
+  emoji: string;
+  blurb: string;
+  tokens: OneOfOneToken[];
+}) {
+  if (tokens.length === 0) return null;
+  return (
+    <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--card)] p-4">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold">
+          {emoji} {title} <span className="text-neutral-500">· {tokens.length}</span>
+        </h2>
+        <p className="text-xs text-neutral-400">{blurb}</p>
+      </div>
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {tokens.map((t) => (
+          <Link
+            key={t.tokenId}
+            href={`/rarity/${t.tokenId}`}
+            className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-center hover:border-[var(--accent)]"
+          >
+            {t.imageUrl ? (
+              <Image
+                src={t.imageUrl}
+                alt={t.name ?? `Ronkeverse #${t.tokenId}`}
+                width={120}
+                height={120}
+                className="mx-auto aspect-square w-full rounded object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="mx-auto flex aspect-square w-full items-center justify-center rounded bg-[var(--border)] text-xs text-neutral-500">
+                #{t.tokenId}
+              </div>
+            )}
+            <div className="mt-1 truncate text-xs font-medium text-[var(--accent)]" title={t.name ?? undefined}>
+              {t.name ?? `#${t.tokenId}`}
+            </div>
+            <div className="text-xs text-neutral-500">#{t.tokenId}</div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /**
  * Rarity leaderboard (U12): rank-sorted grid with NFT thumbnails, a single-trait
- * filter, and a trait-distribution chart. Standalone - NOT gated by the global
- * token/NFT asset toggle (rarity only applies to the collection).
+ * filter, and a trait-distribution chart. The 1/1 pieces (community + official)
+ * are showcased in their own buckets above the standard 1..N ladder rather than
+ * being ranked as near-common. Standalone - NOT gated by the global asset toggle.
  */
 export function RarityView({
   rows,
@@ -17,6 +71,8 @@ export function RarityView({
   filter,
   page = 0,
   pageSize = 60,
+  communityOneOfOnes = [],
+  officialOneOfOnes = [],
 }: {
   rows: RarityRow[];
   distributions: TraitDistribution[];
@@ -24,7 +80,11 @@ export function RarityView({
   filter?: { traitType: string; value: string };
   page?: number;
   pageSize?: number;
+  communityOneOfOnes?: OneOfOneToken[];
+  officialOneOfOnes?: OneOfOneToken[];
 }) {
+  // Buckets only make sense on the unfiltered first page (the showcase header).
+  const showBuckets = !filter && page === 0;
   const filteredHref = (nextPage: number) => {
     const q = new URLSearchParams();
     if (filter) {
@@ -43,8 +103,29 @@ export function RarityView({
       </div>
       {meta.revealedSupply != null ? (
         <p className="text-sm text-neutral-400">
-          Ranked by OpenRarity information content · {meta.revealedSupply} revealed tokens.
+          Standard collection ranked by OpenRarity information content. One-of-ones are
+          showcased in their own buckets below.
         </p>
+      ) : null}
+
+      {showBuckets ? (
+        <>
+          <OneOfOneBucket
+            title="Community 1/1s"
+            emoji="🎨"
+            blurb="Hand-made community pieces — each unique, outside the standard ranking."
+            tokens={communityOneOfOnes}
+          />
+          <OneOfOneBucket
+            title="Official 1/1s"
+            emoji="⭐"
+            blurb="Team-made one-of-ones."
+            tokens={officialOneOfOnes}
+          />
+          {(communityOneOfOnes.length > 0 || officialOneOfOnes.length > 0) ? (
+            <h2 className="pt-2 text-sm font-semibold text-neutral-300">Standard collection · ranked</h2>
+          ) : null}
+        </>
       ) : null}
 
       {filter ? (

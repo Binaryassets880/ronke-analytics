@@ -11,6 +11,7 @@ const base = (over: Partial<ScoreInput> = {}): ScoreInput => ({
   nftHold: null,
   bodyTypesHeld: 0,
   bodyTypesTotal: 10,
+  oneOfOneCount: 0,
   ...over,
 });
 
@@ -97,6 +98,18 @@ describe("computeScore", () => {
     expect(full.breakdown.collectorPoints - partial.breakdown.collectorPoints).toBe(
       C.collector.perType + C.collector.fullKicker,
     );
+  });
+
+  it("adds a flat 1/1 bonus per one-of-one held, into the NFT sub-score", () => {
+    const none = computeScore(base({ nftRarityFactors: [1] }));
+    const one = computeScore(base({ nftRarityFactors: [1], oneOfOneCount: 1 }));
+    const two = computeScore(base({ nftRarityFactors: [1, 1], oneOfOneCount: 2 }));
+    expect(none.breakdown.oneOfOnePoints).toBe(0);
+    expect(one.breakdown.oneOfOnePoints).toBe(C.oneOfOne.bonus);
+    expect(two.breakdown.oneOfOnePoints).toBe(2 * C.oneOfOne.bonus);
+    // The bonus flows into the NFT sub-score (and thus the combined score).
+    expect(one.nftSubscore - none.nftSubscore).toBe(C.oneOfOne.bonus);
+    expect(one.breakdown.oneOfOneCount).toBe(1);
   });
 
   it("contributes no duration for an asset never held (null metrics)", () => {

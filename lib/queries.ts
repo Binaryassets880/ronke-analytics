@@ -276,6 +276,8 @@ export interface WalletScore {
   collectorPoints: number;
   bodyTypesHeld: number;
   bodyTypesTotal: number;
+  oneOfOnePoints: number;
+  oneOfOneCount: number;
 }
 
 /** One wallet's Ronke Score + breakdown + global rank, for the profile. */
@@ -287,7 +289,8 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
            ronke_holding, ronke_duration, ronke_diamond_mult,
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
-           collector_points, body_types_held, body_types_total
+           collector_points, body_types_held, body_types_total,
+           oneofone_points, oneofone_count
     FROM wallet_scores WHERE address = ${address}
   `;
   if (rows.length === 0) return null;
@@ -313,6 +316,8 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     collectorPoints: Number(r.collector_points),
     bodyTypesHeld: Number(r.body_types_held),
     bodyTypesTotal: Number(r.body_types_total),
+    oneOfOnePoints: Number(r.oneofone_points),
+    oneOfOneCount: Number(r.oneofone_count),
   };
 }
 
@@ -545,6 +550,8 @@ export async function getRarityLeaderboard(
 ): Promise<RarityRow[]> {
   const sql = getSql();
   if (!sql) return [];
+  // rarity_rank IS NOT NULL is standard-tokens-only (1/1s are null-ranked and
+  // shown in their own buckets), so the standard grid stays a clean 1..N ladder.
   const rows = traitFilter
     ? await sql`
         SELECT r.token_id, r.rarity_rank, r.info_content_score, r.image_url
@@ -564,6 +571,39 @@ export async function getRarityLeaderboard(
     rarityRank: Number(r.rarity_rank),
     infoContentScore: Number(r.info_content_score),
     imageUrl: (r.image_url as string | null) ?? null,
+  }));
+}
+
+export type OneOfOneTier = "community_1of1" | "official_1of1";
+
+export interface OneOfOneToken {
+  tokenId: string;
+  imageUrl: string | null;
+  /** The showcase name for the piece (e.g. the community artist's title). */
+  name: string | null;
+}
+
+/**
+ * All tokens in a 1/1 bucket (community or official), for the rarity showcase
+ * sections. Ordered by token_id. The `name` is the piece's distinctive trait
+ * value ("Community 1/1" trait for community pieces), null for official 1/1s.
+ */
+export async function getOneOfOneBucket(tier: OneOfOneTier): Promise<OneOfOneToken[]> {
+  const sql = getSql();
+  if (!sql) return [];
+  const nameTrait = tier === "community_1of1" ? "Community 1/1" : null;
+  const rows = await sql`
+    SELECT r.token_id, r.image_url, nt.value AS name
+    FROM token_rarity r
+    LEFT JOIN nft_traits nt
+      ON nt.token_id = r.token_id AND nt.trait_type = ${nameTrait}
+    WHERE r.tier = ${tier}
+    ORDER BY r.token_id::bigint ASC
+  `;
+  return rows.map((r) => ({
+    tokenId: String(r.token_id),
+    imageUrl: (r.image_url as string | null) ?? null,
+    name: (r.name as string | null) ?? null,
   }));
 }
 
@@ -601,6 +641,7 @@ export async function getDailyRandomToken(seed: string): Promise<DailyToken | nu
 export interface TokenDetail {
   tokenId: string;
   rarityRank: number | null;
+  tier: "standard" | "community_1of1" | "official_1of1";
   infoContentScore: number;
   imageUrl: string | null;
   traits: { traitType: string; value: string; probability: number }[];
@@ -610,7 +651,7 @@ export async function getToken(tokenId: string): Promise<TokenDetail | null> {
   const sql = getSql();
   if (!sql) return null;
   const rarity = await sql`
-    SELECT token_id, rarity_rank, info_content_score, image_url
+    SELECT token_id, rarity_rank, tier, info_content_score, image_url
     FROM token_rarity WHERE token_id = ${tokenId}
   `;
   if (rarity.length === 0) return null;
@@ -625,6 +666,7 @@ export async function getToken(tokenId: string): Promise<TokenDetail | null> {
   return {
     tokenId: String(r.token_id),
     rarityRank: r.rarity_rank == null ? null : Number(r.rarity_rank),
+    tier: ((r.tier as string) ?? "standard") as TokenDetail["tier"],
     infoContentScore: Number(r.info_content_score),
     imageUrl: (r.image_url as string | null) ?? null,
     traits: traits.map((t) => ({

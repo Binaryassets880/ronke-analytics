@@ -9,7 +9,11 @@ import { formatPct } from "@/lib/format";
  * an explicit unrevealed state rather than a bogus rank.
  */
 export function TokenDetailView({ token }: { token: TokenDetail }) {
-  const unrevealed = token.rarityRank == null;
+  const isOneOfOne = token.tier !== "standard";
+  // Only a standard token with no rank is genuinely unrevealed; 1/1s are ranked
+  // in their own bucket, not on the standard ladder.
+  const unrevealed = token.rarityRank == null && !isOneOfOne;
+  const oneOfOneLabel = token.tier === "community_1of1" ? "Community 1/1" : "Official 1/1";
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Ronkeverse #{token.tokenId}</h1>
@@ -36,6 +40,11 @@ export function TokenDetailView({ token }: { token: TokenDetail }) {
           {unrevealed ? (
             <div className="rounded-xl border border-amber-500/30 bg-[var(--card)] p-4 text-amber-200">
               This token is unrevealed — no traits are indexed yet, so it has no rarity rank.
+            </div>
+          ) : isOneOfOne ? (
+            <div className="grid grid-cols-2 gap-3">
+              <StatTile label="Rarity tier" value={oneOfOneLabel} />
+              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">

@@ -18,8 +18,32 @@
 
 import type { NormalizedTrait } from "./traits";
 
-export const METHOD_VERSION = "openrarity-v1";
+export const METHOD_VERSION = "openrarity-v2-tiered";
 export const TRAIT_COUNT_KEY = "_trait_count";
+
+/**
+ * Rarity tier (bucket). The 1/1 tiers are hand-made one-of-ones that carry only
+ * 1-2 trait slots, so additive OpenRarity information content buries them below
+ * fully-traited standard tokens. They are pulled OUT of the standard 1..N ladder
+ * into their own buckets rather than being ranked as near-common (they ARE the
+ * rarest). `standard` covers everything else, including the Halloween edition.
+ */
+export type RarityTier = "community_1of1" | "official_1of1" | "standard";
+
+/** The trait_type that marks a community-artist 1/1. */
+const COMMUNITY_1OF1_TRAIT = "Community 1/1";
+/** A Special=1/1 token is an official/team one-of-one. */
+const SPECIAL_TRAIT = "Special";
+const OFFICIAL_1OF1_VALUE = "1/1";
+
+/** Classify a token into its rarity tier from its traits. */
+export function tierOf(traits: NormalizedTrait[]): RarityTier {
+  if (traits.some((t) => t.traitType === COMMUNITY_1OF1_TRAIT)) return "community_1of1";
+  if (traits.some((t) => t.traitType === SPECIAL_TRAIT && t.value === OFFICIAL_1OF1_VALUE)) {
+    return "official_1of1";
+  }
+  return "standard";
+}
 
 export interface TraitStat {
   traitType: string;
@@ -30,10 +54,11 @@ export interface TraitStat {
 
 export interface TokenRarity {
   tokenId: string;
+  tier: RarityTier;
   infoContentScore: number; // normalized by collection average
-  rarityRank: number; // 1 = rarest (OpenRarity)
+  rarityRank: number | null; // 1 = rarest among STANDARD tokens; null for 1/1 buckets
   traitFreqScore: number; // cross-check
-  traitFreqRank: number; // cross-check
+  traitFreqRank: number | null; // cross-check; null for 1/1 buckets
 }
 
 /** log base 2. */
@@ -122,23 +147,40 @@ export function computeRarity(traits: NormalizedTrait[]): TokenRarity[] {
 
   const avgIc = raw.reduce((s, r) => s + r.ic, 0) / raw.length;
 
-  // OpenRarity rank: highest IC = rarest = rank 1. Double-Sort tiebreak by id.
-  const byIc = [...raw].sort((a, b) => b.ic - a.ic || a.tokenId.localeCompare(b.tokenId));
+  // Tier each token from its traits. 1/1 buckets are ranked separately (they get
+  // no standard rank number), so the standard ladder reads a clean 1..N.
+  const tierMap = new Map<string, RarityTier>();
+  for (const [tokenId, list] of tokens) tierMap.set(tokenId, tierOf(list));
+  const isStandard = (tokenId: string) => tierMap.get(tokenId) === "standard";
+
+  // OpenRarity rank over STANDARD tokens only: highest IC = rarest = rank 1.
+  // Double-Sort tiebreak by id. 1/1 tokens are excluded and left null-ranked.
+  const standard = raw.filter((r) => isStandard(r.tokenId));
+  const byIc = [...standard].sort((a, b) => b.ic - a.ic || a.tokenId.localeCompare(b.tokenId));
   const icRank = new Map<string, number>();
   byIc.forEach((r, i) => icRank.set(r.tokenId, i + 1));
 
-  // Trait-frequency rank (cross-check): highest freq = rarest = rank 1.
-  const byFreq = [...raw].sort((a, b) => b.freq - a.freq || a.tokenId.localeCompare(b.tokenId));
+  // Trait-frequency rank (cross-check), also standard-only.
+  const byFreq = [...standard].sort((a, b) => b.freq - a.freq || a.tokenId.localeCompare(b.tokenId));
   const freqRank = new Map<string, number>();
   byFreq.forEach((r, i) => freqRank.set(r.tokenId, i + 1));
 
   return raw
-    .map((r) => ({
-      tokenId: r.tokenId,
-      infoContentScore: avgIc > 0 ? r.ic / avgIc : 0,
-      rarityRank: icRank.get(r.tokenId)!,
-      traitFreqScore: r.freq,
-      traitFreqRank: freqRank.get(r.tokenId)!,
-    }))
-    .sort((a, b) => a.rarityRank - b.rarityRank);
+    .map((r) => {
+      const std = isStandard(r.tokenId);
+      return {
+        tokenId: r.tokenId,
+        tier: tierMap.get(r.tokenId)!,
+        infoContentScore: avgIc > 0 ? r.ic / avgIc : 0,
+        rarityRank: std ? icRank.get(r.tokenId)! : null,
+        traitFreqScore: r.freq,
+        traitFreqRank: std ? freqRank.get(r.tokenId)! : null,
+      };
+    })
+    // Standard tokens by rank (rarest first), then the 1/1 buckets by token_id.
+    .sort(
+      (a, b) =>
+        (a.rarityRank ?? Number.POSITIVE_INFINITY) - (b.rarityRank ?? Number.POSITIVE_INFINITY) ||
+        a.tokenId.localeCompare(b.tokenId),
+    );
 }

@@ -65,4 +65,13 @@ export const SCORE_CONFIG = {
     /** Extra kicker for holding all body types. */
     fullKicker: 1000,
   },
+  /**
+   * Flat bonus per one-of-one (1/1) Ronkeverse held, community OR official. The
+   * 107 community + 52 official 1/1s are the collection's hand-made showpieces;
+   * additive OpenRarity buries them (only 1-2 trait slots), so they earn this
+   * dedicated bonus instead of relying on the rarity curve. Tunable.
+   */
+  oneOfOne: {
+    bonus: 500,
+  },
 } as const;

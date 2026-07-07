@@ -75,6 +75,12 @@ export function RonkeScoreCard({ score }: { score: WalletScore }) {
             label={`Collector${score.bodyTypesTotal > 0 ? ` (${score.bodyTypesHeld}/${score.bodyTypesTotal} bodies)` : ""}`}
             value={formatCompact(score.collectorPoints)}
           />
+          {score.oneOfOneCount > 0 ? (
+            <Row
+              label={`1/1 bonus (${score.oneOfOneCount}×)`}
+              value={formatCompact(score.oneOfOnePoints)}
+            />
+          ) : null}
         </div>
       </div>
     </section>

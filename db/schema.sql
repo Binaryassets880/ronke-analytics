@@ -159,15 +159,20 @@ CREATE TABLE IF NOT EXISTS trait_stats (
 CREATE TABLE IF NOT EXISTS token_rarity (
   token_id          TEXT PRIMARY KEY,
   info_content_score DOUBLE PRECISION NOT NULL DEFAULT 0,  -- OpenRarity
-  rarity_rank       INTEGER,                                -- 1 = rarest (OpenRarity)
+  rarity_rank       INTEGER,                                -- 1 = rarest among STANDARD tokens; NULL for 1/1 buckets
   trait_freq_score  DOUBLE PRECISION NOT NULL DEFAULT 0,   -- cross-check
   trait_freq_rank   INTEGER,                                -- cross-check
   method_version    TEXT,
   image_url         TEXT
 );
+-- Rarity bucket: 'standard' | 'community_1of1' | 'official_1of1'. 1/1s are pulled
+-- out of the standard 1..N ladder into their own showcase buckets.
+ALTER TABLE token_rarity ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'standard';
 
 CREATE INDEX IF NOT EXISTS token_rarity_rank_idx
   ON token_rarity (rarity_rank);
+CREATE INDEX IF NOT EXISTS token_rarity_tier_idx
+  ON token_rarity (tier);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- Derived: earned wallet badges (KTD-9). Rebuilt each run.
@@ -216,6 +221,10 @@ ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_subscore INTEGER NOT
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_holding INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_duration INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_diamond_mult DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- One-of-one (1/1) flat bonus: points earned + count of 1/1s held (part of nft_subscore).
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS oneofone_points INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS oneofone_count INTEGER NOT NULL DEFAULT 0;
 
 -- ─────────────────────────────────────────────────────────────────────
 -- Market snapshots (E6): latest external market reading per source+asset.

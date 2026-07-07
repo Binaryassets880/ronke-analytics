@@ -68,8 +68,8 @@ describe("computeRarity - information content", () => {
   it("trait-frequency and OpenRarity can disagree yet each is internally consistent", () => {
     const r = computeRarity(FIXTURE);
     // Every token has a distinct, contiguous rank in both schemes.
-    const icRanks = r.map((x) => x.rarityRank).sort((a, b) => a - b);
-    const freqRanks = r.map((x) => x.traitFreqRank).sort((a, b) => a - b);
+    const icRanks = r.map((x) => x.rarityRank!).sort((a, b) => a - b);
+    const freqRanks = r.map((x) => x.traitFreqRank!).sort((a, b) => a - b);
     expect(icRanks).toEqual([1, 2, 3]);
     expect(freqRanks).toEqual([1, 2, 3]);
   });
@@ -95,6 +95,39 @@ describe("computeRarity - information content", () => {
 
   it("returns [] for an empty collection", () => {
     expect(computeRarity([])).toEqual([]);
+  });
+});
+
+describe("computeRarity - 1/1 tiers", () => {
+  // Standard tokens A/B/C plus a community 1/1 (only the Community 1/1 trait) and
+  // an official 1/1 (standard traits + Special=1/1).
+  const withOneOfOnes: NormalizedTrait[] = [
+    ...FIXTURE,
+    trait("COM", "Community 1/1", "Ronke Joker"),
+    trait("OFF", "Color", "Red"),
+    trait("OFF", "Size", "Big"),
+    trait("OFF", "Special", "1/1"),
+  ];
+
+  it("tiers 1/1s and pulls them out of the standard rank ladder", () => {
+    const r = computeRarity(withOneOfOnes);
+    const byId = Object.fromEntries(r.map((x) => [x.tokenId, x]));
+    expect(byId.COM.tier).toBe("community_1of1");
+    expect(byId.OFF.tier).toBe("official_1of1");
+    expect(byId.A.tier).toBe("standard");
+    // 1/1s get no standard rank number.
+    expect(byId.COM.rarityRank).toBeNull();
+    expect(byId.OFF.rarityRank).toBeNull();
+  });
+
+  it("ranks the standard collection 1..N among itself, ignoring 1/1s", () => {
+    const r = computeRarity(withOneOfOnes);
+    const standardRanks = r
+      .filter((x) => x.tier === "standard")
+      .map((x) => x.rarityRank)
+      .sort((a, b) => (a ?? 0) - (b ?? 0));
+    // Exactly A, B, C ranked 1,2,3 - the 1/1s do not consume rank numbers.
+    expect(standardRanks).toEqual([1, 2, 3]);
   });
 });
 

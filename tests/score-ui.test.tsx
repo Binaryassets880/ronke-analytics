@@ -30,6 +30,8 @@ const score: WalletScore = {
   collectorPoints: 60,
   bodyTypesHeld: 4,
   bodyTypesTotal: 10,
+  oneOfOnePoints: 0,
+  oneOfOneCount: 0,
 };
 
 describe("RonkeScoreCard", () => {
