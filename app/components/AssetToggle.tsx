@@ -36,8 +36,10 @@ export function AssetToggle() {
             role="tab"
             aria-selected={active}
             onClick={() => select(value)}
-            className={`rounded-md px-3 py-1 ${
-              active ? "bg-white text-black" : "text-neutral-300 hover:text-white"
+            className={`rounded-md px-3 py-1 transition-colors ${
+              active
+                ? "bg-[var(--accent)] font-medium text-[var(--background)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
           >
             {label}

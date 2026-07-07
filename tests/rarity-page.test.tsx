@@ -30,7 +30,7 @@ describe("RarityView", () => {
     // first card is rank 1 token #7
     expect(links[0]).toHaveAttribute("href", "/rarity/7");
     expect(screen.getByText("rank 1")).toBeInTheDocument();
-    expect(screen.getByText(/3 revealed tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/Standard collection ranked by OpenRarity/i)).toBeInTheDocument();
   });
 
   it("does not depend on the global token/NFT asset toggle", () => {
@@ -54,9 +54,11 @@ describe("TokenDetailView", () => {
     const token: TokenDetail = {
       tokenId: "7",
       rarityRank: 1,
+      tier: "standard",
       infoContentScore: 1.834,
       imageUrl: null,
       traits: [{ traitType: "Background", value: "Pink", probability: 0.196 }],
+      owner: null,
     };
     render(<TokenDetailView token={token} />);
     expect(screen.getByText("#1")).toBeInTheDocument();
@@ -68,13 +70,33 @@ describe("TokenDetailView", () => {
     const token: TokenDetail = {
       tokenId: "999",
       rarityRank: null,
+      tier: "standard",
       infoContentScore: 0,
       imageUrl: null,
       traits: [],
+      owner: null,
     };
     render(<TokenDetailView token={token} />);
     expect(screen.getByText(/unrevealed/i)).toBeInTheDocument();
     expect(screen.queryByText(/OpenRarity rank/)).not.toBeInTheDocument();
+  });
+
+  it("shows a 1/1 tier badge (not 'unrevealed') for a null-ranked one-of-one", () => {
+    const token: TokenDetail = {
+      tokenId: "1082",
+      rarityRank: null,
+      tier: "community_1of1",
+      infoContentScore: 0.86,
+      imageUrl: null,
+      traits: [{ traitType: "Community 1/1", value: "Ronke Joker", probability: 0.0001 }],
+      owner: null,
+    };
+    render(<TokenDetailView token={token} />);
+    // The tier badge (label "Rarity tier") shows the bucket name; the trait row
+    // also shows "Community 1/1", so assert on the label + at least one value.
+    expect(screen.getByText("Rarity tier")).toBeInTheDocument();
+    expect(screen.getAllByText("Community 1/1").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/unrevealed/i)).not.toBeInTheDocument();
   });
 });
 

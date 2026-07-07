@@ -12,8 +12,7 @@ import { WalletSearch } from "./WalletSearch";
  * within it.
  */
 const SECTIONS = [
-  { href: "/#ronke-score", label: "Ronke Score", section: "rating" },
-  { href: "/leaderboard", label: "Leaderboard", section: "rating" },
+  { href: "/overview", label: "Ronke Score", section: "rating" },
   { href: "/resources", label: "Resources", section: "resources" },
   { href: "/apps", label: "Apps", section: "apps" },
 ] as const;
@@ -49,7 +48,7 @@ export function EcosystemNav() {
             href="/"
             aria-current={active === "home" ? "page" : undefined}
             className={`whitespace-nowrap text-sm font-medium ${
-              active === "home" ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-white"
+              active === "home" ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
           >
             Home
@@ -60,7 +59,7 @@ export function EcosystemNav() {
               href={s.href}
               aria-current={active === s.section ? "page" : undefined}
               className={`whitespace-nowrap text-sm font-medium ${
-                active === s.section ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-white"
+                active === s.section ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               {s.label}

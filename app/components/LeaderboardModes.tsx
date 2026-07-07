@@ -3,20 +3,19 @@ import type { AssetParam } from "@/lib/format";
 
 /**
  * Shared toggle between the global Ronke Score leaderboard and the per-asset
- * Holdings / Diamond leaderboards (S-series). Rendered by both views. The
- * per-asset modes preserve the current asset; Ronke Score is global.
+ * Holdings leaderboard (S-series). Rendered by both views. The Holdings mode
+ * preserves the current asset; Ronke Score is global.
  */
 export function LeaderboardModes({
   active,
   assetParam = "token",
 }: {
-  active: "score" | "size" | "diamond";
+  active: "score" | "size";
   assetParam?: AssetParam;
 }) {
   const modes = [
     { key: "score", label: "Ronke Score", href: "/leaderboard?by=score" },
     { key: "size", label: "Holdings", href: `/leaderboard?asset=${assetParam}&by=size` },
-    { key: "diamond", label: "Diamond", href: `/leaderboard?asset=${assetParam}&by=diamond` },
   ] as const;
 
   return (

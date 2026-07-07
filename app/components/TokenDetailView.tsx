@@ -1,7 +1,8 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { TokenDetail } from "@/lib/queries";
 import { StatTile } from "./StatTile";
-import { formatPct } from "@/lib/format";
+import { formatPct, displayName } from "@/lib/format";
 
 /**
  * Per-token rarity detail (U12): image, OpenRarity rank + score, and each trait
@@ -9,7 +10,11 @@ import { formatPct } from "@/lib/format";
  * an explicit unrevealed state rather than a bogus rank.
  */
 export function TokenDetailView({ token }: { token: TokenDetail }) {
-  const unrevealed = token.rarityRank == null;
+  const isOneOfOne = token.tier !== "standard";
+  // Only a standard token with no rank is genuinely unrevealed; 1/1s are ranked
+  // in their own bucket, not on the standard ladder.
+  const unrevealed = token.rarityRank == null && !isOneOfOne;
+  const oneOfOneLabel = token.tier === "community_1of1" ? "Community 1/1" : "Official 1/1";
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Ronkeverse #{token.tokenId}</h1>
@@ -26,7 +31,7 @@ export function TokenDetailView({ token }: { token: TokenDetail }) {
               unoptimized
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--border)] text-neutral-500">
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-[var(--border)] text-[var(--muted-2)]">
               #{token.tokenId}
             </div>
           )}
@@ -37,6 +42,11 @@ export function TokenDetailView({ token }: { token: TokenDetail }) {
             <div className="rounded-xl border border-amber-500/30 bg-[var(--card)] p-4 text-amber-200">
               This token is unrevealed — no traits are indexed yet, so it has no rarity rank.
             </div>
+          ) : isOneOfOne ? (
+            <div className="grid grid-cols-2 gap-3">
+              <StatTile label="Rarity tier" value={oneOfOneLabel} />
+              <StatTile label="Info-content score" value={token.infoContentScore.toFixed(3)} />
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <StatTile label="OpenRarity rank" value={`#${token.rarityRank}`} />
@@ -44,13 +54,26 @@ export function TokenDetailView({ token }: { token: TokenDetail }) {
             </div>
           )}
 
+          {token.owner ? (
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3">
+              <span className="text-sm text-[var(--muted)]">Owned by</span>
+              <Link
+                href={`/wallet/${token.owner.address}`}
+                className="mono text-sm text-[var(--accent)] hover:underline"
+                title={token.owner.address}
+              >
+                {displayName(token.owner.name, token.owner.address)}
+              </Link>
+            </div>
+          ) : null}
+
           {token.traits.length > 0 ? (
             <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-              <h2 className="mb-2 text-sm font-medium text-neutral-300">Traits</h2>
+              <h2 className="mb-2 text-sm font-medium text-[var(--muted)]">Traits</h2>
               <ul className="divide-y divide-[var(--border)]/60">
                 {token.traits.map((t) => (
                   <li key={`${t.traitType}-${t.value}`} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-neutral-400">{t.traitType}</span>
+                    <span className="text-[var(--muted)]">{t.traitType}</span>
                     <span className="flex items-center gap-2">
                       <span>{t.value}</span>
                       <span className="text-xs text-[var(--accent)]">{formatPct(t.probability)}</span>

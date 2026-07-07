@@ -17,7 +17,7 @@ export function BadgeCatalog() {
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Badges to earn</h2>
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-[var(--muted)]">
           Hold, stack, and hodl $RONKE and Ronkeverse to earn badges on your profile.
         </p>
       </div>
@@ -26,7 +26,7 @@ export function BadgeCatalog() {
         if (badges.length === 0) return null;
         return (
           <div key={realm}>
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted-2)]">
               {REALM_LABEL[realm]}
             </h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -40,13 +40,13 @@ export function BadgeCatalog() {
                   </span>
                   <div className="min-w-0">
                     <div className="font-medium">{b.label}</div>
-                    <div className="text-sm text-neutral-400">{b.description}</div>
+                    <div className="text-sm text-[var(--muted)]">{b.description}</div>
                     {b.tiers ? (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {b.tiers.map((t) => (
                           <span
                             key={t.tier}
-                            className="rounded bg-black/30 px-1.5 py-0.5 text-xs text-neutral-400"
+                            className="rounded bg-[var(--card-2)] px-1.5 py-0.5 text-xs text-[var(--muted)]"
                           >
                             {t.label}
                           </span>

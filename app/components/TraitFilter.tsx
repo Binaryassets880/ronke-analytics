@@ -38,7 +38,7 @@ export function TraitFilter({
 
   return (
     <label className="flex items-center gap-2 text-sm">
-      <span className="text-neutral-400">Filter trait</span>
+      <span className="text-[var(--muted)]">Filter trait</span>
       <select
         aria-label="Filter by trait"
         value={activeIndex >= 0 ? String(activeIndex) : ""}

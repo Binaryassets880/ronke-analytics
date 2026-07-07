@@ -38,8 +38,8 @@ export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
   if (badges.length === 0) {
     return (
       <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h2 className="mb-1 text-sm font-medium text-neutral-300">Badges</h2>
-        <p className="text-sm text-neutral-500">No badges yet — hold, stack, and hodl to earn them.</p>
+        <h2 className="mb-1 text-sm font-medium text-[var(--muted)]">Badges</h2>
+        <p className="text-sm text-[var(--muted-2)]">No badges yet — hold, stack, and hodl to earn them.</p>
       </section>
     );
   }
@@ -52,11 +52,11 @@ export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
 
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-      <h2 className="mb-3 text-sm font-medium text-neutral-300">Badges</h2>
+      <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Badges</h2>
       <div className="space-y-4">
         {REALM_ORDER.filter((r) => byRealm.has(r)).map((realm) => (
           <div key={realm}>
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-[var(--muted-2)]">
               {REALM_LABEL[realm]}
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -70,7 +70,7 @@ export function BadgeShelf({ badges }: { badges: WalletBadge[] }) {
                   <span
                     key={b.badgeKey}
                     title={tooltip}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-black/20 px-3 py-1 text-sm"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--card-2)] px-3 py-1 text-sm"
                   >
                     <span aria-hidden>{def.icon}</span>
                     <span>{tl ? `${def.label}: ${tl}` : def.label}</span>

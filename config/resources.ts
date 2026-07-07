@@ -37,6 +37,12 @@ export const VERIFIED_ADDRESSES: AddressRow[] = [
     note: "The $RONKE token contract. Always verify before swapping - never trust a random address.",
   },
   {
+    label: CONTRACTS.ronkestr_token.label,
+    address: CONTRACTS.ronkestr_token.address,
+    standard: "ERC-20 · Ronin",
+    note: "The RonkeStr (Ronke Strategy) token contract. Verify before swapping.",
+  },
+  {
     label: CONTRACTS.ronkeverse_nft.label,
     address: CONTRACTS.ronkeverse_nft.address,
     standard: "ERC-721 · Ronin",

@@ -43,9 +43,9 @@ export async function persistRarity(
   await insertMany(
     sql,
     "token_rarity",
-    ["token_id", "info_content_score", "rarity_rank", "trait_freq_score", "trait_freq_rank", "method_version", "image_url"],
+    ["token_id", "tier", "info_content_score", "rarity_rank", "trait_freq_score", "trait_freq_rank", "method_version", "image_url"],
     rarity.map((r) => [
-      r.tokenId, r.infoContentScore, r.rarityRank, r.traitFreqScore, r.traitFreqRank, METHOD_VERSION, images.get(r.tokenId) ?? null,
+      r.tokenId, r.tier, r.infoContentScore, r.rarityRank, r.traitFreqScore, r.traitFreqRank, METHOD_VERSION, images.get(r.tokenId) ?? null,
     ]),
   );
 

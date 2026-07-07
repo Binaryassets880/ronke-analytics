@@ -23,7 +23,7 @@ export function HoldersView({
   if (!meta.backfillComplete) return <PreBackfill />;
   const assetLabel = CONTRACTS[asset].label;
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{assetLabel} · Holders &amp; concentration</h1>
         <StalenessBadge lastRebuildAt={meta.lastRebuildAt} now={now} />
@@ -36,14 +36,14 @@ export function HoldersView({
       </div>
 
       {data.histogram.length > 0 ? (
-        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <h2 className="mb-2 text-sm font-medium text-neutral-300">Balance distribution</h2>
+        <section className="rv-card p-5">
+          <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Balance distribution</h2>
           <BarChart bars={data.histogram} label="balance distribution" />
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h2 className="mb-3 text-sm font-medium text-neutral-300">Holders</h2>
+      <section className="rv-card p-5">
+        <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Holders</h2>
         <HolderTable rows={data.holders} asset={asset} />
       </section>
     </div>

@@ -29,6 +29,8 @@ export interface ScoreInput {
   /** Distinct Body trait values currently held, and the total that exist. */
   bodyTypesHeld: number;
   bodyTypesTotal: number;
+  /** Count of one-of-one (1/1) Ronkeverse held - community + official. */
+  oneOfOneCount: number;
 }
 
 export interface ScoreResult {
@@ -47,6 +49,8 @@ export interface ScoreResult {
     nftDurationPoints: number; // after diamond multiplier
     nftDiamondMult: number;
     collectorPoints: number;
+    oneOfOnePoints: number; // flat 1/1 bonus
+    oneOfOneCount: number;
     bodyTypesHeld: number;
     bodyTypesTotal: number;
   };
@@ -102,7 +106,10 @@ export function computeScore(input: ScoreInput): ScoreResult {
     C.collector.perType * input.bodyTypesHeld +
     (input.bodyTypesTotal > 0 && input.bodyTypesHeld >= input.bodyTypesTotal ? C.collector.fullKicker : 0);
 
-  const nftSubscore = nftHoldingPoints + nftDurationPoints + collectorPoints;
+  // Flat bonus per 1/1 held (community or official) - the showpiece flex.
+  const oneOfOnePoints = C.oneOfOne.bonus * Math.max(0, input.oneOfOneCount);
+
+  const nftSubscore = nftHoldingPoints + nftDurationPoints + collectorPoints + oneOfOnePoints;
 
   return {
     score: round(ronkeSubscore + ronkestrSubscore + nftSubscore),
@@ -120,6 +127,8 @@ export function computeScore(input: ScoreInput): ScoreResult {
       nftDurationPoints: round(nftDurationPoints),
       nftDiamondMult,
       collectorPoints: round(collectorPoints),
+      oneOfOnePoints: round(oneOfOnePoints),
+      oneOfOneCount: input.oneOfOneCount,
       bodyTypesHeld: input.bodyTypesHeld,
       bodyTypesTotal: input.bodyTypesTotal,
     },

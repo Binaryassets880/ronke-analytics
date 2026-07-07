@@ -18,16 +18,16 @@ export function StalenessBadge({
   const stale = hrs === null || hrs > staleAfterHours;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
-        stale
-          ? "border-amber-500/40 text-amber-300"
-          : "border-emerald-500/30 text-emerald-300"
-      }`}
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+      style={{
+        borderColor: stale ? "color-mix(in srgb, var(--paper) 40%, transparent)" : "color-mix(in srgb, var(--diamond) 35%, transparent)",
+        color: stale ? "var(--paper)" : "var(--diamond)",
+      }}
       title={`Snapshots last rebuilt: ${formatTimestamp(lastRebuildAt)}`}
     >
       <span aria-hidden>{stale ? "⚠" : "✓"}</span>
       {stale ? "data may be stale" : "up to date"}
-      <span className="text-neutral-500">· {formatTimestamp(lastRebuildAt)}</span>
+      <span className="text-[var(--muted-2)]">· {formatTimestamp(lastRebuildAt)}</span>
     </span>
   );
 }

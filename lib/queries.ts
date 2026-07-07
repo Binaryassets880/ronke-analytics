@@ -6,6 +6,7 @@
  */
 
 import { getSql } from "@/db/client";
+import { CONTRACTS, ASSETS } from "@/config/contracts";
 import type { Asset } from "@/config/contracts";
 import type { DiamondBucket } from "@/config/contracts";
 
@@ -276,6 +277,8 @@ export interface WalletScore {
   collectorPoints: number;
   bodyTypesHeld: number;
   bodyTypesTotal: number;
+  oneOfOnePoints: number;
+  oneOfOneCount: number;
 }
 
 /** One wallet's Ronke Score + breakdown + global rank, for the profile. */
@@ -287,7 +290,8 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
            ronke_holding, ronke_duration, ronke_diamond_mult,
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
-           collector_points, body_types_held, body_types_total
+           collector_points, body_types_held, body_types_total,
+           oneofone_points, oneofone_count
     FROM wallet_scores WHERE address = ${address}
   `;
   if (rows.length === 0) return null;
@@ -313,6 +317,8 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     collectorPoints: Number(r.collector_points),
     bodyTypesHeld: Number(r.body_types_held),
     bodyTypesTotal: Number(r.body_types_total),
+    oneOfOnePoints: Number(r.oneofone_points),
+    oneOfOneCount: Number(r.oneofone_count),
   };
 }
 
@@ -376,16 +382,12 @@ export interface LeaderboardRow extends HolderRow {
 
 export async function getLeaderboard(
   asset: Asset,
-  by: "size" | "diamond",
   page = 0,
   pageSize = 50,
 ): Promise<LeaderboardRow[]> {
   const sql = getSql();
   if (!sql) return [];
-  const orderExpr =
-    by === "diamond"
-      ? sql`coalesce(m.weighted_duration_days, 0) DESC`
-      : sql`(CASE WHEN b.balance > 0 THEN b.balance ELSE b.token_count END) DESC`;
+  const orderExpr = sql`(CASE WHEN b.balance > 0 THEN b.balance ELSE b.token_count END) DESC`;
   const rows = await sql`
     SELECT b.address, b.balance::text AS balance, b.token_count,
            coalesce(m.holding_duration_days, 0) AS dur,
@@ -416,6 +418,29 @@ export interface WalletHeldToken {
   tokenId: string;
   rarityRank: number | null;
   imageUrl: string | null;
+  /** 'standard' (ranked) vs the two 1/1 buckets - 1/1s show a tier label, not a rank. */
+  tier: "standard" | "community_1of1" | "official_1of1";
+}
+
+/**
+ * Per-asset holding breakdown so the profile can report duration / diamond
+ * bucket / first-buy PER asset - an aggregate "held for 10 mo" is ambiguous
+ * across three different assets.
+ */
+export interface WalletAssetHolding {
+  asset: Asset;
+  label: string;
+  /** Raw balance base units (tokens); "0" for NFTs. */
+  balance: string;
+  /** NFT count; 0 for tokens. */
+  tokenCount: number;
+  /** Currently holding a positive amount of this asset. */
+  isHeld: boolean;
+  holdingDurationDays: number;
+  diamondBucket: DiamondBucket | null;
+  firstAcquiredAt: string | null;
+  neverSold: boolean;
+  everPaperSold: boolean;
 }
 
 export interface WalletData {
@@ -430,6 +455,8 @@ export interface WalletData {
   neverSold: boolean;
   everPaperSold: boolean;
   firstAcquiredAt: string | null;
+  /** Per-asset breakdown ($RONKE, RonkeStr, Ronkeverse), in that order. */
+  assetHoldings: WalletAssetHolding[];
   heldTokens: WalletHeldToken[];
   everHeld: boolean;
 }
@@ -446,6 +473,7 @@ export async function getWallet(address: string): Promise<WalletData> {
     neverSold: false,
     everPaperSold: false,
     firstAcquiredAt: null,
+    assetHoldings: [],
     heldTokens: [],
     everHeld: false,
   };
@@ -485,8 +513,35 @@ export async function getWallet(address: string): Promise<WalletData> {
     neverSold = neverSold && (r.never_sold as boolean);
     everPaperSold = everPaperSold || (r.ever_paper_sold as boolean);
   }
+
+  // Per-asset breakdown: merge the balance + metric rows keyed by asset so each
+  // asset reports its own duration / diamond bucket / first buy.
+  const balanceByAsset = new Map<string, (typeof balances)[number]>();
+  for (const r of balances) balanceByAsset.set(r.asset as string, r);
+  const metricByAsset = new Map<string, (typeof metrics)[number]>();
+  for (const r of metrics) metricByAsset.set(r.asset as string, r);
+  const assetHoldings: WalletAssetHolding[] = ASSETS.map((asset) => {
+    const b = balanceByAsset.get(asset);
+    const m = metricByAsset.get(asset);
+    const balance = String(b?.balance ?? "0");
+    const tokenCount = Number(b?.token_count ?? 0);
+    const isHeld = asset === "ronkeverse_nft" ? tokenCount > 0 : BigInt(balance.split(".")[0] || "0") > 0n;
+    return {
+      asset,
+      label: CONTRACTS[asset].label,
+      balance,
+      tokenCount,
+      isHeld,
+      holdingDurationDays: Number(m?.holding_duration_days ?? 0),
+      diamondBucket: (m?.diamond_bucket as DiamondBucket | undefined) ?? null,
+      firstAcquiredAt: (b?.first_acquired_at as string | null) ?? null,
+      neverSold: (m?.never_sold as boolean | undefined) ?? false,
+      everPaperSold: (m?.ever_paper_sold as boolean | undefined) ?? false,
+    };
+  });
+
   const held = await sql`
-    SELECT l.token_id, r.rarity_rank, r.image_url
+    SELECT l.token_id, r.rarity_rank, r.image_url, r.tier
     FROM holder_lots l
     LEFT JOIN token_rarity r ON r.token_id = l.token_id
     WHERE l.address = ${address} AND l.asset = 'ronkeverse_nft' AND l.token_id IS NOT NULL
@@ -503,13 +558,89 @@ export async function getWallet(address: string): Promise<WalletData> {
     neverSold,
     everPaperSold,
     firstAcquiredAt,
+    assetHoldings,
     heldTokens: held.map((r) => ({
       tokenId: String(r.token_id),
       rarityRank: r.rarity_rank == null ? null : Number(r.rarity_rank),
       imageUrl: (r.image_url as string | null) ?? null,
+      tier: ((r.tier as string) ?? "standard") as WalletHeldToken["tier"],
     })),
     everHeld: true,
   };
+}
+
+export interface WalletHistoryPoint {
+  date: string;
+  balance: number;
+}
+
+export interface WalletHistory {
+  ronke: WalletHistoryPoint[];
+  ronkestr: WalletHistoryPoint[];
+  ronkeverse: WalletHistoryPoint[];
+}
+
+/**
+ * A wallet's balance over time for each asset, reconstructed from the
+ * transfer_events log (the append-only source of truth). We fold signed
+ * quantities (in = +, out = -) into a running balance; quantity is base units
+ * for tokens (converted to whole units) and 1 per NFT (a running count). A final
+ * "today" point extends the line to now so a long-time holder reads as a flat
+ * line rather than stopping at their last transfer.
+ */
+async function seriesFor(
+  sql: NonNullable<ReturnType<typeof getSql>>,
+  asset: Asset,
+  address: string,
+  decimals: number | null,
+  now: Date,
+): Promise<WalletHistoryPoint[]> {
+  const rows = await sql`
+    SELECT block_time::text AS block_time, from_address, to_address, quantity::text AS quantity
+    FROM transfer_events
+    WHERE asset = ${asset} AND (from_address = ${address} OR to_address = ${address})
+    ORDER BY block_time ASC, id ASC
+    LIMIT 20000
+  `;
+  if (rows.length === 0) return [];
+
+  const divisor = decimals != null ? 10 ** decimals : 1;
+  let cum = 0n;
+  const raw: WalletHistoryPoint[] = [];
+  for (const r of rows) {
+    const qty = BigInt(String(r.quantity).split(".")[0] || "0");
+    if (r.to_address === address) cum += qty;
+    if (r.from_address === address) cum -= qty;
+    raw.push({ date: String(r.block_time).slice(0, 10), balance: Number(cum) / divisor });
+  }
+  // Collapse to one point per day (keep the last balance that day), then extend
+  // to today so flat holders still render a line to the present.
+  const byDay = new Map<string, number>();
+  for (const p of raw) byDay.set(p.date, p.balance);
+  const points = [...byDay.entries()].map(([date, balance]) => ({ date, balance }));
+  const today = now.toISOString().slice(0, 10);
+  if (points.length > 0 && points[points.length - 1].date !== today) {
+    points.push({ date: today, balance: points[points.length - 1].balance });
+  }
+  // Downsample for rendering (keep first + last), so a very active wallet stays light.
+  const MAX = 400;
+  if (points.length <= MAX) return points;
+  const step = (points.length - 1) / (MAX - 1);
+  const sampled: WalletHistoryPoint[] = [];
+  for (let i = 0; i < MAX; i++) sampled.push(points[Math.round(i * step)]);
+  return sampled;
+}
+
+export async function getWalletHistory(address: string, now = new Date()): Promise<WalletHistory> {
+  const sql = getSql();
+  const empty: WalletHistory = { ronke: [], ronkestr: [], ronkeverse: [] };
+  if (!sql) return empty;
+  const [ronke, ronkestr, ronkeverse] = await Promise.all([
+    seriesFor(sql, "ronke_token", address, CONTRACTS.ronke_token.decimals ?? 18, now),
+    seriesFor(sql, "ronkestr_token", address, CONTRACTS.ronkestr_token.decimals ?? 18, now),
+    seriesFor(sql, "ronkeverse_nft", address, null, now),
+  ]);
+  return { ronke, ronkestr, ronkeverse };
 }
 
 export interface WalletBadge {
@@ -545,6 +676,8 @@ export async function getRarityLeaderboard(
 ): Promise<RarityRow[]> {
   const sql = getSql();
   if (!sql) return [];
+  // rarity_rank IS NOT NULL is standard-tokens-only (1/1s are null-ranked and
+  // shown in their own buckets), so the standard grid stays a clean 1..N ladder.
   const rows = traitFilter
     ? await sql`
         SELECT r.token_id, r.rarity_rank, r.info_content_score, r.image_url
@@ -564,6 +697,39 @@ export async function getRarityLeaderboard(
     rarityRank: Number(r.rarity_rank),
     infoContentScore: Number(r.info_content_score),
     imageUrl: (r.image_url as string | null) ?? null,
+  }));
+}
+
+export type OneOfOneTier = "community_1of1" | "official_1of1";
+
+export interface OneOfOneToken {
+  tokenId: string;
+  imageUrl: string | null;
+  /** The showcase name for the piece (e.g. the community artist's title). */
+  name: string | null;
+}
+
+/**
+ * All tokens in a 1/1 bucket (community or official), for the rarity showcase
+ * sections. Ordered by token_id. The `name` is the piece's distinctive trait
+ * value ("Community 1/1" trait for community pieces), null for official 1/1s.
+ */
+export async function getOneOfOneBucket(tier: OneOfOneTier): Promise<OneOfOneToken[]> {
+  const sql = getSql();
+  if (!sql) return [];
+  const nameTrait = tier === "community_1of1" ? "Community 1/1" : null;
+  const rows = await sql`
+    SELECT r.token_id, r.image_url, nt.value AS name
+    FROM token_rarity r
+    LEFT JOIN nft_traits nt
+      ON nt.token_id = r.token_id AND nt.trait_type = ${nameTrait}
+    WHERE r.tier = ${tier}
+    ORDER BY r.token_id::bigint ASC
+  `;
+  return rows.map((r) => ({
+    tokenId: String(r.token_id),
+    imageUrl: (r.image_url as string | null) ?? null,
+    name: (r.name as string | null) ?? null,
   }));
 }
 
@@ -601,16 +767,19 @@ export async function getDailyRandomToken(seed: string): Promise<DailyToken | nu
 export interface TokenDetail {
   tokenId: string;
   rarityRank: number | null;
+  tier: "standard" | "community_1of1" | "official_1of1";
   infoContentScore: number;
   imageUrl: string | null;
   traits: { traitType: string; value: string; probability: number }[];
+  /** Current holder of this token (from holder_lots), with .ron name if any. */
+  owner: { address: string; name: string | null } | null;
 }
 
 export async function getToken(tokenId: string): Promise<TokenDetail | null> {
   const sql = getSql();
   if (!sql) return null;
   const rarity = await sql`
-    SELECT token_id, rarity_rank, info_content_score, image_url
+    SELECT token_id, rarity_rank, tier, info_content_score, image_url
     FROM token_rarity WHERE token_id = ${tokenId}
   `;
   if (rarity.length === 0) return null;
@@ -621,10 +790,22 @@ export async function getToken(tokenId: string): Promise<TokenDetail | null> {
     WHERE t.token_id = ${tokenId}
     ORDER BY probability ASC
   `;
+  // Current owner: the wallet holding this token in holder_lots, with .ron name.
+  const ownerRows = await sql`
+    SELECT l.address, n.name
+    FROM holder_lots l
+    LEFT JOIN rns_names n ON n.address = l.address
+    WHERE l.asset = 'ronkeverse_nft' AND l.token_id = ${tokenId}
+    LIMIT 1
+  `;
+  const owner = ownerRows[0]
+    ? { address: ownerRows[0].address as string, name: (ownerRows[0].name as string | null) ?? null }
+    : null;
   const r = rarity[0];
   return {
     tokenId: String(r.token_id),
     rarityRank: r.rarity_rank == null ? null : Number(r.rarity_rank),
+    tier: ((r.tier as string) ?? "standard") as TokenDetail["tier"],
     infoContentScore: Number(r.info_content_score),
     imageUrl: (r.image_url as string | null) ?? null,
     traits: traits.map((t) => ({
@@ -632,6 +813,7 @@ export async function getToken(tokenId: string): Promise<TokenDetail | null> {
       value: t.value as string,
       probability: Number(t.probability),
     })),
+    owner,
   };
 }
 

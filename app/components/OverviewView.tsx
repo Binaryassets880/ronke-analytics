@@ -39,16 +39,16 @@ export function OverviewView({
   const assetLabel = CONTRACTS[asset].label;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">{assetLabel} · Overview</h1>
         <StalenessBadge lastRebuildAt={meta.lastRebuildAt} now={now} />
       </div>
 
       {!isNft && tokenMarket ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-medium text-neutral-300">
-            Market <span className="text-xs font-normal text-neutral-500">· DEX price (low liquidity)</span>
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-[var(--muted)]">
+            Market <span className="text-xs font-normal text-[var(--muted-2)]">· DEX price (low liquidity)</span>
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile label="Price" value={formatUsd(tokenMarket.priceUsd)} />
@@ -60,9 +60,9 @@ export function OverviewView({
       ) : null}
 
       {isNft && nftMarket ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-medium text-neutral-300">
-            Market <span className="text-xs font-normal text-neutral-500">· on-chain, all venues (Seaport + Ronin Market)</span>
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-[var(--muted)]">
+            Market <span className="text-xs font-normal text-[var(--muted-2)]">· on-chain, all venues (Seaport + Ronin Market)</span>
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile label="24h Volume" value={formatRon(nftMarket.volume24hWron)} sub={`${nftMarket.sales24h} sales`} />
@@ -73,41 +73,54 @@ export function OverviewView({
         </section>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile
-          hero
-          label="Diamond Hands"
-          value={formatPct(data.diamondPct)}
-          sub={`${data.diamondDistribution.diamond} holders held 30+ days`}
-        />
-        <StatTile label="Holders" value={formatCompact(data.holderCount)} />
-        <StatTile label="Whales" value={formatCompact(data.whaleCount)} sub=">1% of supply" />
-        <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supply} />
-        <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" />
-      </div>
+      {/* Hero metric (diamond-hands share) beside a 2x2 of supporting KPIs -
+          fills the block cleanly instead of wrapping 5 tiles into a 4-col grid. */}
+      <section className="grid gap-3 lg:grid-cols-2">
+        <div className="rv-card relative overflow-hidden p-5">
+          <div
+            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-20 blur-2xl"
+            style={{ background: "var(--diamond)" }}
+          />
+          <div className="relative flex h-full flex-col justify-between gap-4">
+            <div className="text-xs uppercase tracking-wide text-[var(--muted-2)]">Diamond Hands</div>
+            <div>
+              <div className="mono text-5xl font-bold tracking-tight text-[var(--diamond)]">{formatPct(data.diamondPct)}</div>
+              <div className="mt-2 text-sm text-[var(--muted)]">
+                {formatCompact(data.diamondDistribution.diamond)} holders have held 30+ days
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile label="Holders" value={formatCompact(data.holderCount)} />
+          <StatTile label="Whales" value={formatCompact(data.whaleCount)} sub=">1% of supply" />
+          <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supply} />
+          <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" />
+        </div>
+      </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h2 className="mb-2 text-sm font-medium text-neutral-300">Holders over time</h2>
+      <section className="rv-card p-5">
+        <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Holders over time</h2>
         <TrendChart
-          label="holder count"
+          label="Holders"
           points={data.series.map((s) => ({ x: s.date, y: s.holderCount }))}
         />
       </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h2 className="mb-2 text-sm font-medium text-neutral-300">Diamond-hands distribution</h2>
+      <section className="rv-card p-5">
+        <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Diamond-hands distribution</h2>
         <BarChart
           label="diamond distribution"
           bars={[
-            { label: "\u{1F48E} Diamond (30d+)", count: data.diamondDistribution.diamond },
-            { label: "\u{270B} Regular (7-30d)", count: data.diamondDistribution.regular },
-            { label: "\u{1F9FB} Paper (<7d)", count: data.diamondDistribution.paper },
+            { label: "\u{1F48E} Diamond (30d+)", count: data.diamondDistribution.diamond, color: "var(--diamond)" },
+            { label: "\u{270B} Regular (7-30d)", count: data.diamondDistribution.regular, color: "var(--regular)" },
+            { label: "\u{1F9FB} Paper (<7d)", count: data.diamondDistribution.paper, color: "var(--paper)" },
           ]}
         />
       </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 sm:hidden">
-        <h2 className="mb-2 text-sm font-medium text-neutral-300">Look up a wallet</h2>
+      <section className="rv-card p-5 sm:hidden">
+        <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Look up a wallet</h2>
         <WalletSearch />
       </section>
     </div>
