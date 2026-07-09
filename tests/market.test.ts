@@ -45,6 +45,7 @@ describe("parseTokenMarket (GeckoTerminal)", () => {
     expect(m.volume24hUsd).toBeCloseTo(648.12, 2);
     expect(m.liquidityUsd).toBeCloseTo(10968.4, 1);
     expect(m.marketCapUsd).toBe(250000);
+    expect(m.fdvUsd).toBe(251000);
   });
 
   it("returns nulls for a missing/blank payload rather than throwing", () => {

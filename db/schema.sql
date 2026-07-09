@@ -36,6 +36,11 @@ CREATE INDEX IF NOT EXISTS transfer_events_asset_to_idx
   ON transfer_events (asset, to_address);
 CREATE INDEX IF NOT EXISTS transfer_events_asset_token_idx
   ON transfer_events (asset, token_id);
+-- Partial index for the burn-tracker supply aggregate. The read query filters
+-- `asset = $1 AND (is_mint OR is_burn)` so its predicate implies this one and
+-- the planner can use it (a bare asset filter would not qualify).
+CREATE INDEX IF NOT EXISTS transfer_events_supply_idx
+  ON transfer_events (asset) WHERE is_mint OR is_burn;
 
 -- ─────────────────────────────────────────────────────────────────────
 -- Per-asset ingestion cursor.

@@ -9,6 +9,7 @@ import { getSql } from "@/db/client";
 import { CONTRACTS, ASSETS } from "@/config/contracts";
 import type { Asset } from "@/config/contracts";
 import type { DiamondBucket } from "@/config/contracts";
+import { toWholeTokens } from "@/lib/format";
 
 export interface MetaState {
   lastSyncAt: string | null;
@@ -107,6 +108,7 @@ export interface TokenMarketView {
   volume24hUsd: number | null;
   liquidityUsd: number | null;
   marketCapUsd: number | null;
+  fdvUsd: number | null;
   fetchedAt: string | null;
 }
 
@@ -125,8 +127,57 @@ export async function getTokenMarket(asset: Asset = "ronke_token"): Promise<Toke
     volume24hUsd: n(s.volume24hUsd),
     liquidityUsd: n(s.liquidityUsd),
     marketCapUsd: n(s.marketCapUsd),
+    fdvUsd: n(s.fdvUsd),
     fetchedAt: (rows[0].fetched_at as string | null) ?? null,
   };
+}
+
+// ── Supply / burn stats (Burn tracker) ───────────────────────────────
+
+/**
+ * Token supply picture derived from the transfer_events ledger, in whole
+ * tokens. Both tokens burn via transfers to the dead address (verified
+ * on-chain 2026-07-09), so ledger mints/burns reconstruct supply exactly:
+ * minted = the one genesis mint (1B RONKE / 21M RONKESTR), burned = sum of
+ * is_burn rows, circulating = minted - burned.
+ */
+export interface SupplyStats {
+  /** Whole tokens ever minted (= the token's total supply). */
+  minted: number;
+  /** Whole tokens sent to burn addresses, forever out of circulation. */
+  burned: number;
+  /** minted - burned. */
+  circulating: number;
+  /** 0..1 share of minted supply that is burned. */
+  burnedPct: number;
+}
+
+/** Pure: raw base-unit mint/burn sums -> whole-token supply view. */
+export function supplyStatsFrom(mintedRaw: bigint, burnedRaw: bigint, asset: Asset): SupplyStats {
+  const minted = toWholeTokens(mintedRaw, asset);
+  const burned = toWholeTokens(burnedRaw, asset);
+  const circulating = toWholeTokens(mintedRaw - burnedRaw, asset);
+  return { minted, burned, circulating, burnedPct: minted > 0 ? burned / minted : 0 };
+}
+
+/**
+ * Read-time aggregate over the flagged mint/burn rows (a few hundred per
+ * token). The outer `AND (is_mint OR is_burn)` is load-bearing: it makes the
+ * query predicate imply transfer_events_supply_idx's partial predicate so the
+ * planner uses the index instead of scanning the whole asset partition.
+ */
+export async function getSupplyStats(asset: Asset): Promise<SupplyStats | null> {
+  const sql = getSql();
+  if (!sql) return null;
+  const rows = await sql`
+    SELECT
+      coalesce(sum(quantity) FILTER (WHERE is_mint), 0)::text AS minted,
+      coalesce(sum(quantity) FILTER (WHERE is_burn), 0)::text AS burned
+    FROM transfer_events
+    WHERE asset = ${asset} AND (is_mint OR is_burn)
+  `;
+  const big = (v: unknown) => BigInt(String(v ?? "0").split(".")[0] || "0");
+  return supplyStatsFrom(big(rows[0]?.minted), big(rows[0]?.burned), asset);
 }
 
 /** Ronkeverse on-chain market stats, in whole WRON (all venues). */
