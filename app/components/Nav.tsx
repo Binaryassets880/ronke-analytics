@@ -21,6 +21,7 @@ const LINKS = [
   { href: "/overview", label: "Overview", assetScoped: true },
   { href: "/holders", label: "Holders", assetScoped: true },
   { href: "/leaderboard", label: "Leaderboard", assetScoped: true },
+  { href: "/burn", label: "Burn", assetScoped: false },
   { href: "/rarity", label: "Rarity", assetScoped: false },
 ];
 
@@ -28,8 +29,9 @@ function NavInner() {
   const pathname = usePathname();
   const params = useSearchParams();
   const asset = params.get("asset");
-  // Rarity is NFT-only; the asset toggle is meaningless there.
-  const showToggle = !pathname.startsWith("/rarity");
+  // Rarity is NFT-only and Burn always shows both tokens; the asset toggle is
+  // meaningless on either.
+  const showToggle = !pathname.startsWith("/rarity") && !pathname.startsWith("/burn");
 
   return (
     <div className="border-b border-[var(--border-soft)] bg-[var(--card-2)]/60">
