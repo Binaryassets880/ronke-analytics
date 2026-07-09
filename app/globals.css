@@ -23,6 +23,8 @@
   --diamond: #5ee6a8; /* green - diamond hands / positive */
   --regular: #5ccbff;
   --paper: #f0885a;
+  --burn: #ff4d5e; /* red - burned forever / destroyed supply */
+  --burn-2: #ff8a3d; /* orange - deflation accent, pairs with --burn in the meter gradient */
 }
 
 @theme inline {
@@ -42,6 +44,8 @@
   --color-diamond: var(--diamond);
   --color-regular: var(--regular);
   --color-paper: var(--paper);
+  --color-burn: var(--burn);
+  --color-burn-2: var(--burn-2);
   /* next/font injects these vars on <html>; wire them into Tailwind utilities. */
   --font-sans: var(--font-space-grotesk), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "JetBrains Mono", monospace;
@@ -130,6 +134,14 @@
   height: 100%;
   border-radius: 999px;
   background: var(--accent);
+}
+/* Burn tracker variant: taller track, red -> orange burn gradient (leaves the
+   shared 6px leaderboard meter untouched). */
+.rv-meter--burn {
+  height: 10px;
+}
+.rv-meter--burn > span {
+  background: linear-gradient(90deg, var(--burn), var(--burn-2));
 }
 
 @keyframes rv-float {

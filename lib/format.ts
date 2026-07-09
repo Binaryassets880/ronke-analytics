@@ -27,9 +27,9 @@ export function toWholeTokens(raw: bigint, asset: Asset = "ronke_token"): number
   return Number(raw) / 10 ** decimals;
 }
 
-/** A share in 0..1 -> "12.3%". */
-export function formatPct(share: number): string {
-  return `${(share * 100).toFixed(1)}%`;
+/** A share in 0..1 -> "12.3%" (default) or "12.34%" with `digits = 2`. */
+export function formatPct(share: number, digits = 1): string {
+  return `${(share * 100).toFixed(digits)}%`;
 }
 
 /** USD amount -> "$0.00029" / "$648" / "$11.2K". Null/NaN -> "—". */

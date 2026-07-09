@@ -7,6 +7,7 @@ export function StatTile({
   sub,
   hint,
   hero = false,
+  valueClassName,
 }: {
   label: string;
   value: string;
@@ -14,6 +15,8 @@ export function StatTile({
   /** Optional plain-English explanation of the metric, shown as a hover "i". */
   hint?: string;
   hero?: boolean;
+  /** Optional extra classes on the value (e.g. an accent color). */
+  valueClassName?: string;
 }) {
   return (
     <div
@@ -25,7 +28,7 @@ export function StatTile({
         <span>{label}</span>
         {hint ? <InfoTip text={hint} /> : null}
       </div>
-      <div className={`mono mt-2 font-bold tracking-tight ${hero ? "text-4xl" : "text-[22px]"}`}>{value}</div>
+      <div className={`mono mt-2 font-bold tracking-tight ${hero ? "text-4xl" : "text-[22px]"}${valueClassName ? ` ${valueClassName}` : ""}`}>{value}</div>
       {sub ? <div className="mt-1.5 text-sm text-[var(--muted)]">{sub}</div> : null}
     </div>
   );
