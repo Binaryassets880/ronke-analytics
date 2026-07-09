@@ -50,6 +50,12 @@ describe("BurnView", () => {
     expect(screen.getByText("Burn data temporarily unavailable")).toBeInTheDocument();
     expect(screen.getAllByRole("progressbar")).toHaveLength(1);
   });
+
+  it("shows the pre-backfill state instead of mid-backfill burn numbers", () => {
+    render(<BurnView ronke={RONKE} ronkestr={RONKESTR} meta={{ ...META, backfillComplete: false }} />);
+    expect(screen.getByText(/Gathering on-chain history/i)).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
 });
 
 describe("burn page routing", () => {

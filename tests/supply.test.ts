@@ -82,6 +82,19 @@ describe("displayMarketCap (RONKESTR computed fallback)", () => {
     });
     expect(displayMarketCap(null, supply)).toEqual({ valueUsd: null, computed: false });
   });
+
+  it("does not compute a cap from zero or negative circulating supply", () => {
+    // Fully-burned (or corrupt-ledger negative) circulating must fall back to
+    // null, not render a misleading computed $0 cap.
+    expect(displayMarketCap(market({ priceUsd: 0.001 }), { ...supply, circulating: 0 })).toEqual({
+      valueUsd: null,
+      computed: false,
+    });
+    expect(displayMarketCap(market({ priceUsd: 0.001 }), { ...supply, circulating: -10 })).toEqual({
+      valueUsd: null,
+      computed: false,
+    });
+  });
 });
 
 describe("burn definition (single source of truth)", () => {

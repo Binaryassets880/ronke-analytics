@@ -39,16 +39,32 @@ describe("BurnCard", () => {
     expect(fill).toHaveStyle({ width: "13.06%" });
   });
 
-  it("clamps a fully-burned supply to a 100% bar without overflow", () => {
+  it("clamps an out-of-range burned share (bad ledger data) to a 100% bar", () => {
+    // burnedPct > 1 is the case the clamp exists for - exactly 1 would pass
+    // even without clamping, so it proves nothing.
     render(
       <BurnCard
         symbol="X"
         subtitle="Test"
-        stats={{ minted: 100, burned: 100, circulating: 0, burnedPct: 1 }}
+        stats={{ minted: 100, burned: 140, circulating: -40, burnedPct: 1.4 }}
       />,
     );
-    const fill = screen.getByRole("progressbar").querySelector("span");
-    expect(fill).toHaveStyle({ width: "100.00%" });
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "100");
+    expect(bar.querySelector("span")).toHaveStyle({ width: "100.00%" });
+  });
+
+  it("clamps a negative burned share to an empty bar", () => {
+    render(
+      <BurnCard
+        symbol="X"
+        subtitle="Test"
+        stats={{ minted: 100, burned: -5, circulating: 105, burnedPct: -0.05 }}
+      />,
+    );
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "0");
+    expect(bar.querySelector("span")).toHaveStyle({ width: "0.00%" });
   });
 
   it("renders the unavailable placeholder (no progressbar) for null stats", () => {

@@ -1,6 +1,7 @@
 import type { MetaState, SupplyStats } from "@/lib/queries";
 import { BurnCard } from "./BurnCard";
 import { StalenessBadge } from "./StalenessBadge";
+import { PreBackfill } from "./States";
 
 /**
  * Burn tracker page body: both token cards stacked ($RONKE above $RONKESTR,
@@ -18,6 +19,10 @@ export function BurnView({
   meta: MetaState;
   now?: Date;
 }) {
+  // Site-standard gate (OverviewView/HoldersView): a mid-backfill ledger sums
+  // to a confidently wrong burn percentage, so show the pre-data state instead.
+  if (!meta.backfillComplete) return <PreBackfill />;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
