@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 
 import { render, screen } from "@testing-library/react";
 import { OverviewView } from "@/app/components/OverviewView";
-import type { OverviewData, MetaState } from "@/lib/queries";
+import type { OverviewData, MetaState, TokenMarketView, SupplyStats } from "@/lib/queries";
 
 const meta: MetaState = {
   lastSyncAt: "2026-07-05T07:00:00Z",
@@ -57,5 +57,66 @@ describe("OverviewView", () => {
       />,
     );
     expect(screen.getByText(/data may be stale/i)).toBeInTheDocument();
+  });
+});
+
+describe("OverviewView market cap tile", () => {
+  const market = (over: Partial<TokenMarketView>): TokenMarketView => ({
+    priceUsd: 0.00095467,
+    volume24hUsd: 553,
+    liquidityUsd: 4788,
+    marketCapUsd: null,
+    fdvUsd: 20048,
+    fetchedAt: "2026-07-09T07:00:00Z",
+    ...over,
+  });
+  const supply: SupplyStats = {
+    minted: 21_000_000,
+    burned: 4_509_289,
+    circulating: 16_490_711,
+    burnedPct: 0.2147,
+  };
+
+  it("shows the source market cap without the computed label when present", () => {
+    render(
+      <OverviewView
+        asset="ronke_token"
+        data={data}
+        meta={meta}
+        tokenMarket={market({ marketCapUsd: 250_000 })}
+        supply={supply}
+      />,
+    );
+    expect(screen.getByText("$250K")).toBeInTheDocument();
+    expect(screen.queryByText("price x circulating")).not.toBeInTheDocument();
+  });
+
+  it("computes price x circulating with an honest label when the source cap is null", () => {
+    render(
+      <OverviewView
+        asset="ronkestr_token"
+        data={data}
+        meta={meta}
+        tokenMarket={market({})}
+        supply={supply}
+      />,
+    );
+    // 0.00095467 * 16,490,711 ~= $15.7K
+    expect(screen.getByText("$15.74K")).toBeInTheDocument();
+    expect(screen.getByText("price x circulating")).toBeInTheDocument();
+  });
+
+  it("falls back to a dash when both the source cap and the price are missing", () => {
+    render(
+      <OverviewView
+        asset="ronkestr_token"
+        data={data}
+        meta={meta}
+        tokenMarket={market({ priceUsd: null })}
+        supply={supply}
+      />,
+    );
+    expect(screen.getByText("Market Cap")).toBeInTheDocument();
+    expect(screen.queryByText("price x circulating")).not.toBeInTheDocument();
   });
 });

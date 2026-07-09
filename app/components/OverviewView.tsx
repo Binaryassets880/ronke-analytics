@@ -1,6 +1,7 @@
 import type { Asset } from "@/config/contracts";
 import { CONTRACTS } from "@/config/contracts";
-import type { OverviewData, MetaState, TokenMarketView, NftMarketView } from "@/lib/queries";
+import type { OverviewData, MetaState, TokenMarketView, NftMarketView, SupplyStats } from "@/lib/queries";
+import { displayMarketCap } from "@/lib/queries";
 import { StatTile } from "./StatTile";
 import { InfoTip } from "./Tip";
 import { StalenessBadge } from "./StalenessBadge";
@@ -22,6 +23,7 @@ export function OverviewView({
   meta,
   tokenMarket,
   nftMarket,
+  supply,
   now,
 }: {
   asset: Asset;
@@ -29,12 +31,15 @@ export function OverviewView({
   meta: MetaState;
   tokenMarket?: TokenMarketView | null;
   nftMarket?: NftMarketView | null;
+  /** Ledger supply stats for token assets - feeds the computed market cap fallback. */
+  supply?: SupplyStats | null;
   now?: Date;
 }) {
   if (!meta.backfillComplete) return <PreBackfill />;
 
   const isNft = asset === "ronkeverse_nft";
-  const supply = isNft
+  const mcap = displayMarketCap(tokenMarket, supply);
+  const supplyHeldLabel = isNft
     ? formatCompact(Number(data.supplyHeld))
     : formatCompact(toWholeTokens(BigInt(data.supplyHeld || "0")));
   const assetLabel = CONTRACTS[asset].label;
@@ -55,7 +60,12 @@ export function OverviewView({
             <StatTile label="Price" value={formatUsd(tokenMarket.priceUsd)} />
             <StatTile label="24h Volume" value={formatUsd(tokenMarket.volume24hUsd)} hint="Total value of $RONKE traded on the DEX in the last 24 hours." />
             <StatTile label="Liquidity" value={formatUsd(tokenMarket.liquidityUsd)} hint="Value sitting in the DEX pool backing $RONKE. Low liquidity means the price moves a lot on small trades." />
-            <StatTile label="Market Cap" value={formatUsd(tokenMarket.marketCapUsd)} hint="Price times circulating supply. Thin liquidity makes this a rough estimate." />
+            <StatTile
+              label="Market Cap"
+              value={formatUsd(mcap.valueUsd)}
+              sub={mcap.computed ? "price x circulating" : undefined}
+              hint="Price times circulating supply (total minted minus burned). Thin liquidity makes this a rough estimate."
+            />
           </div>
         </section>
       ) : null}
@@ -105,7 +115,7 @@ export function OverviewView({
         <div className="grid grid-cols-2 gap-3">
           <StatTile label="Holders" value={formatCompact(data.holderCount)} hint="Number of wallets currently holding, excluding contracts, bridges, and known non-holder addresses." />
           <StatTile label="Whales" value={formatCompact(data.whaleCount)} sub=">1% of supply" hint="Wallets among the largest holders, or holding more than 1% of supply." />
-          <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supply} hint="Total currently held across all tracked holders." />
+          <StatTile label={isNft ? "Tokens held" : "Supply held"} value={supplyHeldLabel} hint="Total currently held across all tracked holders." />
           <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" hint="Share of current holders who have never made a genuine sell since acquiring." />
         </div>
       </section>

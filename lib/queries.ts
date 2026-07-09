@@ -180,6 +180,29 @@ export async function getSupplyStats(asset: Asset): Promise<SupplyStats | null> 
   return supplyStatsFrom(big(rows[0]?.minted), big(rows[0]?.burned), asset);
 }
 
+export interface MarketCapDisplay {
+  valueUsd: number | null;
+  /** True when derived as price x circulating because the source had no cap. */
+  computed: boolean;
+}
+
+/**
+ * Market cap for display. GeckoTerminal only reports market_cap_usd for
+ * CoinGecko-listed tokens ($RONKE yes, RONKESTR no - verified 2026-07-09), so
+ * when the source is null we compute price x circulating (minted - burned)
+ * from our own ledger and flag it so the UI can label the sourcing honestly.
+ */
+export function displayMarketCap(
+  market: TokenMarketView | null | undefined,
+  supply: SupplyStats | null | undefined,
+): MarketCapDisplay {
+  if (market?.marketCapUsd != null) return { valueUsd: market.marketCapUsd, computed: false };
+  if (market?.priceUsd != null && supply != null && supply.circulating > 0) {
+    return { valueUsd: market.priceUsd * supply.circulating, computed: true };
+  }
+  return { valueUsd: null, computed: false };
+}
+
 /** Ronkeverse on-chain market stats, in whole WRON (all venues). */
 export interface NftMarketView {
   volume24hWron: number;
