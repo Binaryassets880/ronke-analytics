@@ -1,7 +1,7 @@
 ---
 title: "feat: Burn tracker for RONKE and RONKESTR plus RONKESTR market cap"
 type: feat
-status: active
+status: completed
 date: 2026-07-09
 deepened: 2026-07-09
 ---
