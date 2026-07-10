@@ -37,20 +37,23 @@ export interface RefreshResult {
  */
 export async function refreshRnsNames(sql: Sql, opts: RefreshOptions = {}): Promise<RefreshResult> {
   const reader = opts.reader ?? defaultReader();
-  const limit = opts.limit ?? 500;
+  const limit = opts.limit ?? 1000;
   const maxAgeDays = opts.maxAgeDays ?? 7;
   const now = opts.now ?? new Date();
   const log = opts.log ?? (() => {});
 
-  // Current holders (either asset) with no fresh rns_names row.
+  // Current holders (either asset) with no fresh rns_names row. Never-resolved
+  // addresses first, then oldest-resolved - a fair round-robin. (Ordering by
+  // address starved the high-hex tail: with >limit*maxAgeDays holders, low
+  // addresses went stale and re-filled every batch before the tail was reached.)
   const cutoff = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
   const candidates = await sql`
-    SELECT DISTINCT b.address
+    SELECT DISTINCT b.address, n.resolved_at
     FROM holder_balances b
     LEFT JOIN rns_names n ON n.address = b.address
     WHERE b.is_current_holder = true
       AND (n.address IS NULL OR n.resolved_at < ${cutoff})
-    ORDER BY b.address
+    ORDER BY n.resolved_at ASC NULLS FIRST, b.address
     LIMIT ${limit + 1}
   `;
   const capped = candidates.length > limit;
