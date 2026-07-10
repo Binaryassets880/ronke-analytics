@@ -19,7 +19,9 @@ export default async function OverviewPage({
     getMetaState(),
     isNft ? Promise.resolve(null) : getTokenMarket(asset),
     isNft ? getNftMarket() : Promise.resolve(null),
-    isNft ? Promise.resolve(null) : getSupplyStats(asset),
+    // Isolated: a transient Neon error degrades the burn card to its
+    // placeholder instead of 500ing the whole overview.
+    isNft ? Promise.resolve(null) : getSupplyStats(asset).catch(() => null),
   ]);
   return (
     <OverviewView

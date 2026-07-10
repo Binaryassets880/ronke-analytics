@@ -3,6 +3,7 @@ import { CONTRACTS } from "@/config/contracts";
 import type { OverviewData, MetaState, TokenMarketView, NftMarketView, SupplyStats } from "@/lib/queries";
 import { displayMarketCap } from "@/lib/queries";
 import { StatTile } from "./StatTile";
+import { BurnCard } from "./BurnCard";
 import { InfoTip } from "./Tip";
 import { StalenessBadge } from "./StalenessBadge";
 import { TrendChart } from "./TrendChart";
@@ -119,6 +120,14 @@ export function OverviewView({
           <StatTile label="Never sold" value={formatPct(data.neverSoldPct)} sub="of current holders" hint="Share of current holders who have never made a genuine sell since acquiring." />
         </div>
       </section>
+
+      {!isNft ? (
+        <BurnCard
+          symbol={asset === "ronkestr_token" ? "RONKESTR" : "RONKE"}
+          subtitle={asset === "ronkestr_token" ? "NFTStrategy Token" : "Ronke Token"}
+          stats={supply ?? null}
+        />
+      ) : null}
 
       <section className="rv-card p-5">
         <h2 className="mb-3 text-sm font-medium text-[var(--muted)]">Holders over time</h2>

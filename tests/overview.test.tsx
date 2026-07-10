@@ -60,6 +60,44 @@ describe("OverviewView", () => {
   });
 });
 
+describe("OverviewView burn card (between Diamond Hands and Holders over time)", () => {
+  const supply: SupplyStats = {
+    minted: 1_000_000_000,
+    burned: 130_605_432,
+    circulating: 869_394_568,
+    burnedPct: 0.130605432,
+  };
+
+  it("renders the RONKE burn card on the token overview, above Holders over time", () => {
+    render(<OverviewView asset="ronke_token" data={data} meta={meta} supply={supply} />);
+    expect(screen.getByText("$RONKE")).toBeInTheDocument();
+    expect(screen.getByText("Burned Forever")).toBeInTheDocument();
+    expect(screen.getByText("13.06%")).toBeInTheDocument();
+    // Section order: burn card sits before the Holders over time chart.
+    const burn = screen.getByText("Burned Forever");
+    const holders = screen.getByText("Holders over time");
+    expect(burn.compareDocumentPosition(holders) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("labels the RONKESTR card with its own ticker and subtitle", () => {
+    render(<OverviewView asset="ronkestr_token" data={data} meta={meta} supply={supply} />);
+    expect(screen.getByText("$RONKESTR")).toBeInTheDocument();
+    expect(screen.getByText("NFTStrategy Token")).toBeInTheDocument();
+  });
+
+  it("shows no burn card on the NFT overview", () => {
+    render(<OverviewView asset="ronkeverse_nft" data={data} meta={meta} />);
+    expect(screen.queryByText("Burned Forever")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("degrades to the unavailable placeholder when supply stats are missing", () => {
+    render(<OverviewView asset="ronke_token" data={data} meta={meta} supply={null} />);
+    expect(screen.getByText("Burn data temporarily unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+});
+
 describe("OverviewView market cap tile", () => {
   const market = (over: Partial<TokenMarketView>): TokenMarketView => ({
     priceUsd: 0.00095467,
