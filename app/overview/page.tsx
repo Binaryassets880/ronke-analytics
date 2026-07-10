@@ -1,5 +1,5 @@
 import { assetFromParam } from "@/lib/format";
-import { getOverview, getMetaState, getTokenMarket, getNftMarket } from "@/lib/queries";
+import { getOverview, getMetaState, getTokenMarket, getNftMarket, getSupplyStats } from "@/lib/queries";
 import { OverviewView } from "../components/OverviewView";
 
 export const dynamic = "force-dynamic"; // reads live snapshot tables
@@ -14,11 +14,14 @@ export default async function OverviewPage({
   const { asset: assetParam } = await searchParams;
   const asset = assetFromParam(assetParam);
   const isNft = asset === "ronkeverse_nft";
-  const [data, meta, tokenMarket, nftMarket] = await Promise.all([
+  const [data, meta, tokenMarket, nftMarket, supply] = await Promise.all([
     getOverview(asset),
     getMetaState(),
     isNft ? Promise.resolve(null) : getTokenMarket(asset),
     isNft ? getNftMarket() : Promise.resolve(null),
+    // Isolated: a transient Neon error degrades the burn card to its
+    // placeholder instead of 500ing the whole overview.
+    isNft ? Promise.resolve(null) : getSupplyStats(asset).catch(() => null),
   ]);
   return (
     <OverviewView
@@ -27,6 +30,7 @@ export default async function OverviewPage({
       meta={meta}
       tokenMarket={tokenMarket}
       nftMarket={nftMarket}
+      supply={supply}
     />
   );
 }

@@ -27,6 +27,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Schema DDL is idempotent (IF NOT EXISTS), so applying it every run is a
+      # no-op after the first and guarantees new indexes/columns exist within one
+      # cycle even if the manual `npm run migrate` step was forgotten at deploy.
+      # Running it here (before sync, same job) also means it can never collide
+      # with the sync's own inserts.
+      - name: Apply schema migrations (idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run migrate
       - name: Sync + rebuild
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

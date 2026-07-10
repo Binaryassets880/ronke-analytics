@@ -49,6 +49,13 @@ describe("db/schema.sql (static analysis)", () => {
     }
   });
 
+  it("declares the burn-tracker partial index with the mint-or-burn predicate", () => {
+    const stmt = statements.find((s) => s.includes("transfer_events_supply_idx"));
+    expect(stmt, "missing transfer_events_supply_idx").toBeTruthy();
+    expect(stmt!).toMatch(/IF NOT EXISTS/i);
+    expect(stmt!).toMatch(/WHERE\s+is_mint\s+OR\s+is_burn/i);
+  });
+
   it("adds RonkeStr sub-score columns as idempotent single-statement ALTERs", () => {
     for (const col of [
       "ronkestr_subscore",
