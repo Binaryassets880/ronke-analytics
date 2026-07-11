@@ -292,6 +292,15 @@ function computeNft(
   for (const e of events) {
     if (e.tokenId == null) continue;
     const prev = owner.get(e.tokenId);
+
+    // Retain-ownership custody moves (staking/bridge/team): the wallet keeps
+    // ownership and its holding clock throughout. A deposit leaves the owner
+    // map untouched (the staker still "owns" the token); the matching return
+    // to the owner of record is then a no-op. Mirrors the token path, where
+    // retain moves neither create nor consume lots.
+    if (labels.isRetainOwnership(e.to)) continue;
+    if (labels.isRetainOwnership(e.from) && prev?.address === e.to) continue;
+
     const sell = labels.isSell(e.from, e.to);
 
     // Seller side: selling 1 token out of N held is significant only when it
@@ -314,16 +323,14 @@ function computeNft(
       }
     }
 
-    // Receiver side: becomes owner. Retain-ownership returns preserve the
-    // prior acquiredAt; otherwise the holding clock resets to now.
+    // Receiver side: becomes owner with a fresh holding clock. (Returns from
+    // retain-ownership custody to the owner of record were already skipped
+    // above, so reaching here means custody genuinely changed.)
     if (prev) removeOwned(prev.address, e.tokenId);
     if (!labels.excludeFromHolders(e.to)) {
-      const retainReturn =
-        labels.isRetainOwnership(e.from) && prev?.address === e.to;
-      const acquiredAt = retainReturn ? prev!.acquiredAt : e.blockTime;
-      owner.set(e.tokenId, { address: e.to, acquiredAt });
+      owner.set(e.tokenId, { address: e.to, acquiredAt: e.blockTime });
       addOwned(e.to, e.tokenId);
-      if (!retainReturn) ensure(e.to).everAcquiredCount += 1;
+      ensure(e.to).everAcquiredCount += 1;
     } else {
       owner.delete(e.tokenId);
     }

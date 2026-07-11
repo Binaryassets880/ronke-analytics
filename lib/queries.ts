@@ -315,9 +315,11 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
   if (!sql) return [];
   const rows = await sql`
     SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore,
-           s.body_types_held, s.body_types_total, n.name
+           s.body_types_held, s.body_types_total,
+           coalesce(al.label, n.name) AS name
     FROM wallet_scores s
     LEFT JOIN rns_names n ON n.address = s.address
+    LEFT JOIN address_labels al ON al.address = s.address
     ORDER BY s.score DESC, s.address ASC
     LIMIT ${pageSize} OFFSET ${page * pageSize}
   `;
@@ -426,10 +428,11 @@ export async function getHolders(asset: Asset, limit = 100): Promise<HoldersData
            coalesce(m.holding_duration_days, 0) AS dur,
            coalesce(m.diamond_bucket, 'paper') AS bucket,
            coalesce(m.never_sold, false) AS never_sold,
-           n.name AS name
+           coalesce(al.label, n.name) AS name
     FROM holder_balances b
     LEFT JOIN holder_metrics m ON m.asset = b.asset AND m.address = b.address
     LEFT JOIN rns_names n ON n.address = b.address
+    LEFT JOIN address_labels al ON al.address = b.address
     WHERE b.asset = ${asset} AND b.is_current_holder = true
     ORDER BY (CASE WHEN b.balance > 0 THEN b.balance ELSE b.token_count END) DESC
     LIMIT ${limit}
@@ -468,10 +471,11 @@ export async function getLeaderboard(
            coalesce(m.weighted_duration_days, 0) AS wdur,
            coalesce(m.diamond_bucket, 'paper') AS bucket,
            coalesce(m.never_sold, false) AS never_sold,
-           n.name AS name
+           coalesce(al.label, n.name) AS name
     FROM holder_balances b
     LEFT JOIN holder_metrics m ON m.asset = b.asset AND m.address = b.address
     LEFT JOIN rns_names n ON n.address = b.address
+    LEFT JOIN address_labels al ON al.address = b.address
     WHERE b.asset = ${asset} AND b.is_current_holder = true
     ORDER BY ${orderExpr}
     LIMIT ${pageSize} OFFSET ${page * pageSize}
@@ -562,7 +566,12 @@ export async function getWallet(address: string): Promise<WalletData> {
     SELECT asset, holding_duration_days, diamond_bucket, never_sold, ever_paper_sold
     FROM holder_metrics WHERE address = ${address}
   `;
-  const nameRow = await sql`SELECT name FROM rns_names WHERE address = ${address}`;
+  const nameRow = await sql`
+    SELECT coalesce(al.label, n.name) AS name
+    FROM (SELECT ${address}::text AS address) a
+    LEFT JOIN rns_names n ON n.address = a.address
+    LEFT JOIN address_labels al ON al.address = a.address
+  `;
   const name = (nameRow[0]?.name as string | null) ?? null;
   if (balances.length === 0 && metrics.length === 0) return { ...empty, name };
 
@@ -891,11 +900,13 @@ export async function getToken(tokenId: string): Promise<TokenDetail | null> {
     WHERE t.token_id = ${tokenId}
     ORDER BY probability ASC
   `;
-  // Current owner: the wallet holding this token in holder_lots, with .ron name.
+  // Current owner: the wallet holding this token in holder_lots, with the
+  // curated label (e.g. "RonkeStrategy wallet") or .ron name.
   const ownerRows = await sql`
-    SELECT l.address, n.name
+    SELECT l.address, coalesce(al.label, n.name) AS name
     FROM holder_lots l
     LEFT JOIN rns_names n ON n.address = l.address
+    LEFT JOIN address_labels al ON al.address = l.address
     WHERE l.asset = 'ronkeverse_nft' AND l.token_id = ${tokenId}
     LIMIT 1
   `;
