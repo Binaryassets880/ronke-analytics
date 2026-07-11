@@ -76,6 +76,52 @@ describe("computeDiamond - NFT", () => {
     expect(m.holdingDurationDays).toBeCloseTo(15, 5); // reset to the day-25 sell
     expect(m.diamondBucket).toBe("regular");
   });
+
+  it("staking an NFT is NOT a sell and the wallet keeps holding it", () => {
+    const events = [
+      tx("ronkeverse_nft", { from: ADDR.zero, to: ADDR.wallet, tokenId: "1", blockTime: day(0) }),
+      tx("ronkeverse_nft", { from: ADDR.wallet, to: ADDR.staking, tokenId: "1", blockTime: day(10) }),
+    ];
+    const res = computeDiamond("ronkeverse_nft", events, labels, day(40));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.neverSold).toBe(true);
+    expect(m.everPaperSold).toBe(false);
+    // still counted as held with the original clock while staked
+    expect(m.holdingDurationDays).toBeCloseTo(40, 5);
+    expect(m.diamondBucket).toBe("diamond");
+  });
+
+  it("NFT staking round-trip preserves the holding clock (unstake is a no-op)", () => {
+    const events = [
+      tx("ronkeverse_nft", { from: ADDR.zero, to: ADDR.wallet, tokenId: "1", blockTime: day(0) }),
+      tx("ronkeverse_nft", { from: ADDR.wallet, to: ADDR.staking, tokenId: "1", blockTime: day(10) }),
+      tx("ronkeverse_nft", { from: ADDR.staking, to: ADDR.wallet, tokenId: "1", blockTime: day(30) }),
+    ];
+    const res = computeDiamond("ronkeverse_nft", events, labels, day(40));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.neverSold).toBe(true);
+    expect(m.holdingDurationDays).toBeCloseTo(40, 5); // day-0 clock survives the stake
+    expect(m.pctOriginalHeld).toBeCloseTo(1, 5); // unstake did not double-count an acquisition
+    expect(m.diamondBucket).toBe("diamond");
+  });
+
+  it("selling after an unstake uses the original acquire date for the paper window", () => {
+    const events = [
+      tx("ronkeverse_nft", { from: ADDR.zero, to: ADDR.wallet, tokenId: "1", blockTime: day(0) }),
+      tx("ronkeverse_nft", { from: ADDR.wallet, to: ADDR.staking, tokenId: "1", blockTime: day(10) }),
+      tx("ronkeverse_nft", { from: ADDR.staking, to: ADDR.wallet, tokenId: "1", blockTime: day(30) }),
+      tx("ronkeverse_nft", {
+        from: ADDR.wallet,
+        to: ADDR.external,
+        tokenId: "1",
+        blockTime: new Date(day(30).getTime() + 3_600_000), // 1h after unstake
+      }),
+    ];
+    const res = computeDiamond("ronkeverse_nft", events, labels, day(40));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.neverSold).toBe(false); // the later sell is real
+    expect(m.everPaperSold).toBe(false); // but held since day 0, so not paper
+  });
 });
 
 describe("computeDiamond - token FIFO", () => {
@@ -153,6 +199,22 @@ describe("computeDiamond - token FIFO", () => {
     const m = metricFor(res, ADDR.wallet)!;
     expect(m.holdingDurationDays).toBeCloseTo(40, 5); // still the day-0 lot
     expect(m.pctOriginalHeld).toBeCloseTo(1, 5);
+  });
+
+  it("wagering at a game contract consumes units but is NOT a sell", () => {
+    const game = "0x744b467ce265dbc5078b43036271aec378821b2d"; // seed: CoinFlipper
+    const events = [
+      tx("ronke_token", { from: ADDR.external, to: ADDR.wallet, quantity: WHOLE(10_000), blockTime: day(0) }),
+      tx("ronke_token", { from: ADDR.wallet, to: game, quantity: WHOLE(5_000), blockTime: day(10) }),
+      tx("ronke_token", { from: game, to: ADDR.wallet, quantity: WHOLE(9_000), blockTime: day(11) }), // winnings
+    ];
+    const res = computeDiamond("ronke_token", events, labels, day(40));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.sellCount).toBe(0); // wager is not paper-handing
+    expect(m.neverSold).toBe(true);
+    expect(m.everPaperSold).toBe(false);
+    // original 5,000 keep the day-0 clock; the 9,000 winnings are a fresh lot
+    expect(m.holdingDurationDays).toBeCloseTo(40, 5);
   });
 
   it("selling to an unlabeled external wallet counts as a sell", () => {
