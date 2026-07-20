@@ -10,7 +10,7 @@
 
 import type { Asset } from "@/config/contracts";
 import { contractFor } from "@/config/contracts";
-import type { NormalizedTransfer } from "@/lib/types";
+import type { ReplayEvent } from "@/lib/types";
 import type { Labels } from "./labels";
 import type { HolderBalance } from "./types";
 
@@ -29,7 +29,7 @@ interface Mutable {
  */
 export function computeBalances(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
 ): HolderBalance[] {
   const isNft = contractFor(asset).standard === "erc721";

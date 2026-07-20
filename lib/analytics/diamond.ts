@@ -29,7 +29,7 @@
 import type { Asset, DiamondBucket } from "@/config/contracts";
 import { contractFor, DIAMOND_THRESHOLDS } from "@/config/contracts";
 import { DIAMOND_BADGE_MIN } from "@/config/badges";
-import type { NormalizedTransfer } from "@/lib/types";
+import type { ReplayEvent } from "@/lib/types";
 import type { Labels } from "./labels";
 import type { HolderLot, HolderMetric } from "./types";
 import { daysBetween, MS_PER_DAY } from "./types";
@@ -80,7 +80,7 @@ export interface DiamondResult {
 /** Compute FIFO lots + diamond metrics. `events` sorted ascending by block. */
 export function computeDiamond(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
   asOf: Date,
 ): DiamondResult {
@@ -108,7 +108,7 @@ interface TokenState {
 
 function computeToken(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
   asOf: Date,
 ): DiamondResult {
@@ -260,7 +260,7 @@ interface NftState {
 
 function computeNft(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
   asOf: Date,
 ): DiamondResult {
