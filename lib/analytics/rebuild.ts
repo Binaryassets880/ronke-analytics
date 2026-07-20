@@ -13,7 +13,7 @@
 import { insertMany, type Sql } from "@/db/client";
 import type { Asset } from "@/config/contracts";
 import { ASSETS } from "@/config/contracts";
-import type { NormalizedTransfer } from "@/lib/types";
+import type { ReplayEvent } from "@/lib/types";
 import { Labels, type AddressLabel } from "./labels";
 import { computeBalances } from "./balances";
 import { computeDiamond } from "./diamond";
@@ -34,7 +34,7 @@ export interface AssetSnapshot {
 /** Pure: compute every derived snapshot for one asset from its events. */
 export function computeAssetSnapshot(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
   asOf: Date,
 ): AssetSnapshot {
@@ -55,41 +55,59 @@ export function computeAssetSnapshot(
  * A single SELECT of a full asset (500k+ rows) exceeds the Neon HTTP driver's
  * 64MB response cap, so we page by (block_number, log_index) in batches and
  * accumulate. The rebuild needs the whole series in memory to replay FIFO.
+ *
+ * This is the single largest consumer of Neon network transfer in the project:
+ * it streams the entire event history on every nightly run (the rebuild cannot
+ * be skipped on quiet days - see KTD-3 and the asOf note on computeDiamond).
+ * It is therefore deliberately narrow: 7 columns, returned positionally. See
+ * ReplayEvent in lib/types.ts before adding a column here.
  */
-export async function readEvents(sql: Sql, asset: Asset): Promise<NormalizedTransfer[]> {
+export async function readEvents(sql: Sql, asset: Asset): Promise<ReplayEvent[]> {
   const BATCH = 20_000;
-  const out: NormalizedTransfer[] = [];
+  const out: ReplayEvent[] = [];
   let lastBlock = -1;
   let lastLog = -1;
+  // Column order is load-bearing: arrayMode returns positional rows.
+  const QUERY = `
+    SELECT log_index, block_number, block_time,
+           from_address, to_address, token_id, quantity
+    FROM transfer_events
+    WHERE asset = $1
+      AND (block_number, log_index) > ($2, $3)
+    ORDER BY block_number ASC, log_index ASC
+    LIMIT $4
+  `;
+  const LOG_INDEX = 0,
+    BLOCK_NUMBER = 1,
+    BLOCK_TIME = 2,
+    FROM = 3,
+    TO = 4,
+    TOKEN_ID = 5,
+    QUANTITY = 6;
   for (;;) {
-    const rows = await sql`
-      SELECT tx_hash, log_index, block_number, block_time,
-             from_address, to_address, token_id, quantity, is_mint, is_burn
-      FROM transfer_events
-      WHERE asset = ${asset}
-        AND (block_number, log_index) > (${lastBlock}, ${lastLog})
-      ORDER BY block_number ASC, log_index ASC
-      LIMIT ${BATCH}
-    `;
+    // arrayMode: positional rows drop the repeated JSON key names, which cost
+    // ~54MB per full rebuild at 670k events. Type parsing is unchanged - in
+    // particular NUMERIC still arrives as a string, so the BigInt() below stays
+    // lossless (quantities reach 1e27 wei and would round as JSON numbers).
+    const rows = (await sql.query(QUERY, [asset, lastBlock, lastLog, BATCH], {
+      arrayMode: true,
+    })) as unknown[][];
     if (rows.length === 0) break;
     for (const r of rows) {
       out.push({
         asset,
-        txHash: r.tx_hash as string,
-        logIndex: Number(r.log_index),
-        blockNumber: Number(r.block_number),
-        blockTime: new Date(r.block_time as string),
-        from: r.from_address as string,
-        to: r.to_address as string,
-        tokenId: (r.token_id as string | null) ?? null,
-        quantity: BigInt(r.quantity as string),
-        isMint: r.is_mint as boolean,
-        isBurn: r.is_burn as boolean,
+        logIndex: Number(r[LOG_INDEX]),
+        blockNumber: Number(r[BLOCK_NUMBER]),
+        blockTime: new Date(r[BLOCK_TIME] as string),
+        from: r[FROM] as string,
+        to: r[TO] as string,
+        tokenId: (r[TOKEN_ID] as string | null) ?? null,
+        quantity: BigInt(r[QUANTITY] as string),
       });
     }
     const last = rows[rows.length - 1];
-    lastBlock = Number(last.block_number);
-    lastLog = Number(last.log_index);
+    lastBlock = Number(last[BLOCK_NUMBER]);
+    lastLog = Number(last[LOG_INDEX]);
     if (rows.length < BATCH) break;
   }
   return out;

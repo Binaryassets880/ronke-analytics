@@ -9,7 +9,7 @@
 import type { Asset } from "@/config/contracts";
 import { contractFor } from "@/config/contracts";
 import { WHALE_SUPPLY_SHARE } from "@/config/badges";
-import type { NormalizedTransfer } from "@/lib/types";
+import type { ReplayEvent } from "@/lib/types";
 import type { Labels } from "./labels";
 import { gini, topNShare } from "./concentration";
 
@@ -31,14 +31,14 @@ function dayKey(d: Date): string {
 
 export function computeDailySeries(
   asset: Asset,
-  events: NormalizedTransfer[],
+  events: ReplayEvent[],
   labels: Labels,
 ): DailySnapshot[] {
   if (events.length === 0) return [];
   const isNft = contractFor(asset).standard === "erc721";
   const balance = new Map<string, bigint>();
 
-  const apply = (e: NormalizedTransfer) => {
+  const apply = (e: ReplayEvent) => {
     const delta = isNft ? 1n : e.quantity;
     if (!labels.excludeFromHolders(e.to)) {
       balance.set(e.to, (balance.get(e.to) ?? 0n) + delta);
