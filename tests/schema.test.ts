@@ -71,6 +71,19 @@ describe("db/schema.sql (static analysis)", () => {
     }
   });
 
+  it("adds the persisted standing columns as idempotent single-statement ALTERs", () => {
+    for (const col of ["rank", "percentile"]) {
+      const stmt = statements.find(
+        (s) => /^ALTER TABLE wallet_scores/i.test(s) && new RegExp(`\\b${col}\\b`).test(s),
+      );
+      expect(stmt, `missing ALTER for ${col}`).toBeTruthy();
+      expect(stmt!).toMatch(/ADD COLUMN IF NOT EXISTS/i);
+      // Nullable on purpose: existing rows carry NULL until the next derive, and
+      // the read path falls back to the legacy count(*) while that is true.
+      expect(stmt!).not.toMatch(/NOT NULL/i);
+    }
+  });
+
   it("defines every table in the data model", () => {
     for (const table of [
       "transfer_events",

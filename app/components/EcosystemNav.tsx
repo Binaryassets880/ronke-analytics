@@ -22,19 +22,26 @@ const SECTIONS = [
   { href: "/leaderboard", label: "Leaderboard", section: "rating", path: "/leaderboard" },
   { href: "/resources", label: "Resources", section: "resources", path: null },
   { href: "/apps", label: "Apps", section: "apps", path: null },
+  { href: "/developers", label: "Developers", section: "developers", path: null },
 ] as const;
 
-export type Section = "home" | "rating" | "resources" | "apps";
+export type Section = "home" | "rating" | "resources" | "apps" | "developers";
 
 /**
  * Which ecosystem section a pathname belongs to. "/" is the landing (home);
- * Resources/Apps are their own sections; everything else (overview, holders,
- * leaderboard, rarity, wallet) is the Ronke Score section.
+ * Resources/Apps/Developers are their own sections; everything else (overview,
+ * holders, leaderboard, rarity, wallet) is the Ronke Score section.
+ *
+ * Note the default: "rating" is the fallback, so any NEW route lands in the
+ * analytics section unless it is claimed here. /developers is its own section
+ * because it is a builder surface, not a stats page, and it must not light up
+ * the Analytics tab.
  */
 export function sectionFor(pathname: string): Section {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/resources")) return "resources";
   if (pathname.startsWith("/apps")) return "apps";
+  if (pathname.startsWith("/developers")) return "developers";
   return "rating";
 }
 

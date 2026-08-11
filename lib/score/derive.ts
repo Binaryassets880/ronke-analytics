@@ -217,25 +217,67 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
   return input;
 }
 
+/**
+ * Assign competition rank + percentile to already-computed scores.
+ *
+ * Competition ranking: equal scores share the LOWER rank, and the next distinct
+ * score skips ahead (100, 100, 50 -> ranks 1, 1, 3). This reproduces exactly what
+ * the old per-request `SELECT count(*) WHERE score > n` returned, so persisting it
+ * is behavior-preserving for the profile page.
+ *
+ * Percentile is `100 * (population - rank) / population` over the scored
+ * population - the share of scored wallets at or below you. Ties share a
+ * percentile because they share a rank. Exported for direct unit testing.
+ */
+export function rankScores<T extends { score: number }>(
+  scored: T[],
+): (T & { rank: number; percentile: number })[] {
+  const sorted = [...scored].sort((a, b) => b.score - a.score);
+  const population = sorted.length;
+  const ranked: (T & { rank: number; percentile: number })[] = [];
+  let rank = 0;
+  let lastScore: number | null = null;
+  sorted.forEach((row, i) => {
+    // Only advance the rank on a NEW score; ties keep the first one's rank.
+    if (lastScore === null || row.score !== lastScore) {
+      rank = i + 1;
+      lastScore = row.score;
+    }
+    ranked.push({
+      ...row,
+      rank,
+      percentile: population > 0 ? (100 * (population - rank)) / population : 0,
+    });
+  });
+  return ranked;
+}
+
 /** Compute + persist wallet_scores. Returns the number of scored wallets. */
 export async function deriveScores(sql: Sql): Promise<number> {
   const inputs = await assembleScoreInputs(sql);
   await sql`DELETE FROM wallet_scores`;
-  const rows: unknown[][] = [];
+  const scored: { address: string; score: number; result: ReturnType<typeof computeScore> }[] = [];
   for (const [address, input] of inputs) {
     const r = computeScore(input);
-    // Skip wallets that score zero (never meaningfully held) to keep the table lean.
+    // Skip wallets that score zero (never meaningfully held) to keep the table
+    // lean. NOTE: this makes wallet_scores "wallets with a non-zero score", NOT
+    // "all holders" - anything treating it as the holder set will undercount,
+    // and it is why the public API returns score 0 / rank null rather than 404.
     if (r.score <= 0) continue;
-    const b = r.breakdown;
-    rows.push([
-      address, r.score, r.ronkeSubscore, r.ronkestrSubscore, r.nftSubscore,
+    scored.push({ address, score: r.score, result: r });
+  }
+  const rows: unknown[][] = rankScores(scored).map((s) => {
+    const b = s.result.breakdown;
+    return [
+      s.address, s.result.score, s.result.ronkeSubscore, s.result.ronkestrSubscore, s.result.nftSubscore,
       b.ronkeHoldingPoints, b.ronkeDurationPoints, b.ronkeDiamondMult,
       b.ronkestrHoldingPoints, b.ronkestrDurationPoints, b.ronkestrDiamondMult,
       b.nftHoldingPoints, b.nftDurationPoints, b.nftDiamondMult,
       b.collectorPoints, b.bodyTypesHeld, b.bodyTypesTotal,
       b.oneOfOnePoints, b.oneOfOneCount,
-    ]);
-  }
+      s.rank, s.percentile,
+    ];
+  });
   await insertMany(
     sql,
     "wallet_scores",
@@ -246,6 +288,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       "nft_holding", "nft_duration", "nft_diamond_mult",
       "collector_points", "body_types_held", "body_types_total",
       "oneofone_points", "oneofone_count",
+      "rank", "percentile",
     ],
     rows,
   );

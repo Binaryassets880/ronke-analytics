@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Sql } from "@/db/client";
-import { assembleScoreInputs } from "@/lib/score/derive";
+import { assembleScoreInputs, rankScores } from "@/lib/score/derive";
 
 /**
  * Purpose-built fake `sql` for assembleScoreInputs (U5). Matches the specific
@@ -69,5 +69,55 @@ describe("assembleScoreInputs (RonkeStr)", () => {
     const map = await assembleScoreInputs(sql);
     expect(map.get("0xr")?.ronkestrHold).toBeNull();
     expect(map.get("0xr")?.ronkestrBalanceWhole).toBe(0);
+  });
+});
+
+describe("rankScores (persisted standing)", () => {
+  /** The pre-migration semantics we must reproduce exactly. */
+  const legacyRank = (scores: number[], score: number) =>
+    scores.filter((s) => s > score).length + 1;
+
+  it("ranks descending by score with rank 1 at the top", () => {
+    const out = rankScores([{ score: 50 }, { score: 300 }, { score: 120 }]);
+    expect(out.map((r) => r.score)).toEqual([300, 120, 50]);
+    expect(out.map((r) => r.rank)).toEqual([1, 2, 3]);
+  });
+
+  it("uses competition ranking for ties and skips the consumed ranks", () => {
+    const out = rankScores([{ score: 100 }, { score: 100 }, { score: 50 }]);
+    expect(out.map((r) => r.rank)).toEqual([1, 1, 3]);
+    // Tied wallets share a percentile because they share a rank.
+    expect(out[0].percentile).toBe(out[1].percentile);
+  });
+
+  it("matches the legacy count(*) rank for every row", () => {
+    const scores = [900, 500, 500, 500, 120, 10];
+    const out = rankScores(scores.map((score) => ({ score })));
+    for (const row of out) {
+      expect(row.rank).toBe(legacyRank(scores, row.score));
+    }
+  });
+
+  it("computes percentile over the scored population", () => {
+    const out = rankScores(Array.from({ length: 100 }, (_, i) => ({ score: 100 - i })));
+    expect(out[0].percentile).toBeCloseTo(99, 5); // rank 1 of 100
+    expect(out[99].percentile).toBe(0); // last place is the floor, not negative
+  });
+
+  it("does not divide by zero on a single wallet or an empty population", () => {
+    expect(rankScores([{ score: 42 }])[0].percentile).toBe(0);
+    expect(rankScores([])).toEqual([]);
+  });
+
+  it("preserves the caller's other fields", () => {
+    const out = rankScores([{ score: 10, address: "0xa" }, { score: 20, address: "0xb" }]);
+    expect(out[0]).toMatchObject({ address: "0xb", rank: 1 });
+    expect(out[1]).toMatchObject({ address: "0xa", rank: 2 });
+  });
+
+  it("does not mutate the input array order", () => {
+    const input = [{ score: 1 }, { score: 9 }];
+    rankScores(input);
+    expect(input.map((r) => r.score)).toEqual([1, 9]);
   });
 });
