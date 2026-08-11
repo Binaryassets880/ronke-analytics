@@ -108,6 +108,31 @@ export const ENDPOINTS: ApiEndpoint[] = [
     },
   },
   {
+    path: "/scores/all",
+    file: "app/api/v1/scores/all/route.ts",
+    summary: "Every scored wallet, in one response",
+    description:
+      "The whole scored set, compact - address, score, rank, percentile. Built for periodic " +
+      "re-checks (pruning roles from members who sold) where you need to see everyone at once. " +
+      "Roughly 6,200 rows today. Check the complete flag rather than assuming a 200 means you " +
+      "got everything. Wallets with no score are absent, not listed with score 0 - the same " +
+      "meaning as found:false on the single-wallet endpoint. Every current Ronkeverse NFT " +
+      "holder is included.",
+    params: [],
+    cacheSeconds: 900,
+    example: {
+      data: {
+        scores: [
+          { address: "0xf0229d…", score: 8012, rank: 1, percentile: 99.98 },
+          { address: "0xfeae9f…", score: 6590, rank: 2, percentile: 99.97 },
+        ],
+        count: 6199,
+        complete: true,
+      },
+      meta: { as_of: "2026-08-06T07:10:00.000Z", population: 6199, "…": "…" },
+    },
+  },
+  {
     path: "/leaderboard",
     file: "app/api/v1/leaderboard/route.ts",
     summary: "Top wallets by Ronke Score",

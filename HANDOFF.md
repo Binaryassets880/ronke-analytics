@@ -28,6 +28,7 @@ generated OpenAPI document and a `/developers` docs page:
 |---|---|
 | `GET /api/v1/score/{addressOrName}` | 15 min |
 | `GET /api/v1/scores?addresses=` (batch, max 50) | 15 min |
+| `GET /api/v1/scores/all` (full dump, ~6,200 rows) | 15 min |
 | `GET /api/v1/leaderboard?limit=&offset=` | 15 min |
 | `GET /api/v1/wallet/{addressOrName}` | 15 min |
 | `GET /api/v1/nft/{tokenId}` | 24 h |
@@ -38,7 +39,20 @@ generated OpenAPI document and a `/developers` docs page:
 
 Verified live against the production Neon DB on 2026-08-11: all endpoints 200,
 `rank`/`percentile` populate, error paths return their documented codes, CORS
-preflight 204. 348 tests green, `tsc` clean, `next build` clean.
+preflight 204. 358 tests green, `tsc` clean, `next build` clean.
+
+`/api/v1/scores/all` exists because a Discord role bot re-checking its whole
+membership should not page. It returns 6,199 rows in 617 KB raw / **179 KB
+gzipped** in ~230 ms, four fields per row (address, score, rank, percentile).
+`MAX_ROWS` (50,000, ~8x current population) is a visible-degradation valve, not
+paging: if it ever trips, `complete: false` appears in the response and that is
+the signal to add keyset pagination rather than raise the number.
+
+Coverage note worth keeping (probed live 2026-08-11): **every** current
+Ronkeverse NFT holder is scored - zero exceptions, and all 1,236 single-NFT
+wallets score ~220+. The only current holders absent from `wallet_scores` are
+3,063 $RONKE dust wallets, the largest holding 0.0075 of one token. So the dump
+is complete for role gating but is NOT a holder census.
 
 ## THE DEPLOY GOTCHA - read before merging
 

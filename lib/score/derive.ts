@@ -228,7 +228,15 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
  * Percentile is `100 * (population - rank) / population` over the scored
  * population - the share of scored wallets at or below you. Ties share a
  * percentile because they share a rank. Exported for direct unit testing.
+ *
+ * Rounded to 2 decimals. The raw quotient carries ~14 decimals of false
+ * precision: at 6,199 wallets one whole rank step is 0.016 percentile points,
+ * so everything past the second decimal is noise. It also ships in every
+ * response, and at several thousand rows in the full dump those bytes are real.
+ * Rank, not percentile, is the field that uniquely identifies a position.
  */
+const PERCENTILE_DP = 2;
+
 export function rankScores<T extends { score: number }>(
   scored: T[],
 ): (T & { rank: number; percentile: number })[] {
@@ -243,11 +251,9 @@ export function rankScores<T extends { score: number }>(
       rank = i + 1;
       lastScore = row.score;
     }
-    ranked.push({
-      ...row,
-      rank,
-      percentile: population > 0 ? (100 * (population - rank)) / population : 0,
-    });
+    const raw = population > 0 ? (100 * (population - rank)) / population : 0;
+    const factor = 10 ** PERCENTILE_DP;
+    ranked.push({ ...row, rank, percentile: Math.round(raw * factor) / factor });
   });
   return ranked;
 }

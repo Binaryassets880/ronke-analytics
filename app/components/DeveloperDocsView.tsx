@@ -116,6 +116,26 @@ for (const s of data.scores) {
   await setRole(s.address, s.rank != null && s.rank <= 500 ? "og" : "member");
 }`;
 
+const RECHECK_SNIPPET = `// Only re-check when there IS new data. The rebuild runs once a
+// day, so polling faster than that just burns requests.
+let lastSeen = null;
+
+setInterval(async () => {
+  const { data } = await (await fetch("${API_BASE}/meta")).json();
+  if (data.as_of === lastSeen) return;             // nothing new yet
+  lastSeen = data.as_of;
+
+  const dump = await (await fetch("${API_BASE}/scores/all")).json();
+  if (!dump.data.complete) return;                 // partial set - don't prune on it
+
+  const byAddress = new Map(dump.data.scores.map((s) => [s.address, s]));
+  for (const member of guildMembers) {
+    const s = byAddress.get(member.address.toLowerCase());
+    // Absent = no score at all. That's your cue to remove the role.
+    await setRole(member, s != null && s.rank <= 500 ? "og" : null);
+  }
+}, 30 * 60 * 1000);`;
+
 export function DeveloperDocsView() {
   return (
     <div className="space-y-6">
@@ -146,9 +166,17 @@ export function DeveloperDocsView() {
         </p>
         <Code>{QUICKSTART}</Code>
         <p className="mt-4 mb-3 text-sm text-[var(--muted)]">
-          Checking a whole lobby or Discord guild? Use the batch endpoint.
+          Checking a whole lobby or Discord guild? Use the batch endpoint - up to 50 wallets per
+          request, so a few hundred members is a handful of calls, not hundreds.
         </p>
         <Code>{BATCH_SNIPPET}</Code>
+        <p className="mt-4 mb-3 text-sm text-[var(--muted)]">
+          Running a periodic re-check to prune roles from people who sold? Pull the whole scored
+          set once and diff it locally. Watch <span className="mono">meta.as_of</span> so you only
+          do the work when there is actually new data - the rebuild runs once a day, so a faster
+          poll interval buys you nothing.
+        </p>
+        <Code>{RECHECK_SNIPPET}</Code>
       </Card>
 
       <Card title="Endpoints" id="endpoints">

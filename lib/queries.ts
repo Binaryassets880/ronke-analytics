@@ -404,7 +404,10 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     ]);
     rank = Number(aboveRow[0]?.above ?? 0) + 1;
     const population = Number(popRow[0]?.n ?? 0);
-    percentile = population > 0 ? (100 * (population - rank)) / population : 0;
+    // Same 2-decimal rounding rankScores applies, so a wallet read during this
+    // transitional window reports the same precision it will after the rebuild.
+    const raw = population > 0 ? (100 * (population - rank)) / population : 0;
+    percentile = Math.round(raw * 100) / 100;
   }
   return {
     score: Number(r.score),
@@ -480,6 +483,56 @@ export async function getWalletScoresBatch(
     });
   }
   return out;
+}
+
+/** One row of the full-dump endpoint: the minimum a role-gating bot needs. */
+export interface CompactScore {
+  address: string;
+  score: number;
+  rank: number | null;
+  percentile: number | null;
+}
+
+/**
+ * Every scored wallet, compact, for the public full-dump endpoint.
+ *
+ * Deliberately four columns. A Discord bot re-checking its whole membership
+ * needs address + standing and nothing else; including sub-scores and the
+ * points breakdown would roughly quadruple a response that is already the
+ * largest this API serves.
+ *
+ * `arrayMode` for the same reason `readEvents` uses it (commit c83fceb): at
+ * several thousand rows the repeated JSON key names are a meaningful share of
+ * the bytes Neon ships us, and this is the one read where row count is
+ * unbounded by a caller-supplied limit.
+ *
+ * `cap` is a safety valve, not a paging mechanism - it exists so that if the
+ * scored population ever grows an order of magnitude this degrades visibly
+ * (via the returned `complete` flag) instead of quietly serving a huge payload.
+ */
+export async function getAllScoresCompact(
+  cap: number,
+): Promise<{ rows: CompactScore[]; complete: boolean }> {
+  const sql = getSql();
+  if (!sql) return { rows: [], complete: true };
+  // Column order is load-bearing: arrayMode returns positional rows.
+  const raw = (await sql.query(
+    `SELECT address, score, rank, percentile
+     FROM wallet_scores
+     ORDER BY score DESC, address ASC
+     LIMIT $1`,
+    [cap + 1], // one extra row is how we detect "there were more"
+    { arrayMode: true },
+  )) as unknown[][];
+
+  const complete = raw.length <= cap;
+  const rows = (complete ? raw : raw.slice(0, cap)).map((r) => ({
+    address: r[0] as string,
+    score: Number(r[1]),
+    rank: r[2] == null ? null : Number(r[2]),
+    percentile: r[3] == null ? null : Number(r[3]),
+  }));
+  return { rows, complete };
 }
 
 export interface HolderRow {

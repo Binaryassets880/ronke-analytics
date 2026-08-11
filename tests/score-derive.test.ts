@@ -104,6 +104,19 @@ describe("rankScores (persisted standing)", () => {
     expect(out[99].percentile).toBe(0); // last place is the floor, not negative
   });
 
+  it("rounds percentile to 2 decimals - past that is false precision", () => {
+    // At 6,199 wallets one rank step is ~0.016 points, so a 14-decimal quotient
+    // is noise that ships in every response and in every full-dump row.
+    const out = rankScores(Array.from({ length: 6199 }, (_, i) => ({ score: 10_000 - i })));
+    expect(out[0].percentile).toBe(99.98);
+    expect(out[1].percentile).toBe(99.97);
+    // Adjacent ranks must still be distinguishable at this precision.
+    expect(out[0].percentile).not.toBe(out[1].percentile);
+    for (const r of out) {
+      expect(String(r.percentile).split(".")[1]?.length ?? 0).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("does not divide by zero on a single wallet or an empty population", () => {
     expect(rankScores([{ score: 42 }])[0].percentile).toBe(0);
     expect(rankScores([])).toEqual([]);
