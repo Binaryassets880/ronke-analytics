@@ -118,15 +118,23 @@ for (const s of data.scores) {
 
 const RECHECK_SNIPPET = `// Only re-check when there IS new data. The rebuild runs once a
 // day, so polling faster than that just burns requests.
-let lastSeen = null;
+let applied = null;
 
 setInterval(async () => {
-  const { data } = await (await fetch("${API_BASE}/meta")).json();
-  if (data.as_of === lastSeen) return;             // nothing new yet
-  lastSeen = data.as_of;
+  // Cheap gate: has anything been rebuilt since we last acted?
+  const meta = await (await fetch("${API_BASE}/meta")).json();
+  if (meta.data.as_of === applied) return;
 
   const dump = await (await fetch("${API_BASE}/scores/all")).json();
-  if (!dump.data.complete) return;                 // partial set - don't prune on it
+
+  // Trust the DUMP's own as_of, not /meta's. They are cached separately, so
+  // right after a rebuild /meta can report fresh data while the dump is still
+  // serving the previous one. Skipping here just retries on the next tick.
+  if (dump.meta.as_of !== meta.data.as_of) return;
+
+  // Never prune on a partial set - you would strip roles from everyone
+  // who happened to fall outside it.
+  if (!dump.data.complete) return;
 
   const byAddress = new Map(dump.data.scores.map((s) => [s.address, s]));
   for (const member of guildMembers) {
@@ -134,6 +142,7 @@ setInterval(async () => {
     // Absent = no score at all. That's your cue to remove the role.
     await setRole(member, s != null && s.rank <= 500 ? "og" : null);
   }
+  applied = dump.meta.as_of;
 }, 30 * 60 * 1000);`;
 
 export function DeveloperDocsView() {

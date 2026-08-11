@@ -117,9 +117,12 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "Roughly 6,200 rows today. Check the complete flag rather than assuming a 200 means you " +
       "got everything. Wallets with no score are absent, not listed with score 0 - the same " +
       "meaning as found:false on the single-wallet endpoint. Every current Ronkeverse NFT " +
-      "holder is included.",
+      "holder is included. Cached for an hour rather than 15 minutes - the data only changes " +
+      "once a day, and this is the one response where a cache miss is expensive. Read " +
+      "meta.as_of off this response to know exactly which rebuild you are holding; do not " +
+      "assume it matches what /meta reported, since the two are cached separately.",
     params: [],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         scores: [

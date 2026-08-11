@@ -21,12 +21,19 @@ import { apiMeta, ok, fail, preflight, CACHE } from "@/lib/api/respond";
 import { getAllScoresCompact } from "@/lib/queries";
 
 /**
- * Safety valve, ~8x current population (6,199 as of 2026-08-11). Not paging:
+ * Safety valve, ~4x current population (6,199 as of 2026-08-11). Not paging:
  * if this ever trips, `complete: false` makes the truncation visible instead of
  * letting a caller believe it has the full set, and it is the signal to add
  * keyset pagination rather than raise the number.
+ *
+ * The ceiling is a platform limit, not a taste call. Measured payload is ~100
+ * bytes per row (617 KB at 6,199 rows), and Vercel caps a serverless function
+ * response at 4.5 MB - so 25,000 rows is ~2.5 MB, comfortably inside it, while
+ * the 50,000 this started at would have been ~5 MB and thrown a platform error
+ * BEFORE the valve could report the truncation it exists to report. Raising
+ * this without re-measuring bytes/row would reintroduce that.
  */
-export const MAX_ROWS = 50_000;
+export const MAX_ROWS = 25_000;
 
 export async function GET() {
   try {
@@ -52,7 +59,7 @@ export async function GET() {
                 "distribution and /api/v1/scores?addresses= for specific wallets.",
             }),
       },
-      { meta: { ...meta, population: rows.length }, ttl: CACHE.score },
+      { meta: { ...meta, population: rows.length }, ttl: CACHE.bulk },
     );
   } catch (e) {
     console.error("GET /api/v1/scores/all failed", e);

@@ -60,9 +60,11 @@ describe("GET /api/v1/scores/all", () => {
     ]);
   });
 
-  it("is cached - this is the single biggest response, so it matters most here", async () => {
+  it("caches LONGER than per-wallet reads - a miss here costs ~450 KB of Neon egress", async () => {
+    const { CACHE } = await import("@/lib/api/respond");
     const res = await GET();
-    expect(res.headers.get("Cache-Control")).toContain(`s-maxage=${900}`);
+    expect(res.headers.get("Cache-Control")).toContain(`s-maxage=${CACHE.bulk}`);
+    expect(CACHE.bulk).toBeGreaterThan(CACHE.score);
     expect(res.headers.get("Cache-Control")).not.toContain("no-store");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
@@ -104,9 +106,14 @@ describe("GET /api/v1/scores/all", () => {
     expect(JSON.stringify(body)).not.toContain("neon exploded");
   });
 
-  it("keeps the safety cap well above the current population", async () => {
-    // ~6,200 scored wallets as of 2026-08-11; the cap is a degradation signal,
-    // not a paging limit, so it must not be reachable in normal growth.
-    expect(MAX_ROWS).toBeGreaterThan(20_000);
+  it("sets the safety cap above the population but INSIDE Vercel's response limit", async () => {
+    // ~6,200 scored wallets as of 2026-08-11, measured at ~100 bytes/row. The
+    // cap must clear normal growth yet stay under Vercel's 4.5 MB function
+    // response limit - otherwise the platform 500s before the valve can report
+    // `complete: false`, which is the one thing it exists to do.
+    const BYTES_PER_ROW = 100;
+    const VERCEL_RESPONSE_LIMIT = 4.5 * 1024 * 1024;
+    expect(MAX_ROWS).toBeGreaterThan(6_199 * 3);
+    expect(MAX_ROWS * BYTES_PER_ROW).toBeLessThan(VERCEL_RESPONSE_LIMIT);
   });
 });

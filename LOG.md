@@ -52,3 +52,24 @@ Append-only. Newest entry at the bottom.
 - Touched: `lib/queries.ts`, `lib/score/derive.ts`, `config/apiDocs.ts`,
   `app/components/DeveloperDocsView.tsx`, `tests/score-derive.test.ts`,
   `HANDOFF.md`, `LOG.md`, plus the new files above.
+
+## [2026-08-11] Pre-PR review fixes on the full-dump endpoint
+
+- `MAX_ROWS` 50,000 -> 25,000. At the measured ~100 bytes/row the old cap
+  implied a ~5 MB response, past Vercel's 4.5 MB function response limit - the
+  valve would have thrown a platform error BEFORE it could report the
+  `complete: false` it exists to report. 25,000 is ~4x current population and
+  ~2.5 MB. Test now asserts both bounds.
+- Dump cache 15 min -> 1 h (new `CACHE.bulk`). A continuously-polled dump at
+  15 min is ~1.2 GB/month of Neon egress against ~1.9 GB of headroom; at an
+  hour it is ~310 MB. Costs no freshness - the data changes once a day.
+- Fixed a race in the documented re-check pattern: `/meta` and `/scores/all`
+  are cached separately, so a bot could see a fresh `as_of` from `/meta` and
+  then receive a still-stale dump. The snippet now trusts the dump's own
+  `meta.as_of` and skips the tick when they disagree.
+- Verified no site regression from persisted rank: `/leaderboard` 200, wallet
+  profile renders RONKE SCORE 8,013 / RANK #1 off the new column.
+- 358 tests green, `tsc` clean, `next build` clean.
+- Touched: `app/api/v1/scores/all/route.ts`, `lib/api/respond.ts`,
+  `config/apiDocs.ts`, `app/components/DeveloperDocsView.tsx`,
+  `tests/api-scores-all.test.ts`, `LOG.md`.
