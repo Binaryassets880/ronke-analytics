@@ -102,6 +102,31 @@ wallets score ~220+. The only current holders absent from `wallet_scores` are
 3,063 $RONKE dust wallets, the largest holding 0.0075 of one token. So the dump
 is complete for role gating but is NOT a holder census.
 
+### Preview verification (PR #15, 2026-08-12) - PASSED
+
+Tested on the real Vercel edge, not just locally:
+
+- **CDN caching CONFIRMED.** `x-vercel-cache` goes MISS -> HIT -> HIT on every
+  one of the ten endpoints. This was the one thing not verifiable locally and
+  the only result that could have blocked the merge: the whole cost model
+  assumes the CDN absorbs third-party traffic instead of Neon.
+- Note Vercel rewrites the client-facing header to `Cache-Control: public,
+  max-age=0` - it consumes `s-maxage` at the edge and does not forward it. That
+  is expected; `x-vercel-cache: HIT` is the proof, not the header text.
+- Full dump over the wire: 612,966 B raw, **151,668 B brotli**, 0.15 s.
+- Data parity: top wallet `score 8013, rank 1, percentile 99.98`, subscores sum
+  to the total.
+- Error paths all return documented codes: `invalid_address` 400,
+  `name_not_resolved` 404, `invalid_token_id` 400, `invalid_param` 400.
+- CORS preflight 204 with `Access-Control-Allow-Origin: *`.
+- `/developers` renders.
+
+**Deployment Protection was disabled to run this.** Preview deployments are
+SSO-gated by default (302 to `vercel.com/sso-api`), which bounces anonymous
+requests before they reach the API. If it has been re-enabled since, that is
+why a preview curl returns 302 - it is not an API fault. Production is not
+gated.
+
 ## THE DEPLOY GOTCHA - read before merging
 
 **`npm run migrate` MUST run before this branch is deployed.** The read path now

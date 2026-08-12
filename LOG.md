@@ -102,3 +102,22 @@ recently and nothing recorded where to.
   48K/1M, Fast Origin Transfer 105.59 MB/10 GB.
 - Touched: `HANDOFF.md`, `LOG.md`,
   `docs/plans/2026-08-06-001-feat-ronke-score-public-api-plan.md`.
+
+## [2026-08-12] PR #15 opened; preview verified on the Vercel edge
+
+- Pushed `feat/public-score-api` and opened PR #15. Preview built Ready.
+- **CDN caching confirmed** - `x-vercel-cache` MISS -> HIT -> HIT on all ten
+  endpoints. This was the only unverifiable-locally risk and the sole
+  merge-blocker criterion; it passed. Vercel rewrites the client-facing header
+  to `max-age=0` (it consumes `s-maxage` at the edge), so `x-vercel-cache` is
+  the signal, not the header text.
+- Full dump over the wire: 612,966 B raw -> 151,668 B brotli, 0.15 s.
+- Data parity, all documented error codes, and CORS preflight verified against
+  production data through the preview. `/developers` renders.
+- Gotcha found: preview deployments are SSO-gated by default (302 to
+  `vercel.com/sso-api`), which silently bounces anonymous API tests. Had to
+  disable Deployment Protection to run the check. Production is not gated.
+- Also confirmed unrelated to the move: `sync.yml` secrets survived the repo
+  transfer (11 of last 12 nightly runs succeeded; the 2026-08-04 failure was a
+  transient `Blockscout HTTP 500`, self-recovered, no data loss).
+- Touched: `HANDOFF.md`, `LOG.md`.
