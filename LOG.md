@@ -171,3 +171,25 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   Open cosmetic question is whether to serve from `api.ronkeverse.com`, which
   should be settled before the base URL is publicised.
 - Touched: `HANDOFF.md`, `LOG.md`.
+
+## [2026-08-12] PR #15 MERGED - public score API live in production
+
+- Merged PR #15 (9 commits) as `6ecd40a`; branch deleted. Vercel deployed to
+  `ronke-analytics.vercel.app`.
+- Production verified: all endpoints 200, cache MISS -> HIT -> HIT, `/llms.txt`
+  (14.5 KB, `text/plain`) and `/developers` serving, dump 6,194 rows complete.
+- **The documented transitional gotcha fired.** Right after merge the
+  leaderboard and dump returned `rank: null`: that morning's 08:08 nightly sync
+  had run on pre-merge code, which `DELETE`s and re-inserts `wallet_scores`
+  without the new columns. Single-wallet reads looked fine throughout thanks to
+  the `count(*)` fallback, which is exactly why the leaderboard was the tell.
+  Fixed with `gh workflow run sync.yml --ref main` (migrate + sync + rebuild on
+  merged code, completed success). Lesson recorded in HANDOFF: a deploy landing
+  between nightly runs should trigger the workflow, not wait for 07:00 UTC.
+- Also observed live: `/scores/all` served stale `null` ranks for minutes after
+  the rebuild because its 1 h cache outlived `/meta`'s 5 min. That is the exact
+  skew the documented re-check pattern guards against - confirms the guard is
+  needed, not theoretical.
+- Embed unaffected: `ronke-analytics.vercel.app/leaderboard` returns 200 with no
+  `X-Frame-Options` and no redirect, so ronkeverse.com/score still renders.
+- Touched: `HANDOFF.md`, `LOG.md`.

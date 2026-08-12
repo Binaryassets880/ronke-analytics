@@ -105,8 +105,36 @@ the one thing that hurts to change after integrations exist.
 
 ## Current state
 
-`main` is live and healthy. Work in progress sits on **`feat/public-score-api`**
-(built 2026-08-11, **not merged, not deployed**).
+`main` is live and healthy. The public score API is **MERGED AND DEPLOYED**
+(PR #15, 2026-08-12, merge commit `6ecd40a`). No work in progress.
+
+Live production verification, 2026-08-12: all endpoints 200, CDN cache
+MISS -> HIT -> HIT, `/llms.txt` and `/developers` serving, `rank`/`percentile`
+populated (`as_of` 13:17:03, 6,194 scored wallets), and the ronkeverse.com
+iframe still loads (`ronke-analytics.vercel.app/leaderboard` 200, no
+`X-Frame-Options`, no redirect).
+
+### Post-merge gotcha that DID fire (worth knowing for any similar change)
+
+Immediately after merge the leaderboard and full dump returned `rank: null`.
+Cause: that morning's 08:08 nightly sync had run with **pre-merge** code, whose
+`deriveScores` does `DELETE FROM wallet_scores` then re-inserts WITHOUT the new
+columns - so the columns existed but were empty. The single-wallet endpoint
+looked fine the whole time because `getWalletScore` falls back to the old
+`count(*)`; the leaderboard and dump have no such fallback, which is what
+exposed it.
+
+Fix was one `gh workflow run sync.yml --ref main`, which reran migrate + sync +
+rebuild on the merged code. **Any future deploy that lands between two nightly
+runs should trigger the workflow rather than waiting**, or the derived columns
+stay stale until 07:00 UTC.
+
+Second-order effect seen at the same time: `/scores/all` kept serving `null`
+ranks for several minutes AFTER the rebuild, because its 1 h cache still held
+the pre-rebuild copy while `/meta` (5 min) had already refreshed. That is
+exactly the skew the documented re-check pattern guards against - a bot must
+compare the DUMP's own `meta.as_of`, not `/meta`'s. Live confirmation the guard
+is necessary.
 
 ### feat/public-score-api - public Ronke Score API
 
