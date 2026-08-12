@@ -90,21 +90,24 @@ function Endpoint({ e }: { e: ApiEndpoint }) {
 }
 
 /** The first code block on the page: a correct gate, so copy-paste lands right. */
-const QUICKSTART = `// Gate on rank - survives a score retune.
-const res = await fetch(
+const LLMS_SNIPPET = `# Hand the whole API reference to a coding agent:
+curl https://ronke-analytics.vercel.app/llms.txt
+
+# ...or just paste that URL into the chat.`;
+
+const QUICKSTART = `const res = await fetch(
   "${API_BASE}/score/0x36175b2c13e39de1a79583fa3476d124dc8dfb70"
 );
 const { data, meta } = await res.json();
 
-// Name your own tiers. We deliberately don't ship tier bands -
-// your game knows how many ranks it wants and what to call them.
-const tier =
-  data.rank == null      ? "unranked" :
-  data.rank <= 100       ? "legend"   :
-  data.percentile >= 90  ? "veteran"  :
-  data.percentile >= 50  ? "regular"  : "newcomer";
+// score, rank and percentile all come back. Build on whichever
+// fits your design - and name your own tiers. We don't ship tier
+// bands, because your game knows how many ranks it wants.
+data.score;       // 4820   - what holders recognise
+data.rank;        // 312    - null if the wallet has no score
+data.percentile;  // 94.9   - out of meta.population scored wallets
 
-console.log(data.score, data.rank, tier, "as of", meta.as_of);`;
+console.log(data.score, data.rank, data.percentile, "as of", meta.as_of);`;
 
 const BATCH_SNIPPET = `// One request, one cache entry - not 40 lookups.
 const wallets = [...guildMembers].sort();          // sort = better cache hits
@@ -164,6 +167,22 @@ export function DeveloperDocsView() {
               <p className="mt-1 text-sm text-[var(--muted)]">{c.body}</p>
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card title="Building with an AI assistant?" id="llms">
+        <p className="text-sm text-[var(--muted)]">
+          Point it at{" "}
+          <a className="mono text-[var(--accent)] hover:underline" href="/llms.txt">
+            /llms.txt
+          </a>
+          . That is this entire reference - every endpoint, the caveats above, worked examples,
+          and the error table - as one plain-text document written for a model to read. Paste the
+          URL into Claude (or let an agent fetch it) and it has everything it needs to write a
+          correct integration.
+        </p>
+        <div className="mt-3">
+          <Code>{LLMS_SNIPPET}</Code>
         </div>
       </Card>
 
@@ -234,11 +253,12 @@ export function DeveloperDocsView() {
             time, so parse defensively and ignore keys you do not recognise.
           </li>
           <li>
-            <span className="font-medium text-[var(--foreground)]">Score retunes.</span> The scoring
-            weights are tuned from time to time. When they change,{" "}
-            <span className="mono">meta.score_version</span> changes with them. Gate on{" "}
-            <span className="mono">rank</span> or <span className="mono">percentile</span> and a
-            retune will not break you.
+            <span className="font-medium text-[var(--foreground)]">Score retunes.</span> Changing
+            the scoring weights requires community agreement, so it is rare and announced. If it
+            does happen, <span className="mono">meta.score_version</span> changes with the weights,
+            raw <span className="mono">score</span> magnitudes shift, and{" "}
+            <span className="mono">rank</span> / <span className="mono">percentile</span> positions
+            are unaffected.
           </li>
           <li>
             <span className="font-medium text-[var(--foreground)]">Machine-readable spec.</span>{" "}

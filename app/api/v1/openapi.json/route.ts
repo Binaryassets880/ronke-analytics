@@ -90,9 +90,10 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       version: API_VERSION,
       description:
         "Public, free, read-only API for the Ronke ecosystem. Data is a daily snapshot rebuilt " +
-        "at 07:00 UTC - see meta.as_of. Gate on rank or percentile rather than raw score, which " +
-        "shifts whenever the scoring weights are retuned (meta.score_version changes with them). " +
-        "An unknown wallet returns 200 with found:false and score 0, never a 404.",
+        "at 07:00 UTC - see meta.as_of. Every response carries score, rank and percentile; raw " +
+        "score magnitudes shift if the scoring weights are retuned, while rank and percentile " +
+        "positions do not (meta.score_version changes with the weights, so a retune is " +
+        "detectable). An unknown wallet returns 200 with found:false and score 0, never a 404.",
     },
     servers: [{ url: "/", description: "Same origin as this document." }],
     paths,

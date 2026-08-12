@@ -83,7 +83,7 @@ describe("DeveloperDocsView", () => {
     expect(text.indexOf(CAVEATS[0].title)).toBeLessThan(text.indexOf("Endpoints"));
   });
 
-  it("states the freshness, retune, and absent-wallet warnings explicitly", () => {
+  it("states the freshness, retune, and absent-wallet facts explicitly", () => {
     const { container } = render(<DeveloperDocsView />);
     const text = container.textContent ?? "";
     expect(text).toContain("07:00 UTC");
@@ -91,12 +91,23 @@ describe("DeveloperDocsView", () => {
     expect(text).toContain("found:false");
   });
 
-  it("shows a quick-start that gates on rank, not on a raw score threshold", () => {
+  it("surfaces all three standing fields without prescribing one", () => {
+    // Founder decision 2026-08-12: state what is true, hand over every field,
+    // and let each dev choose. The docs must NOT tell them which to gate on.
     const { container } = render(<DeveloperDocsView />);
     const text = container.textContent ?? "";
-    expect(text).toContain("data.rank");
-    // The first snippet must not teach the pattern the docs warn against.
-    expect(text).not.toMatch(/data\.score\s*>\s*\d/);
+    for (const field of ["data.score", "data.rank", "data.percentile"]) {
+      expect(text, field).toContain(field);
+    }
+    expect(text).not.toMatch(/Gate on rank, not/i);
+    expect(text).not.toMatch(/\bPrefer `?rank`?\b/i);
+    expect(text).not.toMatch(/rather than raw score/i);
+  });
+
+  it("points AI-assisted developers at /llms.txt", () => {
+    const { container } = render(<DeveloperDocsView />);
+    expect(container.querySelector('a[href="/llms.txt"]')).toBeTruthy();
+    expect(container.textContent).toContain("llms.txt");
   });
 
   it("lists every documented error code", () => {

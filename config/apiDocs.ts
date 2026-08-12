@@ -342,14 +342,15 @@ export const CAVEATS = [
       "do not treat it as live chain state.",
   },
   {
-    title: "Gate on rank, not on a raw score threshold",
+    title: "Score magnitudes can move; score_version tells you when",
     body:
-      "score is the number your community recognises, so it leads every response. But its " +
-      "absolute size shifts whenever the weights are retuned - one past calibration moved the " +
-      "top wallet from 17,133 to 8,830, which would have quietly emptied any \"score > 5000\" " +
-      "gate. rank survives that: the top 100 is always 100 people. Use percentile instead if " +
-      "your gate should also hold as the holder base grows. meta.score_version changes on " +
-      "every retune, so you can detect one.",
+      "Every response carries score, rank, and percentile. Which you build on is your call. " +
+      "The one thing worth knowing before you choose: the scoring weights have been retuned " +
+      "before - one past calibration moved the top wallet from 17,133 to 8,830 - and a retune " +
+      "shifts absolute score values while leaving rank and percentile positions intact. Any " +
+      "future change requires community agreement, so it will not happen quietly, but it can " +
+      "still happen. meta.score_version changes whenever the weights change, so you can detect " +
+      "it and recalibrate.",
   },
   {
     title: "A wallet with no score is not an error",
