@@ -7,8 +7,8 @@
  *
  * Ordering is intentional. The caveats come FIRST, before a single endpoint,
  * because each one produces a bug that looks like an API fault from the outside
- * (stale data read as broken, a retune read as an outage, a new player read as
- * an error). A developer who skims only the top of this page still gets them.
+ * (stale data read as broken, a new player read as an error). A developer who
+ * skims only the top of this page still gets them.
  */
 
 import { API_BASE, ENDPOINTS, ERROR_REFERENCE, CAVEATS, type ApiEndpoint } from "@/config/apiDocs";
@@ -251,14 +251,6 @@ export function DeveloperDocsView() {
             <span className="mono">v1</span> keeps serving for at least 90 days after any successor
             is announced. Additive fields can appear in <span className="mono">v1</span> at any
             time, so parse defensively and ignore keys you do not recognise.
-          </li>
-          <li>
-            <span className="font-medium text-[var(--foreground)]">Score retunes.</span> Changing
-            the scoring weights requires community agreement, so it is rare and announced. If it
-            does happen, <span className="mono">meta.score_version</span> changes with the weights,
-            raw <span className="mono">score</span> magnitudes shift, and{" "}
-            <span className="mono">rank</span> / <span className="mono">percentile</span> positions
-            are unaffected.
           </li>
           <li>
             <span className="font-medium text-[var(--foreground)]">Machine-readable spec.</span>{" "}

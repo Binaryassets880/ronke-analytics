@@ -83,12 +83,21 @@ describe("DeveloperDocsView", () => {
     expect(text.indexOf(CAVEATS[0].title)).toBeLessThan(text.indexOf("Endpoints"));
   });
 
-  it("states the freshness, retune, and absent-wallet facts explicitly", () => {
+  it("states the freshness and absent-wallet facts explicitly", () => {
     const { container } = render(<DeveloperDocsView />);
     const text = container.textContent ?? "";
     expect(text).toContain("07:00 UTC");
-    expect(text).toContain("score_version");
     expect(text).toContain("found:false");
+    // score_version stays visible as a documented FIELD (it appears in the
+    // example responses); only the retune advisory around it was removed.
+    expect(text).toContain("score_version");
+  });
+
+  it("carries no retune advisory (founder decision 2026-08-12: removed)", () => {
+    const { container } = render(<DeveloperDocsView />);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/retune/i);
+    expect(text).not.toMatch(/17,133/);
   });
 
   it("surfaces all three standing fields without prescribing one", () => {

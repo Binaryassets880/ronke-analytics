@@ -28,11 +28,6 @@ export async function GET() {
           freshness:
             "Scores are rebuilt once daily at 07:00 UTC. `meta.as_of` is the rebuild this " +
             "data came from. Do not poll more often than that expects to see changes.",
-          stability:
-            "Raw `score` magnitudes shift whenever these weights are retuned, while `rank` and " +
-            "`percentile` positions are unaffected. `meta.score_version` changes with the " +
-            "weights, so you can detect a retune and recalibrate. Retunes require community " +
-            "agreement, so they are rare and announced.",
           population:
             "`meta.population` counts wallets carrying a non-zero Ronke Score. Wallets that " +
             "score zero are not stored, so they are absent from rank and percentile entirely.",
