@@ -26,13 +26,13 @@ probably wrong.
 
 Two gotchas that cost a session to rediscover:
 
-1. **The `StoryLaneMedia` account has READ only on the repo and cannot push.**
-   Verified: `git push --dry-run` returns
-   `remote: Permission to Binaryassets880/ronke-analytics.git denied to StoryLaneMedia` (403).
-   No fork exists. To land work: either get collaborator access on
-   `Binaryassets880/ronke-analytics`, or fork and open a cross-repo PR (how PR
-   #13 was done). If forking, confirm the Vercel bot still comments a preview -
-   fork PRs are not always built.
+1. **`StoryLaneMedia` push access: RESOLVED 2026-08-11.** It was READ-only after
+   the transfer (`git push` returned 403); `StoryLaneMedia` has since been added
+   as a collaborator and `viewerPermission` is now `WRITE`, confirmed by a
+   successful `git push --dry-run`. Note for anyone re-checking this: the repo is
+   a **personal** repo, so GitHub shows no read/write role dropdown - the single
+   "Collaborator" level already includes push. Absence of a role selector is not
+   a sign that access is incomplete.
 2. **Local `.vercel/repo.json` is STALE.** It is gitignored (local only) and
    still points at the old `storylanemedias-projects` org id
    (`team_bFBgsVo1bpGhL9DR9qinBN7Q`), written 2026-07-06. Running `vercel`
