@@ -11,6 +11,54 @@ ONLY; all ingestion and the nightly rebuild run off-Vercel in the `sync.yml`
 GitHub Action (KTD-7). See `README.md` for the pipeline rules and `CLAUDE.md`
 for conventions.
 
+## Where this lives (verified 2026-08-11)
+
+Both homes moved recently. Anything older than 2026-08-11 that names a host is
+probably wrong.
+
+| Thing | Where | Notes |
+|---|---|---|
+| GitHub repo | `Binaryassets880/ronke-analytics` | Transferred FROM `StoryLaneMedia`. The old path redirects, which makes stale links look like they still work. |
+| Vercel project | **BinaryAssets' projects** (`binaryassets-projects`), **Hobby plan** | `https://vercel.com/binaryassets-projects/ronke-analytics` |
+| Production URL | `https://ronke-analytics.vercel.app` | Last production deploy 2026-07-20 (ref `37f0f35`). |
+| Database | Neon (see `.env` `DATABASE_URL`) | Unchanged by the moves. |
+| Nightly sync | GitHub Action `sync.yml` on the repo above | Needs `DATABASE_URL` + `MORALIS_API_KEY` secrets to exist on the NEW repo. |
+
+Two gotchas that cost a session to rediscover:
+
+1. **The `StoryLaneMedia` account has READ only on the repo and cannot push.**
+   Verified: `git push --dry-run` returns
+   `remote: Permission to Binaryassets880/ronke-analytics.git denied to StoryLaneMedia` (403).
+   No fork exists. To land work: either get collaborator access on
+   `Binaryassets880/ronke-analytics`, or fork and open a cross-repo PR (how PR
+   #13 was done). If forking, confirm the Vercel bot still comments a preview -
+   fork PRs are not always built.
+2. **Local `.vercel/repo.json` is STALE.** It is gitignored (local only) and
+   still points at the old `storylanemedias-projects` org id
+   (`team_bFBgsVo1bpGhL9DR9qinBN7Q`), written 2026-07-06. Running `vercel`
+   commands from this folder will target the wrong account. Re-link with
+   `vercel link` against `binaryassets-projects` before trusting any CLI output.
+   Same trap in reverse: Vercel bot Inspect URLs on PRs #12-#14 say
+   `storylanemedias-projects` because they predate the move.
+
+### Hobby plan - what it changes
+
+The project sits on Vercel's **Hobby** tier, which invalidates the abuse-control
+plan written before this was known (see the plan's KTD-9):
+
+- **Vercel Firewall custom rate-limit rules are a Pro+ feature and are NOT
+  available here.** That was the documented "if abuse appears, add dashboard
+  rate limits" fallback. It does not exist. The real controls on Hobby are the
+  ones already in the code: CDN caching, the 50-address batch cap, capped
+  leaderboard pagination, and `MAX_ROWS` on the dump. If abuse becomes real the
+  options are upgrade to Pro, or build the `api_keys` table (U7).
+- Usage caps are shared with every other route. Observed 2026-08-11 (last 30
+  days): Edge Requests 60K/1M, Function Invocations 48K/1M, Fast Origin Transfer
+  105.59 MB/10 GB, Fluid Active CPU 18m55s/4h. Comfortable headroom today.
+- This makes the caching design load-bearing twice over: a CDN hit is served at
+  the edge and does **not** invoke a function, so caching protects the 1M
+  invocation budget as well as Neon's transfer allowance.
+
 ## Current state
 
 `main` is live and healthy. Work in progress sits on **`feat/public-score-api`**

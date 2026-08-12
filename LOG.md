@@ -73,3 +73,32 @@ Append-only. Newest entry at the bottom.
 - Touched: `app/api/v1/scores/all/route.ts`, `lib/api/respond.ts`,
   `config/apiDocs.ts`, `app/components/DeveloperDocsView.tsx`,
   `tests/api-scores-all.test.ts`, `LOG.md`.
+
+## [2026-08-11] Located the deployment; corrected the abuse-control plan
+
+Not a code change - a state correction. Both homes for this project moved
+recently and nothing recorded where to.
+
+- **GitHub** is `Binaryassets880/ronke-analytics` (transferred from
+  `StoryLaneMedia`; the old path redirects, so stale links look healthy).
+  The `StoryLaneMedia` account now has READ only and **cannot push** - verified
+  by `git push --dry-run` returning 403. No fork exists.
+- **Vercel** is `binaryassets-projects` (BinaryAssets' projects), **Hobby**
+  plan, production `ronke-analytics.vercel.app`, last deploy 2026-07-20.
+  Found via GitHub's deployment records after the CLI and dashboard both showed
+  it absent from `storylanemedias-projects`.
+- Vercel bot Inspect URLs on PRs #12-#14 still say `storylanemedias-projects`
+  because they predate the move, and local `.vercel/repo.json` (gitignored)
+  still points at the old org id. Both are traps; re-link before trusting the
+  CLI from this folder.
+- **Corrected KTD-9 in the API plan.** It named Vercel Firewall dashboard
+  rate-limit rules as the no-code abuse escalation. Firewall custom rules are
+  Pro+, so on Hobby that path does not exist - the in-code caps (CDN caching,
+  50-address batch cap, capped leaderboard paging, `MAX_ROWS`) are the only
+  controls. Escalation is now "upgrade to Pro, or build U7".
+- Also noted: on Hobby an edge cache HIT is served without invoking a function,
+  so the KTD-1 caching design protects the 1M/month invocation budget as well as
+  Neon egress. Usage at 2026-08-11: Edge Requests 60K/1M, Function Invocations
+  48K/1M, Fast Origin Transfer 105.59 MB/10 GB.
+- Touched: `HANDOFF.md`, `LOG.md`,
+  `docs/plans/2026-08-06-001-feat-ronke-score-public-api-plan.md`.
