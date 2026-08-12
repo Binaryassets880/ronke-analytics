@@ -193,3 +193,23 @@ in HANDOFF.md; nothing in the API branch changed as a result.
 - Embed unaffected: `ronke-analytics.vercel.app/leaderboard` returns 200 with no
   `X-Frame-Options` and no redirect, so ronkeverse.com/score still renders.
 - Touched: `HANDOFF.md`, `LOG.md`.
+
+## [2026-08-12] Removed the score-retune caveat from the docs
+
+- Founder decision: retunes now require community agreement, and the section
+  read as telling developers how to design their own gating. Removed entirely
+  rather than reworded (an earlier pass had softened it from instruction to
+  disclosure; this drops it).
+- Gone from all four places it rendered: the `CAVEATS` block (which feeds both
+  `/developers` and `/llms.txt`), `notes.stability` on `/api/v1/config`, the
+  OpenAPI `info.description`, and the docs-page policy bullet.
+- **Kept:** `score_version` as a documented field in the Meta schema and in the
+  example responses. Describing a field that exists is not an advisory, and
+  removing it would leave an undocumented key in every response.
+- Tests now assert the advisory stays gone (no `/retune/i`, no `17,133`) rather
+  than asserting its content, so it cannot creep back in.
+- 370 tests green, `tsc` clean, `next build` clean.
+- Touched: `config/apiDocs.ts`, `app/api/v1/config/route.ts`,
+  `app/api/v1/openapi.json/route.ts`, `app/components/DeveloperDocsView.tsx`,
+  `tests/developers-page.test.tsx`, `tests/api-llms-txt.test.ts`,
+  `tests/api-ecosystem.test.ts`, `LOG.md`.

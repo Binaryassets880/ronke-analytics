@@ -8,7 +8,10 @@
  * someone adds a route, and stale docs on a public API are worse than none.
  *
  * Copy here is deliberately blunt about the three things integrators get wrong:
- * daily freshness, retune-shifting scores, and absent-means-zero.
+ * daily freshness and absent-means-zero. (A third caveat about score retunes
+ * was removed 2026-08-12 by founder decision: changing the weights now requires
+ * community agreement, and advising developers how to design their own gating
+ * overstepped. `score_version` remains a documented field.)
  */
 
 export const API_BASE = "/api/v1";
@@ -248,7 +251,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
     description:
       "Weights, curves, gates, diamond thresholds, and the plain-English explainer, " +
       "serialized from the config the scorer actually runs. Render your \"how to rank up\" " +
-      "copy from this rather than hardcoding a copy that goes stale on the next retune.",
+      "copy from this rather than hardcoding your own copy, which can drift out of date.",
     params: [],
     cacheSeconds: 3600,
     example: {
@@ -340,17 +343,6 @@ export const CAVEATS = [
       "meta.as_of tells you which rebuild you are looking at. A player who buys $RONKE will " +
       "not see their score move until the next rebuild, so do not poll this every minute and " +
       "do not treat it as live chain state.",
-  },
-  {
-    title: "Score magnitudes can move; score_version tells you when",
-    body:
-      "Every response carries score, rank, and percentile. Which you build on is your call. " +
-      "The one thing worth knowing before you choose: the scoring weights have been retuned " +
-      "before - one past calibration moved the top wallet from 17,133 to 8,830 - and a retune " +
-      "shifts absolute score values while leaving rank and percentile positions intact. Any " +
-      "future change requires community agreement, so it will not happen quietly, but it can " +
-      "still happen. meta.score_version changes whenever the weights change, so you can detect " +
-      "it and recalibrate.",
   },
   {
     title: "A wallet with no score is not an error",

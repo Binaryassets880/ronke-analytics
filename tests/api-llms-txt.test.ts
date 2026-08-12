@@ -53,11 +53,13 @@ describe("renderLlmsTxt", () => {
     expect(doc).toContain("90 days");
   });
 
-  it("does not prescribe which field to gate on", () => {
-    // Founder decision 2026-08-12: disclose the facts, hand over every field.
+  it("says nothing about retunes or which field to gate on", () => {
+    // Founder decision 2026-08-12: the retune advisory was dropped entirely.
+    // Devs get score, rank and percentile and decide for themselves.
     expect(doc).not.toMatch(/Gate on rank, not/i);
     expect(doc).not.toMatch(/rather than raw score/i);
-    expect(doc).toContain("Which you build on is your call");
+    expect(doc).not.toMatch(/retune/i);
+    expect(doc).not.toMatch(/17,133/);
   });
 
   it("is plain markdown with balanced code fences", () => {

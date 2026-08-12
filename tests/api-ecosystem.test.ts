@@ -156,11 +156,16 @@ describe("GET /api/v1/config", () => {
     expect(body.data.explainer.factors.length).toBeGreaterThan(0);
   });
 
-  it("states the freshness, stability, and population caveats in-band", async () => {
+  it("states the freshness and population notes in-band", async () => {
     const body = await (await getConfig()).json();
     expect(body.data.notes.freshness).toContain("07:00 UTC");
-    expect(body.data.notes.stability).toContain("rank");
     expect(body.data.notes.population).toContain("non-zero");
+  });
+
+  it("carries no retune advisory (founder decision 2026-08-12: removed)", async () => {
+    const body = await (await getConfig()).json();
+    expect(body.data.notes).not.toHaveProperty("stability");
+    expect(JSON.stringify(body.data.notes)).not.toMatch(/retune/i);
   });
 
   it("carries a score_version matching the one /meta reports", async () => {
