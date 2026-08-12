@@ -59,6 +59,50 @@ plan written before this was known (see the plan's KTD-9):
   the edge and does **not** invoke a function, so caching protects the 1M
   invocation budget as well as Neon's transfer allowance.
 
+## This site is embedded in ronkeverse.com (verified 2026-08-12)
+
+`ronkeverse.com` is the main Ronke site, owned and hosted by someone else
+(Brian). Our production deployment is **iframed** into it. Verified by
+inspecting the live page, because the details matter more than the description:
+
+- `ronkeverse.com/score` renders
+  `<iframe src="https://ronke-analytics.vercel.app/#ronke-score">`. It points at
+  **production**, so a merge to `main` changes ronkeverse.com the moment Vercel
+  deploys. There is no staging step on his side.
+- His tab bar maps `?tab=X` to our routes:
+  `/score?tab=leaderboard` -> `ronke-analytics.vercel.app/leaderboard`. The tab
+  list is **hardcoded on his side**: analytics, leaderboard, rarity, resources.
+  Anything not in that list is unreachable from ronkeverse.com - which is
+  already true of our `/apps` page today.
+- **He clips our top nav.** The iframe is `position: absolute; top: -59px`
+  inside an `overflow: hidden` wrapper, which hides our `EcosystemNav` so his
+  own tab bar replaces it. Consequence: adding a nav link here is invisible on
+  ronkeverse.com. Only he can add a tab.
+
+### Two things this couples us to
+
+1. **NEVER enable Vercel Deployment Protection for Production.** The iframe is
+   an anonymous cross-origin request. If production is SSO-gated it returns a
+   302 to `vercel.com/sso-api` and **ronkeverse.com/score breaks for everyone**.
+   Preview-only protection is fine (and is the default). This is easy to trip by
+   flipping the setting to "Standard Protection" while thinking about previews.
+2. **His `-59px` crop is pinned to our header height.** Changing the height of
+   `EcosystemNav` shifts his layout and leaves a sliver of our nav visible, or
+   eats into content. Verified for the API branch: header is 67px on desktop
+   both before and after adding the Developers link, because the nav is
+   `overflow-x-auto` and scrolls horizontally instead of wrapping - extra items
+   never add height. Any future nav restyle needs a heads-up to him.
+
+### What that means for the API
+
+Nothing. The API is a plain cross-origin HTTP endpoint with `Access-Control-Allow-Origin: *`;
+developers call `ronke-analytics.vercel.app/api/v1/...` directly and never touch
+ronkeverse.com. No DNS work, no involvement from Brian, no embed impact. The
+only open question is cosmetic: whether to serve it from a branded host
+(`api.ronkeverse.com`), which would need him to add a DNS record and the domain
+added to the Vercel project. Decide that BEFORE publicising the base URL - it is
+the one thing that hurts to change after integrations exist.
+
 ## Current state
 
 `main` is live and healthy. Work in progress sits on **`feat/public-score-api`**

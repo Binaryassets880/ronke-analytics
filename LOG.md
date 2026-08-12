@@ -147,3 +147,27 @@ recently and nothing recorded where to.
   `app/api/v1/openapi.json/route.ts`, `app/components/DeveloperDocsView.tsx`,
   `tests/developers-page.test.tsx`, `HANDOFF.md`, `LOG.md`, plus new
   `lib/api/llms-txt.ts`, `app/llms.txt/route.ts`, `tests/api-llms-txt.test.ts`.
+
+## [2026-08-12] Mapped the ronkeverse.com embed before merging
+
+Inspected the live embed rather than relying on its description. Findings now
+in HANDOFF.md; nothing in the API branch changed as a result.
+
+- `ronkeverse.com/score` iframes **production** (`ronke-analytics.vercel.app`),
+  so a merge changes the public site as soon as Vercel deploys.
+- His tab bar maps `?tab=X` to our routes and the tab list is hardcoded
+  (analytics, leaderboard, rarity, resources). `/apps` is already unreachable
+  from ronkeverse.com; `/developers` will be too until he adds a tab.
+- He clips our nav: iframe `position:absolute; top:-59px` in an
+  `overflow:hidden` wrapper. So nav links we add are invisible in the embed.
+- **Do not enable Vercel Deployment Protection for Production** - the iframe is
+  an anonymous cross-origin request and would get the SSO 302, breaking
+  ronkeverse.com/score. Preview-only is fine. Worth care because we disabled
+  protection for the cache test and may re-enable it.
+- Verified our header stays 67px on desktop with the added Developers link (nav
+  is `overflow-x-auto`, scrolls instead of wrapping), so his -59px crop is
+  unaffected by this branch.
+- API needs no DNS work and no action from him: cross-origin with CORS `*`.
+  Open cosmetic question is whether to serve from `api.ronkeverse.com`, which
+  should be settled before the base URL is publicised.
+- Touched: `HANDOFF.md`, `LOG.md`.
