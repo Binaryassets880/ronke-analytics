@@ -15,6 +15,7 @@ import type { WalletScore, ScoreLeaderboardRow } from "@/lib/queries";
 const score: WalletScore = {
   score: 1_653,
   rank: 3,
+  percentile: 99.9,
   ronkeSubscore: 820,
   ronkestrSubscore: 511,
   nftSubscore: 322,
@@ -49,7 +50,7 @@ describe("RonkeScoreCard", () => {
 
 describe("ScoreLeaderboardView", () => {
   const rows: ScoreLeaderboardRow[] = [
-    { address: "0x" + "1".repeat(40), name: "one.ron", score: 1_653, ronkeSubscore: 820, ronkestrSubscore: 511, nftSubscore: 322, bodyTypesHeld: 4, bodyTypesTotal: 10 },
+    { address: "0x" + "1".repeat(40), name: "one.ron", score: 1_653, rank: 1, percentile: 99.9, ronkeSubscore: 820, ronkestrSubscore: 511, nftSubscore: 322, bodyTypesHeld: 4, bodyTypesTotal: 10 },
   ];
 
   it("renders a RonkeStr Score column with the row's RonkeStr sub-score", () => {

@@ -50,6 +50,17 @@ export const APPS: AppCard[] = [
     gradient: "from-amber-500/30 to-rose-500/20",
   },
   {
+    key: "ronke-score-api",
+    title: "Ronke Score API",
+    ticker: "API",
+    blurb:
+      "Build the Ronke Score into your own game or bot - scores, ranks, holdings, and rarity. Free, no key.",
+    href: "/developers",
+    status: "live",
+    emoji: "\u{1F9E9}", // 🧩
+    gradient: "from-sky-500/30 to-cyan-500/20",
+  },
+  {
     key: "ronke-rice-farm",
     title: "Ronke Rice Farm",
     ticker: "RRF",

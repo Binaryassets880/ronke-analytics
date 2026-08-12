@@ -302,6 +302,9 @@ export interface ScoreLeaderboardRow {
   address: string;
   name: string | null;
   score: number;
+  /** Competition rank; null until the first post-migration derive. */
+  rank: number | null;
+  percentile: number | null;
   ronkeSubscore: number;
   ronkestrSubscore: number;
   nftSubscore: number;
@@ -315,7 +318,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
   if (!sql) return [];
   const rows = await sql`
     SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore,
-           s.body_types_held, s.body_types_total,
+           s.body_types_held, s.body_types_total, s.rank, s.percentile,
            coalesce(al.label, n.name) AS name
     FROM wallet_scores s
     LEFT JOIN rns_names n ON n.address = s.address
@@ -327,6 +330,8 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
     address: r.address as string,
     name: (r.name as string | null) ?? null,
     score: Number(r.score),
+    rank: r.rank == null ? null : Number(r.rank),
+    percentile: r.percentile == null ? null : Number(r.percentile),
     ronkeSubscore: Number(r.ronke_subscore),
     ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
@@ -338,6 +343,8 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
 export interface WalletScore {
   score: number;
   rank: number | null;
+  /** 0-100 within the scored population; null until the first post-migration derive. */
+  percentile: number | null;
   ronkeSubscore: number;
   ronkestrSubscore: number;
   nftSubscore: number;
@@ -357,7 +364,23 @@ export interface WalletScore {
   oneOfOneCount: number;
 }
 
-/** One wallet's Ronke Score + breakdown + global rank, for the profile. */
+/** Total wallets carrying a non-zero Ronke Score - the percentile denominator. */
+export async function getScoredPopulation(): Promise<number> {
+  const sql = getSql();
+  if (!sql) return 0;
+  const rows = await sql`SELECT count(*)::int AS n FROM wallet_scores`;
+  return Number(rows[0]?.n ?? 0);
+}
+
+/**
+ * One wallet's Ronke Score + breakdown + global rank, for the profile.
+ *
+ * Rank and percentile are persisted by deriveScores (one sort at rebuild time)
+ * rather than recomputed per request. The `count(*)` fallback below exists only
+ * for the window between deploying the migration and the next nightly rebuild,
+ * when the new columns are still NULL for every row; it reproduces the exact
+ * pre-migration semantics so the profile never shows a blank rank.
+ */
 export async function getWalletScore(address: string): Promise<WalletScore | null> {
   const sql = getSql();
   if (!sql) return null;
@@ -367,17 +390,29 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total,
-           oneofone_points, oneofone_count
+           oneofone_points, oneofone_count, rank, percentile
     FROM wallet_scores WHERE address = ${address}
   `;
   if (rows.length === 0) return null;
   const r = rows[0];
-  const rankRow = await sql`
-    SELECT count(*)::int AS above FROM wallet_scores WHERE score > ${Number(r.score)}
-  `;
+  let rank = r.rank == null ? null : Number(r.rank);
+  let percentile = r.percentile == null ? null : Number(r.percentile);
+  if (rank == null) {
+    const [aboveRow, popRow] = await Promise.all([
+      sql`SELECT count(*)::int AS above FROM wallet_scores WHERE score > ${Number(r.score)}`,
+      sql`SELECT count(*)::int AS n FROM wallet_scores`,
+    ]);
+    rank = Number(aboveRow[0]?.above ?? 0) + 1;
+    const population = Number(popRow[0]?.n ?? 0);
+    // Same 2-decimal rounding rankScores applies, so a wallet read during this
+    // transitional window reports the same precision it will after the rebuild.
+    const raw = population > 0 ? (100 * (population - rank)) / population : 0;
+    percentile = Math.round(raw * 100) / 100;
+  }
   return {
     score: Number(r.score),
-    rank: Number(rankRow[0]?.above ?? 0) + 1,
+    rank,
+    percentile,
     ronkeSubscore: Number(r.ronke_subscore),
     ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
@@ -396,6 +431,108 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     oneOfOnePoints: Number(r.oneofone_points),
     oneOfOneCount: Number(r.oneofone_count),
   };
+}
+
+/**
+ * Many wallets' scores in ONE query, for the public batch endpoint.
+ *
+ * The whole point of the batch route is that a caller checking 50 wallets costs
+ * one round-trip, not 50 - so this must stay a single `= ANY` lookup. Returns a
+ * Map keyed by lowercased address; absent addresses are simply missing from it
+ * (callers fill the zeroed shape, since "not in wallet_scores" means "scored
+ * zero", not "unknown wallet").
+ */
+export async function getWalletScoresBatch(
+  addresses: string[],
+): Promise<Map<string, WalletScore>> {
+  const out = new Map<string, WalletScore>();
+  if (addresses.length === 0) return out;
+  const sql = getSql();
+  if (!sql) return out;
+  const rows = await sql`
+    SELECT address, score, ronke_subscore, ronkestr_subscore, nft_subscore,
+           ronke_holding, ronke_duration, ronke_diamond_mult,
+           ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
+           nft_holding, nft_duration, nft_diamond_mult,
+           collector_points, body_types_held, body_types_total,
+           oneofone_points, oneofone_count, rank, percentile
+    FROM wallet_scores WHERE address = ANY(${addresses})
+  `;
+  for (const r of rows) {
+    out.set(r.address as string, {
+      score: Number(r.score),
+      rank: r.rank == null ? null : Number(r.rank),
+      percentile: r.percentile == null ? null : Number(r.percentile),
+      ronkeSubscore: Number(r.ronke_subscore),
+      ronkestrSubscore: Number(r.ronkestr_subscore),
+      nftSubscore: Number(r.nft_subscore),
+      ronkeHolding: Number(r.ronke_holding),
+      ronkeDuration: Number(r.ronke_duration),
+      ronkeDiamondMult: Number(r.ronke_diamond_mult),
+      ronkestrHolding: Number(r.ronkestr_holding),
+      ronkestrDuration: Number(r.ronkestr_duration),
+      ronkestrDiamondMult: Number(r.ronkestr_diamond_mult),
+      nftHolding: Number(r.nft_holding),
+      nftDuration: Number(r.nft_duration),
+      nftDiamondMult: Number(r.nft_diamond_mult),
+      collectorPoints: Number(r.collector_points),
+      bodyTypesHeld: Number(r.body_types_held),
+      bodyTypesTotal: Number(r.body_types_total),
+      oneOfOnePoints: Number(r.oneofone_points),
+      oneOfOneCount: Number(r.oneofone_count),
+    });
+  }
+  return out;
+}
+
+/** One row of the full-dump endpoint: the minimum a role-gating bot needs. */
+export interface CompactScore {
+  address: string;
+  score: number;
+  rank: number | null;
+  percentile: number | null;
+}
+
+/**
+ * Every scored wallet, compact, for the public full-dump endpoint.
+ *
+ * Deliberately four columns. A Discord bot re-checking its whole membership
+ * needs address + standing and nothing else; including sub-scores and the
+ * points breakdown would roughly quadruple a response that is already the
+ * largest this API serves.
+ *
+ * `arrayMode` for the same reason `readEvents` uses it (commit c83fceb): at
+ * several thousand rows the repeated JSON key names are a meaningful share of
+ * the bytes Neon ships us, and this is the one read where row count is
+ * unbounded by a caller-supplied limit.
+ *
+ * `cap` is a safety valve, not a paging mechanism - it exists so that if the
+ * scored population ever grows an order of magnitude this degrades visibly
+ * (via the returned `complete` flag) instead of quietly serving a huge payload.
+ */
+export async function getAllScoresCompact(
+  cap: number,
+): Promise<{ rows: CompactScore[]; complete: boolean }> {
+  const sql = getSql();
+  if (!sql) return { rows: [], complete: true };
+  // Column order is load-bearing: arrayMode returns positional rows.
+  const raw = (await sql.query(
+    `SELECT address, score, rank, percentile
+     FROM wallet_scores
+     ORDER BY score DESC, address ASC
+     LIMIT $1`,
+    [cap + 1], // one extra row is how we detect "there were more"
+    { arrayMode: true },
+  )) as unknown[][];
+
+  const complete = raw.length <= cap;
+  const rows = (complete ? raw : raw.slice(0, cap)).map((r) => ({
+    address: r[0] as string,
+    score: Number(r[1]),
+    rank: r[2] == null ? null : Number(r[2]),
+    percentile: r[3] == null ? null : Number(r[3]),
+  }));
+  return { rows, complete };
 }
 
 export interface HolderRow {

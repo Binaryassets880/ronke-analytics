@@ -231,6 +231,18 @@ ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS ronkestr_diamond_mult DOUBLE 
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS oneofone_points INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS oneofone_count INTEGER NOT NULL DEFAULT 0;
 
+-- Standing, persisted at derive time (public API, KTD-2). Previously the profile
+-- computed rank per request with `SELECT count(*) WHERE score > n` - a full-table
+-- aggregate on every view, and untenable once third parties call it per wallet.
+-- deriveScores already holds every score in memory, so ranking there is free.
+-- `rank` is competition ranking (ties share the lower rank); `percentile` is
+-- 100 * (population - rank) / population over the SCORED population. Zero-score
+-- wallets are not stored at all, so they never enter either number.
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS rank INTEGER;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS percentile DOUBLE PRECISION;
+
+CREATE INDEX IF NOT EXISTS wallet_scores_rank_idx ON wallet_scores (rank);
+
 -- ─────────────────────────────────────────────────────────────────────
 -- Market snapshots (E6): latest external market reading per source+asset.
 -- $RONKE price/volume/liquidity from GeckoTerminal. Fetched off-Vercel during
