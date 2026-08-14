@@ -235,3 +235,18 @@ in HANDOFF.md; nothing in the API branch changed as a result.
 - 375 tests green (4 new regression tests, both paths), `tsc` clean.
 - Touched: `lib/analytics/diamond.ts`, `tests/diamond.test.ts`, `HANDOFF.md`,
   `LOG.md`, `C:\dev\claude\DECISIONS.md`.
+
+## [2026-08-14] Merged the paper-hands fix and rebuilt on merged code
+
+- Merged PR #17 (`f719dd0`). The branch was cut fresh off `origin/main` because
+  the local branch (`docs/drop-retune-caveat`) had already shipped as PR #16 and
+  `main` had moved on.
+- Reran `npm run rebuild` against production Neon on the merged code. Output is
+  **identical** to the pre-merge rebuild: same bucket counts on all three
+  assets, `ever_paper_sold` 29,734 both times, top score 8,017. The only
+  movement was total score 3,355,137 -> 3,355,177 across 6,189 wallets, which is
+  `asOf` advancing ten minutes. Confirms the rebuild is deterministic.
+- Live production check: `/leaderboard` 200, and the public wallet endpoint for
+  `0x75cd...33a5` (godfather.ron) now returns `diamond_bucket: "regular"` /
+  `ever_paper_sold: false` on both assets.
+- Touched: `HANDOFF.md`, `LOG.md`.
