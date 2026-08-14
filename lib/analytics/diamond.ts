@@ -18,6 +18,16 @@
  * never_sold flips false) AND resets the holding clock on everything still
  * held (all remaining lots re-date to the sell moment).
  *
+ * Two clocks per lot/token (2026-08-14): `acquiredAt` is the DISPLAY clock and
+ * is what a significant sell resets; `trueAcquiredAt` records when the wallet
+ * genuinely took custody and is NEVER reset. The paper-hands window measures
+ * against `trueAcquiredAt`. Before this split, a second significant sell within
+ * a day of a first one was automatically "paper-handed" - the first sell had
+ * re-dated everything still held to its own timestamp, so the second sell
+ * compared against a synthetic clock. That mislabeled genuinely long-held
+ * positions (e.g. an NFT held 4.5 months, sold 2m36s after another one) and
+ * cost those wallets the 0.3x paper multiplier on their Ronke Score.
+ *
  * Behavioral ownership model (documented divergence from raw on-chain balance):
  *  - Only genuine sells (labels.isSell) can be significant; burns consume lots
  *    (units gone) but are not sells and never reset the clock.
@@ -91,7 +101,10 @@ export function computeDiamond(
 
 // ── ERC-20: FIFO behavioral lots ─────────────────────────────────────
 interface Lot {
+  /** Display clock: reset to the sell moment by a significant sell. */
   acquiredAt: Date;
+  /** Genuine custody date, never reset. Drives the paper-hands window. */
+  trueAcquiredAt: Date;
   acquiredBlock: number;
   quantityRemaining: bigint;
 }
@@ -141,6 +154,7 @@ function computeToken(
       const s = ensure(e.to);
       const lot: Lot = {
         acquiredAt: e.blockTime,
+        trueAcquiredAt: e.blockTime,
         acquiredBlock: e.blockNumber,
         quantityRemaining: e.quantity,
       };
@@ -168,7 +182,8 @@ function computeToken(
         if (sell && isSignificantSell(e.quantity, balanceBefore)) {
           s.sellCount += 1;
           for (const c of consumed) {
-            if (e.blockTime.getTime() - c.acquiredAt.getTime() < PAPER_WINDOW_MS) {
+            // Against the genuine custody date, not a prior sell's reset.
+            if (e.blockTime.getTime() - c.trueAcquiredAt.getTime() < PAPER_WINDOW_MS) {
               s.everPaperSold = true;
             }
           }
@@ -232,8 +247,8 @@ function computeToken(
 function consumeFifo(
   queue: Lot[],
   amount: bigint,
-): { acquiredAt: Date; consumed: bigint }[] {
-  const out: { acquiredAt: Date; consumed: bigint }[] = [];
+): { acquiredAt: Date; trueAcquiredAt: Date; consumed: bigint }[] {
+  const out: { acquiredAt: Date; trueAcquiredAt: Date; consumed: bigint }[] = [];
   let remaining = amount;
   let i = 0;
   while (remaining > 0n && i < queue.length) {
@@ -245,7 +260,11 @@ function consumeFifo(
     const take = lot.quantityRemaining <= remaining ? lot.quantityRemaining : remaining;
     lot.quantityRemaining -= take;
     remaining -= take;
-    out.push({ acquiredAt: lot.acquiredAt, consumed: take });
+    out.push({
+      acquiredAt: lot.acquiredAt,
+      trueAcquiredAt: lot.trueAcquiredAt,
+      consumed: take,
+    });
     if (lot.quantityRemaining === 0n) i += 1;
   }
   return out;
@@ -264,8 +283,11 @@ function computeNft(
   labels: Labels,
   asOf: Date,
 ): DiamondResult {
-  // token_id -> current owner + when the current owner acquired it.
-  const owner = new Map<string, { address: string; acquiredAt: Date }>();
+  // token_id -> current owner, its display clock, and its genuine custody date.
+  const owner = new Map<
+    string,
+    { address: string; acquiredAt: Date; trueAcquiredAt: Date }
+  >();
   // address -> the token_ids it currently owns (for tolerance + clock resets).
   const ownedBy = new Map<string, Set<string>>();
   const state = new Map<string, NftState>();
@@ -311,7 +333,8 @@ function computeNft(
       if (isSignificantSell(1n, countBefore)) {
         const s = ensure(prev.address);
         s.sellCount += 1;
-        if (e.blockTime.getTime() - prev.acquiredAt.getTime() < PAPER_WINDOW_MS) {
+        // Against the genuine custody date, not a prior sell's reset.
+        if (e.blockTime.getTime() - prev.trueAcquiredAt.getTime() < PAPER_WINDOW_MS) {
           s.everPaperSold = true;
         }
         // Reset the holding clock on everything the seller still holds.
@@ -328,7 +351,11 @@ function computeNft(
     // above, so reaching here means custody genuinely changed.)
     if (prev) removeOwned(prev.address, e.tokenId);
     if (!labels.excludeFromHolders(e.to)) {
-      owner.set(e.tokenId, { address: e.to, acquiredAt: e.blockTime });
+      owner.set(e.tokenId, {
+        address: e.to,
+        acquiredAt: e.blockTime,
+        trueAcquiredAt: e.blockTime,
+      });
       addOwned(e.to, e.tokenId);
       ensure(e.to).everAcquiredCount += 1;
     } else {

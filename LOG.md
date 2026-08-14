@@ -213,3 +213,25 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   `app/api/v1/openapi.json/route.ts`, `app/components/DeveloperDocsView.tsx`,
   `tests/developers-page.test.tsx`, `tests/api-llms-txt.test.ts`,
   `tests/api-ecosystem.test.ts`, `LOG.md`.
+
+## [2026-08-14] Fixed the paper-hands clock-reset bug and rebuilt
+
+- **Bug:** a significant sell (10%+) re-dates every surviving lot/token to the
+  sell moment so the "held for" clock stays honest. That same reset date was
+  then used as the acquisition date for the NEXT sell's paper-hands check, so
+  any second significant sell within 24h of a first was automatically flagged
+  `ever_paper_sold`, no matter how long the position had genuinely been held.
+  Found via wallet `0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5`, which sold two
+  Ronkeverse NFTs 2m36s apart; the second was #5199, held since 2025-05-23.
+- **Fix:** every lot (ERC-20) and owned token (ERC-721) now carries two dates.
+  `acquiredAt` is the display clock and still resets; `trueAcquiredAt` records
+  genuine custody and never resets. The paper window measures against
+  `trueAcquiredAt`. Both asset paths were affected, not just the NFT one.
+- Rebuilt production Neon. 1,597 `ever_paper_sold` flags cleared, 0 newly set.
+  560 buckets moved paper -> regular. 777 of 6,189 scores changed, **every one
+  upward, none down**; median +0.13%, and for the 475 scored wallets that
+  actually had a flag cleared the median is +6.65% (max +48.5%, from the 0.3x
+  paper multiplier becoming 0.6x). Top-50 leaderboard membership unchanged.
+- 375 tests green (4 new regression tests, both paths), `tsc` clean.
+- Touched: `lib/analytics/diamond.ts`, `tests/diamond.test.ts`, `HANDOFF.md`,
+  `LOG.md`, `C:\dev\claude\DECISIONS.md`.

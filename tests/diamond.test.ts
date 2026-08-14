@@ -122,6 +122,49 @@ describe("computeDiamond - NFT", () => {
     expect(m.neverSold).toBe(false); // the later sell is real
     expect(m.everPaperSold).toBe(false); // but held since day 0, so not paper
   });
+
+  it("a second sell soon after a first is NOT paper when the tokens were long-held", () => {
+    // Regression: the first significant sell re-dates every remaining token's
+    // display clock to its own timestamp. A second sell minutes later must
+    // still measure the paper window against genuine custody, not that reset.
+    const events = [
+      ...Array.from({ length: 5 }, (_, i) =>
+        tx("ronkeverse_nft", { from: ADDR.zero, to: ADDR.wallet, tokenId: String(i + 1), blockTime: day(0) }),
+      ),
+      tx("ronkeverse_nft", { from: ADDR.wallet, to: ADDR.external, tokenId: "5", blockTime: day(100) }),
+      tx("ronkeverse_nft", {
+        from: ADDR.wallet,
+        to: ADDR.external,
+        tokenId: "4",
+        blockTime: new Date(day(100).getTime() + 156_000), // 2m36s later
+      }),
+    ];
+    const res = computeDiamond("ronkeverse_nft", events, labels, day(140));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.sellCount).toBe(2);
+    expect(m.everPaperSold).toBe(false); // both tokens held since day 0
+    expect(m.diamondBucket).toBe("regular"); // not "paper"
+    expect(m.holdingDurationDays).toBeCloseTo(40, 2); // display clock still resets
+  });
+
+  it("a genuine buy-then-dump inside the window still flags paper", () => {
+    const events = [
+      ...Array.from({ length: 4 }, (_, i) =>
+        tx("ronkeverse_nft", { from: ADDR.zero, to: ADDR.wallet, tokenId: String(i + 1), blockTime: day(0) }),
+      ),
+      tx("ronkeverse_nft", { from: ADDR.external, to: ADDR.wallet, tokenId: "9", blockTime: day(100) }),
+      tx("ronkeverse_nft", {
+        from: ADDR.wallet,
+        to: ADDR.external,
+        tokenId: "9",
+        blockTime: new Date(day(100).getTime() + 3_600_000), // +1h
+      }),
+    ];
+    const res = computeDiamond("ronkeverse_nft", events, labels, day(140));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.everPaperSold).toBe(true);
+    expect(m.diamondBucket).toBe("paper");
+  });
 });
 
 describe("computeDiamond - token FIFO", () => {
@@ -163,6 +206,39 @@ describe("computeDiamond - token FIFO", () => {
     expect(m.neverSold).toBe(false);
     expect(m.holdingDurationDays).toBeCloseTo(10, 5); // day40 - day30
     expect(m.weightedDurationDays).toBeCloseTo(10, 5); // every remaining lot re-dated
+  });
+
+  it("a second sell the day after a first is NOT paper when the lots are old", () => {
+    // Regression, token side: sell #1 re-dates the surviving lots to day 30.
+    // Sell #2 on day 31 consumes those lots and must not read them as
+    // "acquired yesterday" - they were genuinely bought on day 0.
+    const events = [
+      tx("ronke_token", { from: ADDR.external, to: ADDR.wallet, quantity: WHOLE(10_000), blockTime: day(0) }),
+      tx("ronke_token", { from: ADDR.wallet, to: ADDR.marketplace, quantity: WHOLE(2_000), blockTime: day(30) }),
+      tx("ronke_token", { from: ADDR.wallet, to: ADDR.marketplace, quantity: WHOLE(2_000), blockTime: day(31) }),
+    ];
+    const res = computeDiamond("ronke_token", events, labels, day(60));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.sellCount).toBe(2);
+    expect(m.everPaperSold).toBe(false);
+    expect(m.diamondBucket).toBe("regular"); // not "paper"
+  });
+
+  it("a genuine same-day buy-then-dump still flags paper on the token side", () => {
+    const events = [
+      tx("ronke_token", { from: ADDR.external, to: ADDR.wallet, quantity: WHOLE(1_000), blockTime: day(0) }),
+      tx("ronke_token", { from: ADDR.wallet, to: ADDR.marketplace, quantity: WHOLE(1_000), blockTime: day(30) }),
+      tx("ronke_token", { from: ADDR.external, to: ADDR.wallet, quantity: WHOLE(5_000), blockTime: day(40) }),
+      tx("ronke_token", {
+        from: ADDR.wallet,
+        to: ADDR.marketplace,
+        quantity: WHOLE(5_000),
+        blockTime: new Date(day(40).getTime() + 3_600_000), // +1h
+      }),
+    ];
+    const res = computeDiamond("ronke_token", events, labels, day(60));
+    const m = metricFor(res, ADDR.wallet)!;
+    expect(m.everPaperSold).toBe(true);
   });
 
   it("a dust position is never diamond, even if never sold and old", () => {
