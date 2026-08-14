@@ -1,7 +1,7 @@
 # Ronke Analytics - handoff
 
 Absolute path: `C:\dev\claude\ronke-analytics`
-Last updated: 2026-08-11
+Last updated: 2026-08-14
 
 ## What this is
 
@@ -106,7 +106,16 @@ the one thing that hurts to change after integrations exist.
 ## Current state
 
 `main` is live and healthy. The public score API is **MERGED AND DEPLOYED**
-(PR #15, 2026-08-12, merge commit `6ecd40a`). No work in progress.
+(PR #15, 2026-08-12, merge commit `6ecd40a`).
+
+**Open work, 2026-08-14:** the paper-hands clock-reset fix on
+`fix/paper-hands-clock-reset` (`lib/analytics/diamond.ts` plus 4 regression
+tests). Production Neon has ALREADY been rebuilt with the fixed engine, so the
+database is **ahead of `main` until this merges**. Until then every nightly
+`sync.yml` run executes pre-fix code and re-stamps ~1,600 wallets Paper, so if
+the merge slips past 07:00 UTC, rerun `npm run rebuild` after merging. See the
+2026-08-14 `LOG.md` entry for the numbers and `C:\dev\claude\DECISIONS.md` for
+the two-clock model.
 
 Live production verification, 2026-08-12: all endpoints 200, CDN cache
 MISS -> HIT -> HIT, `/llms.txt` and `/developers` serving, `rank`/`percentile`
