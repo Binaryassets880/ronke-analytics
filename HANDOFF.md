@@ -114,42 +114,59 @@ Code and database are back in sync, so the nightly `sync.yml` is safe to let
 run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
 `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
 
-### READ FIRST, 2026-08-23: production data is ahead of `main`
+### Hand tiers are LIVE, 2026-08-23. Code and database are in sync.
 
-`npm run migrate` + `npm run seed-labels` + `npm run rebuild` have been run
-against production Neon with the **hand-tier engine from PR #21**, which is NOT
-merged. The derived tables therefore hold new-rule tiers while `main` still
-holds the old engine.
+PR #19, #20 and #21 are all merged. Production Neon has been migrated, seeded
+(38 labels) and rebuilt on the merged engine, and the deploy is verified: `/`,
+`/leaderboard`, `/holders`, the wallet page and `/api/v1/*` all 200, and the
+response still carries no `X-Frame-Options`, so the ronkeverse.com embed works.
 
-**The nightly `sync.yml` runs at 07:00 UTC, checks out `main`, and rebuilds.**
-If PR #21 is not merged before then, that run recomputes every bucket with the
-old per-transfer rule and silently reverts all of it. The site would go back to
-certifying wallets that sold hundreds of NFTs as `diamond`, with nothing in the
-logs to say why.
+The nightly `sync.yml` at 07:00 UTC is safe to let run: `main` now holds the
+same engine the data was built with. **That was not true for a few hours today**
+- the rebuild was run from the branch before the merge - so if anything looks
+reverted, check that PR #21 is still in `main` before re-deriving anything.
 
-Either merge PR #21 today, or re-run the rebuild from the `feat/hand-tiers`
-branch after the nightly to put the data back.
+Live tier split among wallets holding something:
 
-### Open work, 2026-08-23
+| asset | diamond | regular | paper |
+|---|---|---|---|
+| ronkeverse_nft | 1,083 | 593 | 156 |
+| ronke_token | 710 | 2,612 | 4,694 |
+| ronkestr_token | 106 | 75 | 47 |
 
-1. **PR #19, `fix/wallet-bucket-merge` - MERGED.** Fixed the order-dependent
-   wallet-level bucket merge in `getWallet()`; 320 wallets were badged `paper`
-   that should read `regular`. Read path only, so it took effect on deploy with
-   no rebuild.
-2. **PR #20, `chore/expand-address-labels`.** Grows `SEED_LABELS` 21 -> 38
-   (evidence per entry in its `note`; see the 2026-08-23 `LOG.md` entry).
-   **Merging changes nothing on its own.** Applying it is two steps, in order:
-   `npm run seed-labels`, then `npm run rebuild`. Seeding without rebuilding
-   leaves `address_labels` and the derived tables disagreeing.
-3. **PR #21, `feat/hand-tiers` - OPEN, but its data is already live.** Rolling
-   30-day let-go rate, a 50% paper line, a 5-NFT position floor, and redemption
-   (serve 30/60/90/180 clean days AND hold 50% of your highest-ever pre-dump
-   position). Also points the score multiplier and both hand badges at the tier,
-   closing the 8,248-row badge/multiplier disagreement, and adds the hover/tap
-   popover on the profile badge. See the banner above before doing anything.
-   Known limit that no code fixes: a transfer between two wallets the same
-   person owns is still indistinguishable from a sale, so the paper population
-   carries a false-positive rate.
+### What shipped 2026-08-23
+
+1. **PR #19 - MERGED.** Fixed the order-dependent wallet-level bucket merge in
+   `getWallet()`; 320 wallets were badged `paper` that should read `regular`.
+   Read path only, so it took effect on deploy with no rebuild.
+2. **PR #20 - MERGED AND APPLIED.** Grew `SEED_LABELS` 21 -> 38, evidence per
+   entry in its `note`. Both `npm run seed-labels` and `npm run rebuild` have
+   been run, so it is fully in effect: 5,761 transfers by 210 wallets no longer
+   count as sales, and five contracts stopped ranking as holders.
+3. **PR #21 - MERGED AND DEPLOYED.** Rolling 30-day let-go rate, a 50% paper
+   line, a 5-NFT position floor, and redemption (serve 30/60/90/180 clean days
+   AND hold 50% of your highest-ever pre-dump position). Points the score
+   multiplier and both hand badges at the tier, closing the 8,248-row
+   badge/multiplier disagreement, and adds the hover/tap popover on the profile
+   badge.
+
+### Known limits of the tier model - say these out loud, do not rediscover them
+
+- **Self-transfers are unresolvable.** Moving NFTs between two wallets the same
+  person owns is indistinguishable from a sale without price data. The paper
+  population carries a false-positive rate because of it. No label list fixes
+  this; only price or an explicit wallet-linking feature would.
+- **Wallets holding nothing still read `paper`.** The proposal called for them
+  to be untiered, which needs a fourth `diamond_bucket` value and is a breaking
+  change for `/api/v1` consumers. Deliberately deferred, not forgotten.
+- **Four known ways to game it**, in practical order: inflate the window
+  denominator from a wallet you control; bleed just under 50% every 31 days;
+  split across wallets and dump all but one; have a staking or bridge contract
+  release to a third party, which records no sale at all. All are still harder
+  than the old rule, which required no cleverness whatsoever.
+- **The token side moved more than the NFT side in absolute terms.** $RONKE went
+  3,055 -> 2,612 regular. The redesign was argued in NFT terms but applies to
+  both assets.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns
