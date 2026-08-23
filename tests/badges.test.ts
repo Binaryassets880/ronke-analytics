@@ -10,6 +10,8 @@ function agg(over: Partial<WalletAggregate>): WalletAggregate {
     holdingDurationDays: 0,
     neverSold: true,
     everPaperSold: false,
+    allDiamond: true,
+    anyPaper: false,
     ogEarly: false,
     isWhale: false,
     hasTopRarity: false,
@@ -38,17 +40,21 @@ describe("evaluateWallet - achievements", () => {
     expect(keys(agg({ ronkeBalanceWhole: 10, ronkeverseCount: 0 }))).not.toContain("dual_citizen");
   });
 
-  it("Diamond Hands iff never_sold; Never Paper-handed iff !ever_paper_sold (independent)", () => {
-    // A real, seasoned, never-sold position (baseline for the diamond checks below).
+  it("both hand badges follow the tier, so they cannot contradict the pill", () => {
+    // A real, seasoned position (baseline for the diamond checks below).
     const seasoned = { ronkeBalanceWhole: 5_000, holdingDurationDays: 120 };
-    // sold but never within a day: diamond no, never-paper yes
-    const soldClean = agg({ ...seasoned, neverSold: false, everPaperSold: false });
-    expect(keys(soldClean)).not.toContain("diamond_hands");
-    expect(keys(soldClean)).toContain("never_paper_handed");
-    // never sold but (hypothetically) flagged paper: diamond yes, never-paper no
-    const heldButPaper = agg({ ...seasoned, neverSold: true, everPaperSold: true });
-    expect(keys(heldButPaper)).toContain("diamond_hands");
-    expect(keys(heldButPaper)).not.toContain("never_paper_handed");
+    // Regular: sold something at some point, but is not dumping.
+    const middling = agg({ ...seasoned, allDiamond: false, anyPaper: false });
+    expect(keys(middling)).not.toContain("diamond_hands");
+    expect(keys(middling)).toContain("never_paper_handed");
+    // Paper on any asset: neither badge.
+    const dumping = agg({ ...seasoned, allDiamond: false, anyPaper: true });
+    expect(keys(dumping)).not.toContain("diamond_hands");
+    expect(keys(dumping)).not.toContain("never_paper_handed");
+    // Diamond everywhere: both.
+    const clean = agg({ ...seasoned, allDiamond: true, anyPaper: false });
+    expect(keys(clean)).toContain("diamond_hands");
+    expect(keys(clean)).toContain("never_paper_handed");
   });
 
   it("Diamond Hands requires a real (non-dust) position held past the diamond window", () => {
@@ -101,6 +107,8 @@ describe("evaluateWallet - empty", () => {
       ronkeverseCount: 0,
       neverSold: false,
       everPaperSold: true,
+      allDiamond: false,
+      anyPaper: true,
       holdingDurationDays: 0,
     });
     expect(evaluateWallet(nothing)).toEqual([]);

@@ -7,6 +7,7 @@
 
 import { insertMany, type Sql } from "@/db/client";
 import { CONTRACTS } from "@/config/contracts";
+import type { DiamondBucket } from "@/config/contracts";
 import { SCORE_CONFIG } from "@/config/score";
 import { computeScore, type ScoreInput } from "./compute";
 
@@ -68,13 +69,14 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
   // has its clock pulled toward the fresh units, so you can't reactivate an old dust
   // lot into instant max-duration, and sustained size is rewarded over a token stub.
   const metrics = await sql`
-    SELECT asset, address, weighted_duration_days, never_sold, ever_paper_sold FROM holder_metrics
+    SELECT asset, address, weighted_duration_days, never_sold, ever_paper_sold, diamond_bucket FROM holder_metrics
   `;
   for (const r of metrics) {
     const hold = {
       durationDays: Number(r.weighted_duration_days),
       neverSold: r.never_sold as boolean,
       everPaperSold: r.ever_paper_sold as boolean,
+      bucket: r.diamond_bucket as DiamondBucket,
     };
     const a = ensure(r.address as string);
     if (r.asset === "ronke_token") a.ronkeHold = hold;
@@ -171,7 +173,7 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
   }
 
   const metrics = await sql`
-    SELECT asset, weighted_duration_days, never_sold, ever_paper_sold
+    SELECT asset, weighted_duration_days, never_sold, ever_paper_sold, diamond_bucket
     FROM holder_metrics WHERE address = ${address}
   `;
   for (const r of metrics) {
@@ -179,6 +181,7 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
       durationDays: Number(r.weighted_duration_days),
       neverSold: r.never_sold as boolean,
       everPaperSold: r.ever_paper_sold as boolean,
+      bucket: r.diamond_bucket as DiamondBucket,
     };
     if (r.asset === "ronke_token") input.ronkeHold = hold;
     else if (r.asset === "ronkestr_token") input.ronkestrHold = hold;

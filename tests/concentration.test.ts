@@ -82,6 +82,12 @@ describe("computeConcentration", () => {
         neverSold: true,
         sellCount: 0,
         pctOriginalHeld: 1,
+        peakSellRate: 0,
+        episodeCount: 0,
+        rebuildTarget: 0,
+        rebuildHeld: 0,
+        sentenceServedDays: 0,
+        sentenceRequiredDays: 0,
       },
       {
         asset: "ronke_token",
@@ -93,6 +99,12 @@ describe("computeConcentration", () => {
         neverSold: true,
         sellCount: 0,
         pctOriginalHeld: 1,
+        peakSellRate: 0,
+        episodeCount: 0,
+        rebuildTarget: 0,
+        rebuildHeld: 0,
+        sentenceServedDays: 0,
+        sentenceRequiredDays: 0,
       },
     ];
     const c = computeConcentration("ronke_token", balances, metrics);

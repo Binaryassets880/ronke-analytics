@@ -34,6 +34,10 @@ export interface WalletAggregate {
   holdingDurationDays: number;
   /** No genuine sell on any asset. */
   neverSold: boolean;
+  /** True only if EVERY asset the wallet holds is tier diamond. */
+  allDiamond: boolean;
+  /** True if any asset is currently tier paper. */
+  anyPaper: boolean;
   /** Ever dumped within the paper-sell window on any asset. */
   everPaperSold: boolean;
   /** First acquired before the L2 migration. */
@@ -82,13 +86,13 @@ export function evaluateWallet(agg: WalletAggregate): EarnedBadge[] {
           agg.ronkeBalanceWhole >= DIAMOND_BADGE_MIN.ronke ||
           agg.ronkestrBalanceWhole >= DIAMOND_BADGE_MIN.ronkestr ||
           agg.ronkeverseCount >= DIAMOND_BADGE_MIN.nftCount;
-        if (agg.neverSold && agg.holdingDurationDays >= DIAMOND_BADGE_MIN.minDays && meaningfulStake) {
+        if (agg.allDiamond && agg.holdingDurationDays >= DIAMOND_BADGE_MIN.minDays && meaningfulStake) {
           add(def.key, null, {});
         }
         break;
       }
       case "never_paper_handed":
-        if (!agg.everPaperSold) add(def.key, null, {});
+        if (!agg.anyPaper) add(def.key, null, {});
         break;
       case "og_early":
         if (agg.ogEarly) add(def.key, null, {});
@@ -144,6 +148,8 @@ export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAg
         holdingDurationDays: 0,
         neverSold: true,
         everPaperSold: false,
+        allDiamond: true,
+        anyPaper: false,
         ogEarly: false,
         isWhale: false,
         hasTopRarity: false,
@@ -177,7 +183,7 @@ export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAg
 
   // Metrics per asset: merge across assets.
   const metrics = await sql`
-    SELECT address, holding_duration_days, never_sold, ever_paper_sold
+    SELECT address, holding_duration_days, never_sold, ever_paper_sold, diamond_bucket
     FROM holder_metrics
   `;
   for (const r of metrics) {
@@ -185,6 +191,8 @@ export async function assembleAggregates(sql: Sql): Promise<Map<string, WalletAg
     a.holdingDurationDays = Math.max(a.holdingDurationDays, Number(r.holding_duration_days));
     a.neverSold = a.neverSold && (r.never_sold as boolean);
     a.everPaperSold = a.everPaperSold || (r.ever_paper_sold as boolean);
+    a.allDiamond = a.allDiamond && r.diamond_bucket === "diamond";
+    a.anyPaper = a.anyPaper || r.diamond_bucket === "paper";
   }
 
   // Whale sets per asset (top >1% of supply). Reuses concentration definition.

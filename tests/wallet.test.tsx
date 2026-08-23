@@ -22,9 +22,9 @@ const diamondHolder: WalletData = {
   everPaperSold: false,
   firstAcquiredAt: "2025-02-25T00:00:00.000Z",
   assetHoldings: [
-    { asset: "ronke_token", label: "$RONKE", balance: "5000000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 120, diamondBucket: "diamond", firstAcquiredAt: "2025-02-25T00:00:00.000Z", neverSold: true, everPaperSold: false },
-    { asset: "ronkestr_token", label: "RonkeStr", balance: "250000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 90, diamondBucket: "regular", firstAcquiredAt: "2025-03-01T00:00:00.000Z", neverSold: true, everPaperSold: false },
-    { asset: "ronkeverse_nft", label: "Ronkeverse", balance: "0", tokenCount: 3, isHeld: true, holdingDurationDays: 60, diamondBucket: "diamond", firstAcquiredAt: "2025-04-01T00:00:00.000Z", neverSold: true, everPaperSold: false },
+    { asset: "ronke_token", label: "$RONKE", balance: "5000000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 120, diamondBucket: "diamond", firstAcquiredAt: "2025-02-25T00:00:00.000Z", neverSold: true, everPaperSold: false, tier: null },
+    { asset: "ronkestr_token", label: "RonkeStr", balance: "250000000000000000000000", tokenCount: 0, isHeld: true, holdingDurationDays: 90, diamondBucket: "regular", firstAcquiredAt: "2025-03-01T00:00:00.000Z", neverSold: true, everPaperSold: false, tier: null },
+    { asset: "ronkeverse_nft", label: "Ronkeverse", balance: "0", tokenCount: 3, isHeld: true, holdingDurationDays: 60, diamondBucket: "diamond", firstAcquiredAt: "2025-04-01T00:00:00.000Z", neverSold: true, everPaperSold: false, tier: null },
   ],
   heldTokens: [
     { tokenId: "42", rarityRank: 7, imageUrl: null, tier: "standard" },

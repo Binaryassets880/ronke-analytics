@@ -54,6 +54,7 @@ const WALLET: WalletData = {
       firstAcquiredAt: "2025-11-16T00:00:00.000Z",
       neverSold: true,
       everPaperSold: false,
+      tier: null,
     },
     {
       asset: "ronkestr_token",
@@ -66,6 +67,7 @@ const WALLET: WalletData = {
       firstAcquiredAt: null,
       neverSold: false,
       everPaperSold: false,
+      tier: null,
     },
     {
       asset: "ronkeverse_nft",
@@ -78,6 +80,7 @@ const WALLET: WalletData = {
       firstAcquiredAt: "2026-05-01T00:00:00.000Z",
       neverSold: false,
       everPaperSold: false,
+      tier: null,
     },
   ],
   heldTokens: [
