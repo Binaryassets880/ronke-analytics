@@ -114,6 +114,22 @@ Code and database are back in sync, so the nightly `sync.yml` is safe to let
 run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
 `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
 
+### READ FIRST, 2026-08-23: production data is ahead of `main`
+
+`npm run migrate` + `npm run seed-labels` + `npm run rebuild` have been run
+against production Neon with the **hand-tier engine from PR #21**, which is NOT
+merged. The derived tables therefore hold new-rule tiers while `main` still
+holds the old engine.
+
+**The nightly `sync.yml` runs at 07:00 UTC, checks out `main`, and rebuilds.**
+If PR #21 is not merged before then, that run recomputes every bucket with the
+old per-transfer rule and silently reverts all of it. The site would go back to
+certifying wallets that sold hundreds of NFTs as `diamond`, with nothing in the
+logs to say why.
+
+Either merge PR #21 today, or re-run the rebuild from the `feat/hand-tiers`
+branch after the nightly to put the data back.
+
 ### Open work, 2026-08-23
 
 1. **PR #19, `fix/wallet-bucket-merge` - MERGED.** Fixed the order-dependent
@@ -125,12 +141,15 @@ run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
    **Merging changes nothing on its own.** Applying it is two steps, in order:
    `npm run seed-labels`, then `npm run rebuild`. Seeding without rebuilding
    leaves `address_labels` and the derived tables disagreeing.
-3. **Tier redesign - proposed, NOT implemented.** Rolling 30-day "let-go rate",
-   a 50% paper line, a 5-NFT floor, and redemption (serve 30/60/90/180 days AND
-   rebuild to 50% of your highest-ever pre-dump stack). Two independent audits
-   confirmed the modelling. Item 2 is its prerequisite, and even with it done, a
-   transfer between two wallets the same person owns is still indistinguishable
-   from a sale.
+3. **PR #21, `feat/hand-tiers` - OPEN, but its data is already live.** Rolling
+   30-day let-go rate, a 50% paper line, a 5-NFT position floor, and redemption
+   (serve 30/60/90/180 clean days AND hold 50% of your highest-ever pre-dump
+   position). Also points the score multiplier and both hand badges at the tier,
+   closing the 8,248-row badge/multiplier disagreement, and adds the hover/tap
+   popover on the profile badge. See the banner above before doing anything.
+   Known limit that no code fixes: a transfer between two wallets the same
+   person owns is still indistinguishable from a sale, so the paper population
+   carries a false-positive rate.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns
