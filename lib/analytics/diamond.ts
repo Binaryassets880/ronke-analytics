@@ -58,8 +58,13 @@ const PAPER_WINDOW_MS = DIAMOND_THRESHOLDS.paperSellWindowDays * MS_PER_DAY;
 function tierColumns(t: TierOutcome) {
   return {
     diamondBucket: t.bucket,
-    neverSold: t.episodeCount === 0,
-    everPaperSold: t.bucket === "paper" && t.episodeCount > 0,
+    // Literally never disposed of a unit. A wallet that trims steadily without
+    // ever crossing the line has no episode, but it HAS sold, so this must not
+    // key off the episode count: the profile renders it as "Never sold", and a
+    // wallet that sold 99 of 188 Ronkeverse was carrying that pill.
+    neverSold: t.peakSellRate === 0,
+    // Ever dumped, as a permanent record. Redemption clears the tier, not this.
+    everPaperSold: t.episodeCount > 0,
     sellCount: t.episodeCount,
     peakSellRate: t.peakSellRate,
     episodeCount: t.episodeCount,

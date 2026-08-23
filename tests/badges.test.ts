@@ -12,6 +12,7 @@ function agg(over: Partial<WalletAggregate>): WalletAggregate {
     everPaperSold: false,
     allDiamond: true,
     anyPaper: false,
+    anyEpisode: false,
     ogEarly: false,
     isWhale: false,
     hasTopRarity: false,
@@ -48,7 +49,7 @@ describe("evaluateWallet - achievements", () => {
     expect(keys(middling)).not.toContain("diamond_hands");
     expect(keys(middling)).toContain("never_paper_handed");
     // Paper on any asset: neither badge.
-    const dumping = agg({ ...seasoned, allDiamond: false, anyPaper: true });
+    const dumping = agg({ ...seasoned, allDiamond: false, anyPaper: true, anyEpisode: true });
     expect(keys(dumping)).not.toContain("diamond_hands");
     expect(keys(dumping)).not.toContain("never_paper_handed");
     // Diamond everywhere: both.
@@ -109,6 +110,7 @@ describe("evaluateWallet - empty", () => {
       everPaperSold: true,
       allDiamond: false,
       anyPaper: true,
+      anyEpisode: true,
       holdingDurationDays: 0,
     });
     expect(evaluateWallet(nothing)).toEqual([]);

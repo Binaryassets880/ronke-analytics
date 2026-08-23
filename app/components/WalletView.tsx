@@ -120,30 +120,52 @@ function AssetHoldingCard({ h, diamondTooltip }: { h: WalletAssetHolding; diamon
         <InfoRow label="First buy" value={<span className="mono">{h.firstAcquiredAt ? h.firstAcquiredAt.slice(0, 10) : "—"}</span>} />
       </dl>
 
-      {(h.neverSold || !h.everPaperSold) ? (
-        <div className="mt-3 flex flex-wrap gap-1 text-xs">
-          {h.neverSold ? (
-            <Tip text={`Never made a genuine sell of ${h.label} since acquiring. Moves to staking, bridge, or games don't count.`}>
-              <span
-                className="cursor-help rounded px-1.5 py-0.5 text-[var(--accent)]"
-                style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)" }}
-              >
-                Never sold
-              </span>
-            </Tip>
-          ) : null}
-          {!h.everPaperSold ? (
-            <Tip text={`Never sold ${h.label} within a day of buying it.`}>
-              <span
-                className="cursor-help rounded px-1.5 py-0.5 text-[var(--diamond)]"
-                style={{ background: "color-mix(in srgb, var(--diamond) 15%, transparent)" }}
-              >
-                Never paper-handed
-              </span>
-            </Tip>
-          ) : null}
-        </div>
-      ) : null}
+      {/*
+        These pills sit beside the tier and have to agree with it. "Never sold"
+        is shown only when the wallet has genuinely never disposed of a unit;
+        anything else states the worst window on record instead, so a wallet
+        that trimmed its way down cannot read as untouched.
+      */}
+      <div className="mt-3 flex flex-wrap gap-1 text-xs">
+        {h.neverSold ? (
+          <Tip text={`Never disposed of a single ${h.label}. Moves to staking, bridge, or games don't count as sales.`}>
+            <span
+              className="cursor-help rounded px-1.5 py-0.5 text-[var(--accent)]"
+              style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)" }}
+            >
+              Never sold
+            </span>
+          </Tip>
+        ) : (
+          <Tip text={`In its worst 30 days this wallet let go of ${Math.round((h.tier?.peakSellRate ?? 0) * 100)}% of its ${h.label}. The tier is set by that number.`}>
+            <span
+              className="cursor-help rounded px-1.5 py-0.5 text-[var(--muted)]"
+              style={{ background: "color-mix(in srgb, var(--muted) 12%, transparent)" }}
+            >
+              Worst month: let go of {Math.round((h.tier?.peakSellRate ?? 0) * 100)}%
+            </span>
+          </Tip>
+        )}
+        {!h.everPaperSold ? (
+          <Tip text={`Never let go of 50% or more of its ${h.label} inside 30 days.`}>
+            <span
+              className="cursor-help rounded px-1.5 py-0.5 text-[var(--diamond)]"
+              style={{ background: "color-mix(in srgb, var(--diamond) 15%, transparent)" }}
+            >
+              Never dumped
+            </span>
+          </Tip>
+        ) : (
+          <Tip text={`Has let go of 50%+ of its ${h.label} inside 30 days at least once. That record is permanent, even after the tier recovers.`}>
+            <span
+              className="cursor-help rounded px-1.5 py-0.5 text-[var(--paper)]"
+              style={{ background: "color-mix(in srgb, var(--paper) 15%, transparent)" }}
+            >
+              Dumped before
+            </span>
+          </Tip>
+        )}
+      </div>
     </div>
   );
 }
