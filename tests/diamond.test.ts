@@ -32,8 +32,9 @@ describe("computeDiamond - NFT", () => {
     expect(m.holdingDurationDays).toBeCloseTo(10, 5); // day30 - day20
     // The window hits 100%, but a one-NFT position is below
     // HAND_TIERS.minPositionForEpisode, so it never brands the wallet.
-    expect(m.neverSold).toBe(true);
     expect(m.episodeCount).toBe(0);
+    expect(m.everPaperSold).toBe(false);
+    expect(m.neverSold).toBe(false); // it did sell, and the profile says so
   });
 
   it("selling within 1 day of acquiring flags ever_paper_sold + paper bucket", () => {
@@ -64,7 +65,11 @@ describe("computeDiamond - NFT", () => {
     ];
     const res = computeDiamond("ronkeverse_nft", events, labels, day(40));
     const m = metricFor(res, ADDR.wallet)!;
-    expect(m.neverSold).toBe(true); // 1/20 = 5%, nowhere near the 50% line
+    // 5% is under the diamond line, so the tier survives - but the wallet
+    // still parted with a token, so it cannot claim "never sold".
+    expect(m.neverSold).toBe(false);
+    expect(m.everPaperSold).toBe(false);
+    expect(m.peakSellRate).toBeCloseTo(0.05, 5);
     expect(m.holdingDurationDays).toBeCloseTo(40, 5); // clock untouched
     expect(m.diamondBucket).toBe("diamond");
   });
@@ -80,7 +85,8 @@ describe("computeDiamond - NFT", () => {
     const m = metricFor(res, ADDR.wallet)!;
     // 1/5 = 20%, below the 50% line. Under the old per-transfer rule this
     // tripped the 10% tolerance and cost the wallet its clock and its badge.
-    expect(m.neverSold).toBe(true);
+    expect(m.neverSold).toBe(false); // it sold one
+    expect(m.everPaperSold).toBe(false); // but never dumped
     expect(m.holdingDurationDays).toBeCloseTo(40, 5); // clock untouched
     // 20% is past the 10% diamond line but short of the 50% paper line, so the
     // wallet lands in the middle tier: it sold something, it is not dumping.
@@ -131,7 +137,8 @@ describe("computeDiamond - NFT", () => {
     const res = computeDiamond("ronkeverse_nft", events, labels, day(40));
     const m = metricFor(res, ADDR.wallet)!;
     // One NFT is under the position floor, so no episode opens either way.
-    expect(m.neverSold).toBe(true);
+    expect(m.episodeCount).toBe(0);
+    expect(m.neverSold).toBe(false); // the sale is real, even if unbranded
     expect(m.everPaperSold).toBe(false); // held since day 0 regardless
   });
 
@@ -212,8 +219,9 @@ describe("computeDiamond - token FIFO", () => {
     ];
     const res = computeDiamond("ronke_token", events, labels, day(40));
     const m = metricFor(res, ADDR.wallet)!;
-    expect(m.sellCount).toBe(0); // 5% < tolerance
-    expect(m.neverSold).toBe(true);
+    expect(m.sellCount).toBe(0); // 5%, well under the 50% line
+    expect(m.neverSold).toBe(false); // 500 tokens did leave
+    expect(m.everPaperSold).toBe(false);
     expect(m.holdingDurationDays).toBeCloseTo(40, 5); // clock untouched
     expect(m.pctOriginalHeld).toBeCloseTo(0.95, 5); // units still left FIFO
     expect(m.diamondBucket).toBe("diamond");
@@ -448,6 +456,28 @@ describe("hand tiers - the cases the old rule missed", () => {
     // Second episode ends day 300; 60 days required, so day 340 is still inside.
     expect(run(events, day(340)).sentenceRequiredDays).toBe(60);
     expect(run(events, day(340)).sentenceServedDays).toBeCloseTo(40, 0);
+  });
+
+  it("never claims a wallet that sold is untouched", () => {
+    // The regression that shipped and had to be caught on the live site: the
+    // profile prints `neverSold` as "Never sold". It was keyed off the episode
+    // count, so a wallet that trimmed its way down without ever crossing 50%
+    // reported true - and 0x9f8bc9c1, 99 sales out of 188, wore the pill.
+    const trimmer = run(
+      [...mint(30, day(0)),
+        ...Array.from({ length: 6 }, (_, k) => dump(2, day(100 + k * 45), k * 2)).flat()],
+      day(400),
+    );
+    expect(trimmer.episodeCount).toBe(0); // never dumped
+    expect(trimmer.everPaperSold).toBe(false);
+    expect(trimmer.diamondBucket).not.toBe("paper");
+    expect(trimmer.neverSold).toBe(false); // but it plainly did sell
+    expect(trimmer.peakSellRate).toBeGreaterThan(0);
+
+    // The only wallet that may claim it is one that has disposed of nothing.
+    const untouched = run(mint(30, day(0)), day(400));
+    expect(untouched.neverSold).toBe(true);
+    expect(untouched.peakSellRate).toBe(0);
   });
 
   it("never restores diamond once the lifetime peak is past the line", () => {
