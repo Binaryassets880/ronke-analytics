@@ -251,6 +251,30 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   `ever_paper_sold: false` on both assets.
 - Touched: `HANDOFF.md`, `LOG.md`.
 
+## [2026-08-23] Fixed the order-dependent wallet-level diamond bucket merge
+
+- `getWallet()` collapsed a wallet's per-asset `diamond_bucket` rows with
+  `if (!diamondBucket || r.diamond_bucket === "diamond")`, which kept whichever
+  row arrived first and only ever upgraded to `diamond`. The metrics `SELECT`
+  has no `ORDER BY`, so a wallet holding one `paper` asset and one `regular`
+  asset was badged on arbitrary row order. Replaced with a ranked
+  `bestBucket(current, next)` helper (paper 0 < regular 1 < diamond 2), so the
+  merge is order-independent by construction.
+- Measured against production Neon: 670 wallets are exposed to the bug (mixed
+  `regular` + `paper`, no `diamond`), and **320 of them were badged wrong**.
+  All 320 move `paper` -> `regular`; `diamond` is unchanged at 1,806 because the
+  old code already special-cased it. Surfaces in the wallet OG share card,
+  `/api/v1/wallet/[address]`, and the wallet page.
+- 377 tests green (3 new in `tests/config.test.ts` covering single-asset,
+  every two-bucket order, and all six three-bucket permutations), `tsc` clean.
+  `npm run lint` fails on an eslintrc config-schema error that predates this
+  change - confirmed by stashing the diff and re-running.
+- Found during an independent audit of the proposed diamond/regular/paper tier
+  redesign (rolling 30-day let-go rate + redemption). That redesign is NOT
+  implemented; only this pre-existing merge bug was fixed.
+- Touched: `config/contracts.ts`, `lib/queries.ts`, `tests/config.test.ts`,
+  `HANDOFF.md`, `LOG.md`.
+
 ## [2026-08-23] Expanded address_labels - closed most of the R4 curation gap
 
 - `SEED_LABELS` 21 -> 38. Candidates were ranked out of `transfer_events` by

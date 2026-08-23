@@ -7,7 +7,9 @@ import {
   assetForAddress,
   isBurnAddress,
   ZERO_ADDRESS,
+  bestBucket,
 } from "@/config/contracts";
+import type { DiamondBucket } from "@/config/contracts";
 import { requireEnv, MissingEnvError } from "@/config/env";
 import { BADGES, highestTier, badgeDef } from "@/config/badges";
 
@@ -104,5 +106,41 @@ describe("config/badges", () => {
     expect(highestTier(bag, 1)?.label).toBe("Shrimp");
     expect(highestTier(bag, 5_000_000)?.label).toBe("Believer");
     expect(highestTier(bag, 999_000_000)?.label).toBe("Leviathan");
+  });
+});
+
+describe("bestBucket", () => {
+  /** Fold a wallet's per-asset buckets the way getWallet() does. */
+  const merge = (buckets: DiamondBucket[]) =>
+    buckets.reduce<DiamondBucket | null>((acc, b) => bestBucket(acc, b), null);
+
+  it("takes the first bucket when there is only one asset", () => {
+    expect(merge(["paper"])).toBe("paper");
+    expect(merge(["regular"])).toBe("regular");
+    expect(merge(["diamond"])).toBe("diamond");
+  });
+
+  it("keeps the best bucket regardless of row order", () => {
+    // The regression: the old merge kept whichever row arrived first unless a
+    // later one was `diamond`, so ["paper", "regular"] badged the wallet paper.
+    expect(merge(["paper", "regular"])).toBe("regular");
+    expect(merge(["regular", "paper"])).toBe("regular");
+    expect(merge(["paper", "regular", "paper"])).toBe("regular");
+    expect(merge(["paper", "diamond"])).toBe("diamond");
+    expect(merge(["diamond", "paper"])).toBe("diamond");
+    expect(merge(["regular", "diamond", "paper"])).toBe("diamond");
+  });
+
+  it("is order-independent across every permutation of the three buckets", () => {
+    const all: DiamondBucket[] = ["paper", "regular", "diamond"];
+    const perms: DiamondBucket[][] = [
+      [all[0], all[1], all[2]],
+      [all[0], all[2], all[1]],
+      [all[1], all[0], all[2]],
+      [all[1], all[2], all[0]],
+      [all[2], all[0], all[1]],
+      [all[2], all[1], all[0]],
+    ];
+    for (const p of perms) expect(merge(p)).toBe("diamond");
   });
 });
