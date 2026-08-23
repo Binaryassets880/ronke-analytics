@@ -250,3 +250,46 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   `0x75cd...33a5` (godfather.ron) now returns `diamond_bucket: "regular"` /
   `ever_paper_sold: false` on both assets.
 - Touched: `HANDOFF.md`, `LOG.md`.
+
+## [2026-08-23] Expanded address_labels - closed most of the R4 curation gap
+
+- `SEED_LABELS` 21 -> 38. Candidates were ranked out of `transfer_events` by
+  distinct counterparties, then each was tested for contract code via the Ronin
+  explorer `/api/v2/addresses/{hash}`. Of the 60 busiest unlabeled addresses,
+  **only 14 hold code**; the other 46 are ordinary active traders and were
+  deliberately left alone. Two of the 14 are EIP-7702 delegated EOAs, which
+  report `is_contract: true` but are people, so they were also left alone.
+- Classification evidence, all recorded in each entry's `note`:
+  - **Same-transaction pass-through** (measured over our own `transfer_events`)
+    separates routers from everything else. Katana AggregateRouter, KyberSwap
+    MetaAggregationRouterV2, AffiliateRouter, PermissionedRouter, LiFiDiamond
+    and two unnamed contracts are all 100% pass-through holding nothing.
+  - **Inbound method names** from the explorer identified the rest: Scatter
+    (`disperseToken`), ClickTile (`createGame`/`cashOut`), the Katana V3
+    position manager (`collect`/`increaseLiquidity`/`mint`), and a mystery-pack
+    vault (`openMysteryPack`/`sellBackNFT`).
+  - **NFT round-trip rate** (what share of deposits return to the depositing
+    wallet) separates custody from disposal. `0x22e8eccc` returns 385 of 410
+    deposits to the same wallet (94%), median 24.5h held, 27 depositors - it is
+    custody, and today all 410 deposits score as sales.
+- Measured effect if seeded and rebuilt: **5,761 transfers by 210 wallets stop
+  counting as sales** (5,348 RONKE, 3 RONKESTR, 410 Ronkeverse). Another 73,066
+  transfers stay sales but their venue stops ranking as a holder. Five addresses
+  that currently rank as holders drop out, including one holding 498,946 RONKE
+  and one holding 8 Ronkeverse.
+- Corrected a wrong note: `0x7cf0fb64` was described on the `0xca562117` entry
+  as an "aggregate router". Its inbound calls are `collect`/`increaseLiquidity`/
+  `mint`, so it is the Katana V3 position manager. Labeled `lp` with
+  `countsAsSell: false` - providing liquidity keeps the wallet's exposure,
+  unlike swapping into a pool, which the existing pool entries already treat as
+  a sale.
+- Left unlabeled ON PURPOSE and documented in `scripts/seed-labels.ts`: plain
+  wallets, EIP-7702 EOAs, CEX deposit addresses (Ronin exposes no tag source),
+  and three token-side contracts whose purpose could not be established
+  (`0x14bb374e`, `0xf0107aa0`, `0x5078cb39`).
+- 383 tests green (9 new in `tests/labels.test.ts`, including an invariant that any
+  entry forgiving a sale must record why - which caught two pre-existing staking
+  entries with no note), `tsc` clean. **Not seeded to production** - `npm run seed-labels`
+  plus a rebuild is still required for any of this to affect displayed metrics.
+- Touched: `lib/analytics/labels.ts`, `scripts/seed-labels.ts`,
+  `tests/labels.test.ts`, `HANDOFF.md`, `LOG.md`.

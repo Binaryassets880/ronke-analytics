@@ -4,11 +4,21 @@
  * Idempotent: upserts on the address PK so re-running does not duplicate. Labels
  * are also editable directly in the DB in v1 (a full admin UI is deferred).
  *
- * Curation gap (R4): Ronkeverse-specific staking / game-internal contracts are
- * NOT in the seed (their addresses were not confidently identified). Until they
- * are added here or via DB edit, transfers to them are conservatively counted as
- * sells, which UNDERSTATES diamond hands. Triage the "unlabeled high-frequency
- * counterparties" once backfill lands and add them.
+ * Curation gap (R4): largely closed 2026-08-23. The high-fan-out unlabeled
+ * counterparties were triaged against the Ronin explorer (is_contract) and
+ * against our own transfer_events (same-transaction pass-through, and, for the
+ * NFT side, what share of deposits return to the depositing wallet). See the
+ * dated block at the end of SEED_LABELS for the evidence behind each entry.
+ *
+ * What is still NOT labeled, on purpose:
+ *  - Plain wallets. High fan-out is not evidence of infrastructure; the busiest
+ *    unlabeled addresses in this dataset are ordinary active traders.
+ *  - EIP-7702 delegated EOAs. They report is_contract = true but are people.
+ *  - Centralised exchange deposit addresses. No tag source available on Ronin
+ *    today, and guessing would wrongly forgive or punish real sales.
+ *  - Three token-side contracts whose purpose could not be established:
+ *    0x14bb374e, 0xf0107aa0, 0x5078cb39. They are neither clean pass-throughs
+ *    nor clean sinks. Left at the unlabeled default (counts as a sell).
  */
 
 import { requireSql } from "@/db/client";

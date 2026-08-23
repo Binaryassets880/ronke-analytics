@@ -111,8 +111,26 @@ the one thing that hurts to change after integrations exist.
 The paper-hands clock-reset fix is **MERGED AND DEPLOYED** (PR #17, 2026-08-14,
 merge commit `f719dd0`) and production Neon has been rebuilt on the merged code.
 Code and database are back in sync, so the nightly `sync.yml` is safe to let
-run. No work in progress. See the 2026-08-14 `LOG.md` entry for the rebuild
-numbers and `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
+run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
+`C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
+
+### Open work, 2026-08-23
+
+1. **PR #19, `fix/wallet-bucket-merge`** - open, Vercel preview green, not
+   merged. Fixes the order-dependent wallet-level bucket merge in `getWallet()`;
+   320 wallets were badged `paper` that should read `regular`. Read path only.
+2. **`chore/expand-address-labels`** - local branch, NOT pushed. Grows
+   `SEED_LABELS` 21 -> 38 (see the 2026-08-23 `LOG.md` entry for the evidence
+   behind each). **Code only: nothing is seeded to production.** Applying it is
+   two steps, in order: `npm run seed-labels`, then `npm run rebuild`. Until
+   both run, live metrics are unchanged. Seeding without rebuilding leaves the
+   labels table and the derived tables disagreeing.
+3. **Tier redesign - proposed, NOT implemented.** Rolling 30-day "let-go rate",
+   a 50% paper line, a 5-NFT floor, and redemption (serve 30/60/90/180 days AND
+   rebuild to 50% of your highest-ever pre-dump stack). Two independent audits
+   confirmed the modelling. Item 2 above is its prerequisite, and even with it
+   done, a transfer between two wallets the same person owns is still
+   indistinguishable from a sale.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns
