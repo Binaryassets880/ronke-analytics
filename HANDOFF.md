@@ -114,22 +114,23 @@ Code and database are back in sync, so the nightly `sync.yml` is safe to let
 run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
 `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
 
-**UNCOMMITTED WORK IN PROGRESS (2026-08-23).** Three files are modified on
-`master` and not committed: `config/contracts.ts`, `lib/queries.ts`,
-`tests/config.test.ts`. They fix the order-dependent wallet-level bucket merge
-in `getWallet()` - 320 wallets were badged `paper` when they should read
-`regular`. Read-path only, no rebuild needed, no schema change. 377 tests green
-and `tsc` clean. Commit, branch, and PR it before starting anything else.
-Details in the 2026-08-23 `LOG.md` entry.
+### Open work, 2026-08-23
 
-Separately, a **redesign of the diamond/regular/paper tiers is proposed but NOT
-implemented** - rolling 30-day "let-go rate", a 50% paper line, a 5-NFT floor,
-and a redemption path (serve 30/60/90/180 days AND rebuild to 50% of your
-highest-ever pre-dump stack). Two independent audits confirmed the modelling.
-Nothing in the repo has been changed for it. Prerequisite before it can ship:
-`address_labels` holds only 21 rows and has no CEX or team entries, so every
-unlabeled address defaults to "sale" and self-custody transfers read as dumping.
-Expand `scripts/seed-labels.ts` first.
+1. **PR #19, `fix/wallet-bucket-merge` - MERGED.** Fixed the order-dependent
+   wallet-level bucket merge in `getWallet()`; 320 wallets were badged `paper`
+   that should read `regular`. Read path only, so it took effect on deploy with
+   no rebuild.
+2. **PR #20, `chore/expand-address-labels`.** Grows `SEED_LABELS` 21 -> 38
+   (evidence per entry in its `note`; see the 2026-08-23 `LOG.md` entry).
+   **Merging changes nothing on its own.** Applying it is two steps, in order:
+   `npm run seed-labels`, then `npm run rebuild`. Seeding without rebuilding
+   leaves `address_labels` and the derived tables disagreeing.
+3. **Tier redesign - proposed, NOT implemented.** Rolling 30-day "let-go rate",
+   a 50% paper line, a 5-NFT floor, and redemption (serve 30/60/90/180 days AND
+   rebuild to 50% of your highest-ever pre-dump stack). Two independent audits
+   confirmed the modelling. Item 2 is its prerequisite, and even with it done, a
+   transfer between two wallets the same person owns is still indistinguishable
+   from a sale.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns

@@ -31,11 +31,14 @@ export interface AddressLabel {
 }
 
 /**
- * Curated starter set of known Ronin infrastructure. Confident entries only -
- * an unknown address defaults to a normal external wallet (counts as holder,
- * outbound counts as sell). Ronkeverse-specific staking/game contracts are a
- * known curation gap (see seed-labels.ts) - add them here or via DB edit; until
- * then such moves are conservatively treated as sells.
+ * Curated set of known Ronin infrastructure. Confident entries only - an unknown
+ * address defaults to a normal external wallet (counts as holder, outbound
+ * counts as sell), so a wrong label is far more damaging than a missing one.
+ * Every entry must be justified by evidence recorded in its `note`.
+ *
+ * Two things this list can never settle, both documented in seed-labels.ts: a
+ * transfer between two wallets the same person owns is indistinguishable from a
+ * sale without price data, and Ronin exposes no CEX deposit-address tags.
  */
 export const SEED_LABELS: AddressLabel[] = [
   {
@@ -72,7 +75,8 @@ export const SEED_LABELS: AddressLabel[] = [
     label: "AXS Staking Pool (ERC20StakingPool)",
     category: "staking",
     excludeFromHolders: true,
-    countsAsSell: false, // staking deposit retains ownership, not a disposal
+    countsAsSell: false,
+    note: "Staking deposit retains ownership, so it is not a disposal. Category staking also makes the round trip a no-op for the holding clock.",
   },
   {
     address: "0x545edb750eb8769c868429be9586f5857a768758",
@@ -80,6 +84,7 @@ export const SEED_LABELS: AddressLabel[] = [
     category: "staking",
     excludeFromHolders: true,
     countsAsSell: false,
+    note: "Ronin validator staking. Delegating retains ownership; undelegating returns principal to the same wallet.",
   },
   {
     address: "0x5c9e9d11a6fbee98397e60238d986ea4991cb6f7",
@@ -195,6 +200,175 @@ export const SEED_LABELS: AddressLabel[] = [
     category: "contract",
     excludeFromHolders: true,
     countsAsSell: true,
+  },
+
+  // ── Added 2026-08-23, closing the R4 curation gap ──────────────────
+  //
+  // Every address below was confirmed to hold contract code via the Ronin
+  // explorer (`/api/v2/addresses/{hash}` -> is_contract). Candidates were
+  // ranked out of `transfer_events` by distinct counterparties, so these are
+  // the addresses whose mislabeling moves the most wallets. Plain wallets with
+  // high fan-out were deliberately NOT labeled - an active trader is not
+  // infrastructure - and neither were EIP-7702 delegated EOAs, which report
+  // as contracts but are individual people using smart wallets.
+  //
+  // "Pass-through" below means the contract received and sent the same asset
+  // inside the same transaction, measured over our own transfer_events. A
+  // router never rests on a balance; a custody contract does.
+
+  // Swap routers and aggregators. Tokens enter and leave in the same tx, and
+  // the contracts rest on no balance, so an outbound to one is a real sale.
+  {
+    address: "0x5f0acdd3ec767514ff1bf7e79949640bf94576bd",
+    label: "Katana AggregateRouter",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified as AggregateRouter. Largest unlabeled counterparty in the dataset: 5,444 distinct wallets, 48,129 transactions, 100% pass-through, holds nothing.",
+  },
+  {
+    address: "0x6131b5fae19ea4f9d964eac0408e4408b66337b5",
+    label: "MetaAggregationRouterV2 (KyberSwap)",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified contract name. 2,249 distinct wallets, 100% pass-through. Pairs with the existing swap executor 0x6e4141d3.",
+  },
+  {
+    address: "0x77f96cf7b98b963fb8a9b84787806d396d953b2b",
+    label: "AffiliateRouter",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified contract name. 165 distinct wallets, 100% pass-through over 941 transactions.",
+  },
+  {
+    address: "0xc05afc8c9353c1dd5f872eccfacd60fd5a2a9ac7",
+    label: "PermissionedRouter",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified contract name. 100% pass-through over 188 transactions.",
+  },
+  {
+    address: "0x452cf1b8597e6319cd21abd847312bf17e26d8d1",
+    label: "LiFiDiamond (LI.FI bridge/swap aggregator)",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified EIP-2535 diamond. 100% pass-through. Treated as a sale to match the existing RelayRouter entries - the wallet parts with the asset on Ronin either way.",
+  },
+  {
+    address: "0xe377e13256002ab260e8ab59478652710a79ac5c",
+    label: "Unnamed swap router",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Unverified and unnamed on the explorer, but behaviourally unambiguous: 3,097 distinct wallets, 5,875 in / 5,875 out, 100% same-transaction pass-through, holds nothing.",
+  },
+  {
+    address: "0x8f10b468b06c6fd214b65f87778827f7d113f996",
+    label: "Unnamed swap router",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Unverified and unnamed. 100% same-transaction pass-through over 1,286 transactions, holds nothing.",
+  },
+
+  // Liquidity provision, NOT a sale. The existing LP entries are the *pools*,
+  // where a swap really is a sale. This is the position manager: minting or
+  // topping up a position hands tokens over but keeps the wallet's exposure.
+  {
+    address: "0x7cf0fb64d72b733695d77d197c664e90d07cf45a",
+    label: "Katana V3 NonfungiblePositionManager",
+    category: "lp",
+    excludeFromHolders: true,
+    countsAsSell: false,
+    note: "Inbound calls are collect / increaseLiquidity / multicall / mint, i.e. LP position management. Supersedes the description in the 0xca562117 note, which called this an aggregate router.",
+  },
+
+  // Bulk distribution. Loading a disperser is not a disposal, and receiving
+  // out of one is an airdrop.
+  {
+    address: "0x5d518933351a0bc14b24b329b33b813565608769",
+    label: "Scatter (bulk disperse)",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: false,
+    note: "Verified as Scatter; sampled inbound calls are disperseToken/disperseRON. 2,095 distinct wallets, 70 in / 2,580 out - a distributor, not a venue.",
+  },
+
+  // Games. Wagering is not paper-handing, matching CoinFlipper above.
+  {
+    address: "0xa9b7d87df126ae0b80b90ded3d481209e20eb3bf",
+    label: "ClickTile game",
+    category: "game",
+    excludeFromHolders: true,
+    countsAsSell: false,
+    note: "Verified as ClickTileERC20; inbound calls are createGame / markGameAsLost / cashOut. Holds a ~499k RONKE pot, so it is a house rather than a pass-through.",
+  },
+
+  // Ronkeverse NFT custody. Deposits come back to the SAME wallet 385 times
+  // out of 410 (94%), median 24.5 hours in the contract, across 27 depositors.
+  // Today every one of those deposits is scored as a sale.
+  {
+    address: "0x22e8ecccbc419cda1a6b2c6fca72ee2cb239f506",
+    label: "Ronkeverse NFT custody (unidentified)",
+    category: "staking",
+    excludeFromHolders: true,
+    countsAsSell: false,
+    note: "IDENTIFIED BEHAVIOURALLY, NOT BY NAME - unverified and unnamed on the explorer. 410 NFT deposits, 410 returns, 94% back to the depositing wallet, median 24.5h held, 27 depositors, active 2025-06 to 2025-09. Confirm what it is before treating this label as settled.",
+  },
+
+  // Ronkeverse NFT venues. Deposits leave to a DIFFERENT wallet essentially
+  // always, so the depositor really did part with the token.
+  {
+    address: "0x7962c19767f10df016f1f7154b5fe286e502e023",
+    label: "Mystery pack vault",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Inbound calls are openMysteryPack / sellBackNFT / depositAssetsToPack. sellBackNFT is a genuine sale to the protocol. Still holds 8 Ronkeverse, so without this it ranks as a holder.",
+  },
+  {
+    address: "0xf9333ebf0d47b26803a963fcbc27ddde11bb18b6",
+    label: "NFT vault (BeaconProxy)",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified BeaconProxy; inbound calls include claimPendingNFTsFor / syncVaultStandardsForTiers. 90 in / 90 out, 0% returned to the depositor, only 2 depositors - protocol-operated, not user custody.",
+  },
+  {
+    address: "0xc16af7ea967ef43a468b84f5003c7577b299ab6d",
+    label: "RealmWalkers game",
+    category: "game",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified as RealmWalkersRT. Unlike the token-wagering games above this one moves NFTs on to other wallets: 50 in / 50 out with 1 return to the depositor, so a deposit really is a disposal.",
+  },
+  {
+    address: "0xdfda7f48a58618af138cb5c3582b5426bf418d0d",
+    label: "RealmWalkers game (second contract)",
+    category: "game",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Verified as RealmWalkersRT, same family as 0xc16af7ea. 14 in / 14 out, 0% returned to the depositor.",
+  },
+  {
+    address: "0x644a6d2aa3abeec944c874260d64805ed262eb4c",
+    label: "Unnamed Ronkeverse NFT venue",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Unverified EIP-1967 proxy. 100 NFTs in, 100 out, 0% returned to the depositor, 17 distinct wallets, active 2025-03 to 2025-05.",
+  },
+  {
+    address: "0x7b2d268eea7f99520f7e968052fac76f52c73c7e",
+    label: "Unnamed Ronkeverse NFT venue",
+    category: "contract",
+    excludeFromHolders: true,
+    countsAsSell: true,
+    note: "Unverified contract. 16 NFTs in, 16 out, 0% returned to the depositor, 25 distinct wallets.",
   },
 ];
 
