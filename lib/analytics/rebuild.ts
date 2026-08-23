@@ -160,10 +160,12 @@ export async function persistSnapshot(sql: Sql, snap: AssetSnapshot): Promise<vo
   await insertMany(
     sql,
     "holder_metrics",
-    ["asset", "address", "holding_duration_days", "weighted_duration_days", "diamond_bucket", "ever_paper_sold", "never_sold", "sell_count", "pct_original_held"],
+    ["asset", "address", "holding_duration_days", "weighted_duration_days", "diamond_bucket", "ever_paper_sold", "never_sold", "sell_count", "pct_original_held", "peak_sell_rate", "episode_count", "rebuild_target", "rebuild_held", "sentence_served_days", "sentence_required_days"],
     snap.metrics.map((m) => [
       asset, m.address, m.holdingDurationDays, m.weightedDurationDays, m.diamondBucket,
       m.everPaperSold, m.neverSold, m.sellCount, m.pctOriginalHeld,
+      m.peakSellRate, m.episodeCount, m.rebuildTarget, m.rebuildHeld,
+      m.sentenceServedDays, m.sentenceRequiredDays,
     ]),
   );
   await insertMany(

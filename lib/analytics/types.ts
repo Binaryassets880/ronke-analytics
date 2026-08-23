@@ -37,6 +37,18 @@ export interface HolderMetric {
   neverSold: boolean;
   sellCount: number;
   pctOriginalHeld: number; // 0..1
+  /** Worst rolling-window let-go rate the wallet ever reached, 0..1. */
+  peakSellRate: number;
+  /** Dumping episodes that cleared the position floor. */
+  episodeCount: number;
+  /** Units the wallet must currently hold to leave paper. 0 when never dumped. */
+  rebuildTarget: number;
+  /** Units it holds against that target, for the profile popover. */
+  rebuildHeld: number;
+  /** Clean days served since the last qualifying episode ended. */
+  sentenceServedDays: number;
+  /** Clean days that episode requires. 0 when never dumped. */
+  sentenceRequiredDays: number;
 }
 
 export const MS_PER_DAY = 86_400_000;

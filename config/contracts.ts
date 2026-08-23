@@ -119,6 +119,59 @@ export const DIAMOND_THRESHOLDS = {
   sellTolerancePct: 0.1,
 } as const;
 
+/**
+ * Hand-tier model (2026-08-23). Replaces the per-transfer tolerance above for
+ * bucketing, because that test asked "is this ONE transfer 10% of your bag?" -
+ * and NFTs move one at a time, so it only ever fired once a wallet was down to
+ * ten or fewer. Everything above that line disposed of its stack for free.
+ *
+ * One number drives all three tiers: over any rolling `windowDays`, what share
+ * of the position did the wallet let go? The denominator is what it held when
+ * the window opened plus anything it acquired inside the window, so the measure
+ * reads the same for a 5-NFT wallet and a 500-NFT wallet.
+ *
+ *  - lifetime peak below `diamondLinePct`  -> diamond, and losing it is permanent
+ *  - a rolling window at or above `paperLinePct` -> a dumping EPISODE
+ *  - everything else                        -> regular
+ *
+ * An episode is served by BOTH waiting out `sentenceDays` without crossing
+ * again AND currently holding `rebuildPct` of the largest position the wallet
+ * ever took into a dump. The rebuild test is re-evaluated on every rebuild, so
+ * there is no graduation: selling back below the line returns the wallet to
+ * paper immediately.
+ */
+export const HAND_TIERS = {
+  /** Rolling window the let-go rate is measured over. */
+  windowDays: 30,
+  /** Lifetime peak below this keeps a wallet diamond-eligible. */
+  diamondLinePct: 0.1,
+  /** A window at or above this opens a dumping episode. */
+  paperLinePct: 0.5,
+  /** Share of the highest-ever pre-dump position needed to leave paper. */
+  rebuildPct: 0.5,
+  /**
+   * Dumps out of a position smaller than this are ignored. Without a floor the
+   * tier measures wallet size as much as behaviour: in the Ronkeverse history
+   * 17,546 crossings came from a position of exactly one NFT, which would brand
+   * a one-NFT seller identically to a wallet unloading 300.
+   */
+  minPositionForEpisode: 5,
+  /**
+   * Sales within this many days of the previous sale belong to the same
+   * episode, so one bad weekend is one offence rather than forty.
+   */
+  episodeGapDays: 30,
+  /** Sentence by episode number; the last entry applies to every later one. */
+  sentenceDaysByEpisode: [30, 60, 90, 90, 180] as const,
+} as const;
+
+/** Clean days required before episode number `n` (1-based) can be served. */
+export function sentenceDaysFor(episodeNumber: number): number {
+  const ladder = HAND_TIERS.sentenceDaysByEpisode;
+  const i = Math.max(1, Math.floor(episodeNumber)) - 1;
+  return ladder[Math.min(i, ladder.length - 1)];
+}
+
 export type DiamondBucket = "paper" | "regular" | "diamond";
 
 /** The three buckets ordered worst to best. */

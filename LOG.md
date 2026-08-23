@@ -317,3 +317,44 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   plus a rebuild is still required for any of this to affect displayed metrics.
 - Touched: `lib/analytics/labels.ts`, `scripts/seed-labels.ts`,
   `tests/labels.test.ts`, `HANDOFF.md`, `LOG.md`.
+
+## [2026-08-23] Hand tiers: rolling-window rule shipped to production data
+
+- Replaced the per-transfer bucket test with a rolling 30-day "let-go rate"
+  shared by both assets (`lib/analytics/tiers.ts`). The old rule asked "is this
+  ONE transfer 10% of your bag?", which for an NFT collapsed into "do you hold
+  ten or fewer?" - so any larger wallet sold its collection with `sell_count`
+  stuck at 0. One wallet sold 407 Ronkeverse and still read `diamond`.
+- Tiers: lifetime peak under 10% = diamond (permanent once lost); a window at
+  or above 50% opens a dumping episode = paper; everything else = regular.
+  An episode is served by BOTH 30/60/90/180 clean days AND currently holding
+  50% of the largest position ever taken into a dump. Re-checked every rebuild,
+  so selling back below the line returns a wallet to paper immediately.
+- Two guards from the modelling: the rebuild target is the HIGHEST pre-dump
+  position (against the latest, `0xa8da6b89` 76 -> 16 would read "recovered"
+  holding a fifth of what it started with), and dumps out of a position under
+  5 units do not brand a wallet (17,546 crossings came from a position of one).
+- The score multiplier and both hand badges now read the tier, closing the
+  8,248 rows where badge and multiplier disagreed. Post-rebuild check: 0 rows
+  with `never_sold` false but bucket diamond, 0 with `ever_paper_sold` true but
+  bucket not paper.
+- **Applied to production**: `npm run migrate` (6 new `holder_metrics` columns),
+  `npm run seed-labels` (38), `npm run rebuild`. Live result among wallets
+  holding something:
+
+  | asset | before | after |
+  |---|---|---|
+  | ronkeverse_nft | 1,112 / 465 / 256 | 1,083 / 593 / 156 |
+  | ronke_token | 714 / 3,055 / 4,250 | 710 / 2,612 / 4,694 |
+  | ronkestr_token | 107 / 78 / 44 | 106 / 75 / 47 |
+
+  `nibbles208.ron` (`0x9f8bc9c1`), the wallet that started this: Ronkeverse
+  `diamond` -> `regular`, peak 27%, score 4,583 -> 4,317, rank 10 -> 13.
+- 394 tests, `tsc` and `next build` clean. PR #21 open with the engine + the
+  hover/tap tier popover.
+- Touched: `config/contracts.ts`, `config/badges.ts`, `lib/analytics/tiers.ts`
+  (new), `lib/analytics/diamond.ts`, `lib/analytics/types.ts`,
+  `lib/analytics/rebuild.ts`, `lib/badges/derive.ts`, `lib/queries.ts`,
+  `lib/score/compute.ts`, `lib/score/derive.ts`, `db/schema.sql`,
+  `app/components/TierBadge.tsx` (new), `app/components/WalletView.tsx`,
+  five test files, `HANDOFF.md`, `LOG.md`.

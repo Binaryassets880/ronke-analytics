@@ -5,12 +5,22 @@
  */
 
 import { SCORE_CONFIG as C } from "@/config/score";
+import type { DiamondBucket } from "@/config/contracts";
 
 /** Per-asset holding behavior (from holder_metrics). */
 export interface AssetHold {
   durationDays: number;
   neverSold: boolean;
   everPaperSold: boolean;
+  /**
+   * The wallet's tier for this asset. When present it is the sole input to the
+   * multiplier. Before 2026-08-23 the multiplier read the two flags above while
+   * the displayed badge came from `bucketFor`, which applies holdings, dust and
+   * duration gates the flags know nothing about - so the two disagreed on 8,248
+   * wallet-asset rows, always in the wallet's favour. Optional so a caller that
+   * only has the legacy flags still gets a sane answer.
+   */
+  bucket?: DiamondBucket;
 }
 
 export interface ScoreInput {
@@ -62,8 +72,19 @@ export function durationPoints(days: number): number {
   return C.duration.base * Math.pow(C.duration.growthPerMonth, months);
 }
 
-/** Diamond-hands multiplier from behavioral flags. Pure. */
+/**
+ * Hand-tier multiplier. Pure.
+ *
+ * Reads the tier when the caller has one, so the badge on the profile and the
+ * multiplier in the score can never disagree again. Falls back to the legacy
+ * flags otherwise.
+ */
 export function diamondMultiplier(hold: AssetHold): number {
+  if (hold.bucket) {
+    if (hold.bucket === "diamond") return C.diamond.neverSold;
+    if (hold.bucket === "paper") return C.diamond.everPaperSold;
+    return C.diamond.soldNotPaper;
+  }
   if (hold.neverSold) return C.diamond.neverSold;
   if (hold.everPaperSold) return C.diamond.everPaperSold;
   return C.diamond.soldNotPaper;

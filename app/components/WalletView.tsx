@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { WalletData, WalletAssetHolding } from "@/lib/queries";
 import { DiamondBadge } from "./DiamondBadge";
+import { TierBadge } from "./TierBadge";
 import { EmptyState } from "./States";
 import { HeldTokenGrid } from "./HeldTokenGrid";
 import { Tip } from "./Tip";
@@ -96,7 +97,13 @@ function AssetHoldingCard({ h, diamondTooltip }: { h: WalletAssetHolding; diamon
     <div className="rv-card p-4">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">{h.label}</span>
-        {h.diamondBucket ? <DiamondBadge bucket={h.diamondBucket} title={diamondTooltip} /> : null}
+        {h.diamondBucket ? (
+          <TierBadge
+            bucket={h.diamondBucket}
+            detail={h.tier}
+            unit={isNft ? "NFTs" : "tokens"}
+          />
+        ) : null}
       </div>
 
       <div className="mono mt-2 text-3xl font-bold tracking-tight">

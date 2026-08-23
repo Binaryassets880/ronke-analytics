@@ -11,7 +11,7 @@
  */
 
 import type { Asset } from "./contracts";
-import { DIAMOND_THRESHOLDS, MIGRATION_DATE } from "./contracts";
+import { DIAMOND_THRESHOLDS, HAND_TIERS, MIGRATION_DATE } from "./contracts";
 
 export type BadgeCategory =
   | "bag_size" // tiered by $RONKE balance
@@ -226,9 +226,9 @@ export function badgeThresholdHint(def: BadgeDef): string | null {
     case "rarity_hunter":
       return `Holds a Ronkeverse token ranked in the rarest ${(RARITY_HUNTER_TOP_FRACTION * 100).toFixed(0)}% of the collection.`;
     case "diamond_hands":
-      return `Held a real position (at least ${DIAMOND_BADGE_MIN.ronke.toLocaleString()} $RONKE, ${DIAMOND_BADGE_MIN.ronkestr.toLocaleString()} RonkeStr, or 1 Ronkeverse) for ${DIAMOND_BADGE_MIN.minDays}+ days and never sold ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ of holdings in one go. Trims under ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}% are forgiven; moves to staking, bridge, or games don't count as sells.`;
+      return `Held a real position (at least ${DIAMOND_BADGE_MIN.ronke.toLocaleString()} $RONKE, ${DIAMOND_BADGE_MIN.ronkestr.toLocaleString()} RonkeStr, or 1 Ronkeverse) for ${DIAMOND_BADGE_MIN.minDays}+ days, and never let go of ${HAND_TIERS.diamondLinePct * 100}% of it in any ${HAND_TIERS.windowDays} days. Measured as a rolling window, so selling one at a time does not dodge it. Moves to staking, bridge, or games are not sales. Once lost, it is not earned back.`;
     case "never_paper_handed":
-      return `Never dumped ${DIAMOND_THRESHOLDS.sellTolerancePct * 100}%+ of holdings within ${DIAMOND_THRESHOLDS.paperSellWindowDays} day of buying.`;
+      return `Never let go of ${HAND_TIERS.paperLinePct * 100}% of a position of ${HAND_TIERS.minPositionForEpisode}+ inside ${HAND_TIERS.windowDays} days. A wallet that has can win this back by serving the clean-day sentence and rebuilding to ${HAND_TIERS.rebuildPct * 100}% of its biggest pre-dump position.`;
     case "og_early":
       return `Held since before the Ronin L2 migration (${MIGRATION_DATE.toISOString().slice(0, 10)}).`;
     case "dual_citizen":

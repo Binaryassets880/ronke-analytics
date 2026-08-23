@@ -656,6 +656,19 @@ export interface WalletAssetHolding {
   firstAcquiredAt: string | null;
   neverSold: boolean;
   everPaperSold: boolean;
+  /** Hand-tier detail, for the badge popover. Null before the first rebuild. */
+  tier: TierDetail | null;
+}
+
+/** The three numbers behind a tier badge. */
+export interface TierDetail {
+  /** Worst rolling-window let-go rate, 0..1. */
+  peakSellRate: number;
+  episodeCount: number;
+  rebuildTarget: number;
+  rebuildHeld: number;
+  sentenceServedDays: number;
+  sentenceRequiredDays: number;
 }
 
 export interface WalletData {
@@ -700,7 +713,9 @@ export async function getWallet(address: string): Promise<WalletData> {
     FROM holder_balances WHERE address = ${address}
   `;
   const metrics = await sql`
-    SELECT asset, holding_duration_days, diamond_bucket, never_sold, ever_paper_sold
+    SELECT asset, holding_duration_days, diamond_bucket, never_sold, ever_paper_sold,
+           peak_sell_rate, episode_count, rebuild_target, rebuild_held,
+           sentence_served_days, sentence_required_days
     FROM holder_metrics WHERE address = ${address}
   `;
   const nameRow = await sql`
@@ -759,6 +774,16 @@ export async function getWallet(address: string): Promise<WalletData> {
       firstAcquiredAt: (b?.first_acquired_at as string | null) ?? null,
       neverSold: (m?.never_sold as boolean | undefined) ?? false,
       everPaperSold: (m?.ever_paper_sold as boolean | undefined) ?? false,
+      tier: m
+        ? {
+            peakSellRate: Number(m.peak_sell_rate ?? 0),
+            episodeCount: Number(m.episode_count ?? 0),
+            rebuildTarget: Number(m.rebuild_target ?? 0),
+            rebuildHeld: Number(m.rebuild_held ?? 0),
+            sentenceServedDays: Number(m.sentence_served_days ?? 0),
+            sentenceRequiredDays: Number(m.sentence_required_days ?? 0),
+          }
+        : null,
     };
   });
 
