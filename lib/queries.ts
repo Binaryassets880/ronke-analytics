@@ -6,7 +6,7 @@
  */
 
 import { getSql } from "@/db/client";
-import { CONTRACTS, ASSETS } from "@/config/contracts";
+import { CONTRACTS, ASSETS, bestBucket } from "@/config/contracts";
 import type { Asset } from "@/config/contracts";
 import type { DiamondBucket } from "@/config/contracts";
 import { toWholeTokens } from "@/lib/format";
@@ -729,7 +729,9 @@ export async function getWallet(address: string): Promise<WalletData> {
   let everPaperSold = false;
   for (const r of metrics) {
     holdingDurationDays = Math.max(holdingDurationDays, Number(r.holding_duration_days));
-    if (!diamondBucket || r.diamond_bucket === "diamond") diamondBucket = r.diamond_bucket as DiamondBucket;
+    // Best bucket across the wallet's assets. The metrics SELECT has no ORDER BY,
+    // so this has to be order-independent (see bestBucket).
+    diamondBucket = bestBucket(diamondBucket, r.diamond_bucket as DiamondBucket);
     neverSold = neverSold && (r.never_sold as boolean);
     everPaperSold = everPaperSold || (r.ever_paper_sold as boolean);
   }

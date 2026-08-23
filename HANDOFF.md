@@ -111,8 +111,25 @@ the one thing that hurts to change after integrations exist.
 The paper-hands clock-reset fix is **MERGED AND DEPLOYED** (PR #17, 2026-08-14,
 merge commit `f719dd0`) and production Neon has been rebuilt on the merged code.
 Code and database are back in sync, so the nightly `sync.yml` is safe to let
-run. No work in progress. See the 2026-08-14 `LOG.md` entry for the rebuild
-numbers and `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
+run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
+`C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
+
+**UNCOMMITTED WORK IN PROGRESS (2026-08-23).** Three files are modified on
+`master` and not committed: `config/contracts.ts`, `lib/queries.ts`,
+`tests/config.test.ts`. They fix the order-dependent wallet-level bucket merge
+in `getWallet()` - 320 wallets were badged `paper` when they should read
+`regular`. Read-path only, no rebuild needed, no schema change. 377 tests green
+and `tsc` clean. Commit, branch, and PR it before starting anything else.
+Details in the 2026-08-23 `LOG.md` entry.
+
+Separately, a **redesign of the diamond/regular/paper tiers is proposed but NOT
+implemented** - rolling 30-day "let-go rate", a 50% paper line, a 5-NFT floor,
+and a redemption path (serve 30/60/90/180 days AND rebuild to 50% of your
+highest-ever pre-dump stack). Two independent audits confirmed the modelling.
+Nothing in the repo has been changed for it. Prerequisite before it can ship:
+`address_labels` holds only 21 rows and has no CEX or team entries, so every
+unlabeled address defaults to "sale" and self-custody transfers read as dumping.
+Expand `scripts/seed-labels.ts` first.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns
