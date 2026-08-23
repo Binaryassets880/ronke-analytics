@@ -660,6 +660,16 @@ export interface WalletAssetHolding {
   tier: TierDetail | null;
 }
 
+/**
+ * Rebuild figures come out of the engine in the asset's own units: NFT counts
+ * for Ronkeverse, raw base units for a token. Scale a token down to whole
+ * tokens so it is readable next to the balance shown on the same card.
+ */
+export function toDisplayUnits(asset: Asset, raw: number): number {
+  const decimals = CONTRACTS[asset].decimals;
+  return decimals ? raw / 10 ** decimals : raw;
+}
+
 /** The three numbers behind a tier badge. */
 export interface TierDetail {
   /** Worst rolling-window let-go rate, 0..1. */
@@ -774,12 +784,15 @@ export async function getWallet(address: string): Promise<WalletData> {
       firstAcquiredAt: (b?.first_acquired_at as string | null) ?? null,
       neverSold: (m?.never_sold as boolean | undefined) ?? false,
       everPaperSold: (m?.ever_paper_sold as boolean | undefined) ?? false,
+      // The engine counts in the asset's own units, which for a token means raw
+      // base units. Scale them here so the popover reads "6,972 of 9,179" and
+      // not "6.972e+22 of 9.179e+24". NFT counts pass through untouched.
       tier: m
         ? {
-            peakSellRate: Number(m.peak_sell_rate ?? 0),
+            peakSellRate: Math.min(1, Number(m.peak_sell_rate ?? 0)),
             episodeCount: Number(m.episode_count ?? 0),
-            rebuildTarget: Number(m.rebuild_target ?? 0),
-            rebuildHeld: Number(m.rebuild_held ?? 0),
+            rebuildTarget: toDisplayUnits(asset, Number(m.rebuild_target ?? 0)),
+            rebuildHeld: toDisplayUnits(asset, Number(m.rebuild_held ?? 0)),
             sentenceServedDays: Number(m.sentence_served_days ?? 0),
             sentenceRequiredDays: Number(m.sentence_required_days ?? 0),
           }

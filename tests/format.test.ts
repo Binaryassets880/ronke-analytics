@@ -1,3 +1,4 @@
+import { toDisplayUnits } from "@/lib/queries";
 import { describe, it, expect } from "vitest";
 import {
   formatCompact,
@@ -53,5 +54,19 @@ describe("format helpers", () => {
   });
   it("converts raw base units to whole tokens", () => {
     expect(toWholeTokens(1_000_000_000_000_000_000n)).toBe(1);
+  });
+});
+
+describe("toDisplayUnits", () => {
+  it("passes NFT counts through untouched", () => {
+    expect(toDisplayUnits("ronkeverse_nft", 89)).toBe(89);
+    expect(toDisplayUnits("ronkeverse_nft", 0)).toBe(0);
+  });
+
+  it("scales token base units down to whole tokens", () => {
+    // The rebuild figures come out of the engine in raw units. Rendered
+    // unscaled the profile popover read "6.972e+22 of 9.179e+24 tokens".
+    expect(toDisplayUnits("ronke_token", 6.972e22)).toBeCloseTo(69_720, 0);
+    expect(toDisplayUnits("ronkestr_token", 4.446469552456467e23)).toBeCloseTo(444_646.955, 2);
   });
 });
