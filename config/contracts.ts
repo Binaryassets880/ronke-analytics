@@ -121,6 +121,28 @@ export const DIAMOND_THRESHOLDS = {
 
 export type DiamondBucket = "paper" | "regular" | "diamond";
 
+/** The three buckets ordered worst to best. */
+export const DIAMOND_BUCKET_RANK: Record<DiamondBucket, number> = {
+  paper: 0,
+  regular: 1,
+  diamond: 2,
+};
+
+/**
+ * Best of two buckets, for collapsing a multi-asset wallet's per-asset buckets
+ * into one wallet-level badge. Order-independent by construction: the previous
+ * merge kept whichever row arrived first and only ever upgraded to `diamond`,
+ * so a wallet holding one `paper` asset and one `regular` asset was badged on
+ * the arbitrary row order of an unordered SELECT.
+ */
+export function bestBucket(
+  current: DiamondBucket | null,
+  next: DiamondBucket,
+): DiamondBucket {
+  if (current === null) return next;
+  return DIAMOND_BUCKET_RANK[next] > DIAMOND_BUCKET_RANK[current] ? next : current;
+}
+
 /** Zero address = mint source / burn sink. */
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 /** Common "dead" burn sink. */
