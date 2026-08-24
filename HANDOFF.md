@@ -1,7 +1,7 @@
 # Ronke Analytics - handoff
 
 Absolute path: `C:\dev\claude\ronke-analytics`
-Last updated: 2026-08-14
+Last updated: 2026-08-24
 
 ## What this is
 
@@ -114,25 +114,31 @@ Code and database are back in sync, so the nightly `sync.yml` is safe to let
 run. See the 2026-08-14 `LOG.md` entry for the rebuild numbers and
 `C:\dev\claude\DECISIONS.md` for the two-clock model behind it.
 
-### Hand tiers are LIVE, 2026-08-23. Code and database are in sync.
+### Hand tiers are LIVE and settled. Verified through a nightly, 2026-08-24.
 
-PR #19, #20 and #21 are all merged. Production Neon has been migrated, seeded
-(38 labels) and rebuilt on the merged engine, and the deploy is verified: `/`,
-`/leaderboard`, `/holders`, the wallet page and `/api/v1/*` all 200, and the
-response still carries no `X-Frame-Options`, so the ronkeverse.com embed works.
+PRs #19 through #24 are merged. Production Neon is migrated, seeded (38 labels)
+and rebuilt on the merged engine, and `sync.yml` ran at 07:48 UTC on `main` and
+**re-derived the same tiers** - which is the check that this is genuinely
+finished rather than resting on a hand-run rebuild. No work in progress.
 
-The nightly `sync.yml` at 07:00 UTC is safe to let run: `main` now holds the
-same engine the data was built with. **That was not true for a few hours today**
-- the rebuild was run from the branch before the merge - so if anything looks
-reverted, check that PR #21 is still in `main` before re-deriving anything.
+Deploy verified: `/`, `/leaderboard`, `/holders`, the wallet page and
+`/api/v1/*` all 200, and the response still carries no `X-Frame-Options`, so
+the ronkeverse.com embed works.
 
 Live tier split among wallets holding something:
 
 | asset | diamond | regular | paper |
 |---|---|---|---|
-| ronkeverse_nft | 1,083 | 593 | 156 |
-| ronke_token | 710 | 2,612 | 4,694 |
-| ronkestr_token | 106 | 75 | 47 |
+| ronkeverse_nft | 1,082 | 594 | 155 |
+| ronke_token | 710 | 2,615 | 4,694 |
+| ronkestr_token | 106 | 74 | 48 |
+
+**Canary wallet.** `0x9f8bc9c10d6c344fd089ac27ec1cab694dd864f8`
+(`nibbles208.ron`) is the wallet the whole redesign came from: 188 Ronkeverse
+acquired, 99 sold, 89 held. Its correct answer is `regular`, `never_sold false`,
+peak 27%, 0 episodes - sold steadily, never dumped, not diamond. Re-check it
+after any change to the engine. Before this work it read `diamond` with
+`never_sold true`.
 
 ### What shipped 2026-08-23
 
@@ -149,6 +155,18 @@ Live tier split among wallets holding something:
    multiplier and both hand badges at the tier, closing the 8,248-row
    badge/multiplier disagreement, and adds the hover/tap popover on the profile
    badge.
+4. **PR #22 - MERGED.** Docs.
+5. **PR #23 - MERGED AND REBUILT.** The profile prints `never_sold` as a "Never
+   sold" pill, and #21 had redefined that flag as "no dumping episode" without
+   touching the label - so the canary wallet, 99 sales out of 188, wore it.
+   Both flags now mean what their names say. See `CLAUDE.md` for the contract.
+6. **PR #24 - MERGED.** The tier popover rendered token figures in raw base
+   units (`6.972e+22 of 9.179e+24 tokens`). Read path only.
+
+**Both #23 and #24 were found by the owner opening the live page after being
+told the work was done.** The derived data was correct in every check; the
+rendering was not. `CLAUDE.md` opens with this because it is the most expensive
+habit to relearn.
 
 ### Known limits of the tier model - say these out loud, do not rediscover them
 
@@ -165,8 +183,8 @@ Live tier split among wallets holding something:
   release to a third party, which records no sale at all. All are still harder
   than the old rule, which required no cleverness whatsoever.
 - **The token side moved more than the NFT side in absolute terms.** $RONKE went
-  3,055 -> 2,612 regular. The redesign was argued in NFT terms but applies to
-  both assets.
+  3,055 -> 2,615 regular. The redesign was argued in NFT terms but applies to
+  both assets, and nobody asked for that half.
 
 Live verification, 2026-08-14: `/leaderboard` 200, and
 `/api/v1/wallet/0x75cd5bddd1d7066fd22899b5b3c514d7386f33a5` returns
