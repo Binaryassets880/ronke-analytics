@@ -358,3 +358,54 @@ in HANDOFF.md; nothing in the API branch changed as a result.
   `lib/score/compute.ts`, `lib/score/derive.ts`, `db/schema.sql`,
   `app/components/TierBadge.tsx` (new), `app/components/WalletView.tsx`,
   five test files, `HANDOFF.md`, `LOG.md`.
+
+## [2026-08-23] Two display fixes on top of the tier ship, both found on the page
+
+Both were caught by the owner opening the live wallet page after being told the
+work was done. The derived data was correct in every check; the rendering was
+not. Recorded here because the failure mode matters more than either bug.
+
+- **PR #23 - flags that contradicted their own labels.** The profile prints
+  `never_sold` as a "Never sold" pill. The tier work had redefined that flag as
+  "has no dumping episode on record" and left the label alone, so
+  `0x9f8bc9c1` - 99 sales out of 188 - sat badged `Regular` next to a pill
+  saying it had never sold. The exact credibility problem the tier work existed
+  to remove, one element to the left. Both flags now mean what their names say:
+  `never_sold` is `peak_sell_rate === 0`, `ever_paper_sold` is
+  `episode_count > 0` (permanent; redemption clears the tier, not this). On the
+  card, "Never sold" appears only for a wallet that has disposed of nothing;
+  anything else states the fact instead ("Worst month: let go of 27%"). "Never
+  paper-handed" became "Never dumped", with "Dumped before" when the record
+  exists. The `never_paper_handed` badge follows the same move.
+- **PR #24 - raw base units in the popover.** The engine counts in each asset's
+  own units, so a $RONKE wallet serving a sentence read `Holding 6.972e+22 of
+  9.179e+24 tokens`. Scaled at the query layer via an exported `toDisplayUnits`,
+  pinned with tests. Also clamps the displayed peak to 1 (float accumulation
+  produced `1.0000000000000002`).
+- Rebuilt after #23 (both flags are stored columns). #24 is read-path only.
+- 397 tests, `tsc` and `next build` clean. Verified on the rendered page this
+  time, not the database: the Ronkeverse card now reads `Regular` /
+  "Worst month: let go of 27%" / "Never dumped", and "Never sold" survives only
+  on RonkeStr, whose peak really is 0.
+- Touched: `lib/analytics/diamond.ts`, `lib/badges/derive.ts`, `lib/queries.ts`,
+  `app/components/WalletView.tsx`, `tests/diamond.test.ts`,
+  `tests/badges.test.ts`, `tests/format.test.ts`.
+
+## [2026-08-24] Nightly confirms code and data are in sync
+
+- `sync.yml` ran 07:48 UTC on merged `main` and re-derived the same tiers, which
+  is the check that the rollout is genuinely finished rather than resting on a
+  hand-run rebuild. Ronkeverse 1,082 / 594 / 155, $RONKE 710 / 2,615 / 4,694,
+  RonkeStr 106 / 74 / 48 - within a few wallets of yesterday's figures, the
+  drift being a day of real transfers.
+- Canary `0x9f8bc9c1` (`nibbles208.ron`) still reads `regular`,
+  `never_sold false`, peak 27%, 0 episodes. Worth re-checking after any future
+  change to the engine: it is the wallet the whole redesign came from, and its
+  correct answer is "sold steadily, never dumped, not diamond".
+- Added `CLAUDE.md` (the project had none) with the conventions that have
+  already cost a session: verify the rendered page not the database, renaming a
+  column's meaning renames it on screen, the three-file rule for adding a
+  `holder_metrics` column, deploy order, the 07:00 UTC revert risk, and how to
+  identify an address without inventing one.
+- Touched: `CLAUDE.md` (new), `HANDOFF.md`, `LOG.md`,
+  `C:\dev\claude\DECISIONS.md`.
