@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getToken } from "@/lib/queries";
+import { getToken } from "@/lib/queries-cached";
 
 /** Dynamic OG card for a token's rarity rank (U12). */
 export const alt = "Ronkeverse token rarity";

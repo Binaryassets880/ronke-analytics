@@ -1,8 +1,13 @@
-import { getToken } from "@/lib/queries";
+import { getToken } from "@/lib/queries-cached";
 import { TokenDetailView } from "@/app/components/TokenDetailView";
 import { EmptyState } from "@/app/components/States";
 
-export const dynamic = "force-dynamic";
+// ISR, not force-dynamic (2026-08-27, perf/neon-compute-cost). This page takes no
+// searchParams, so the whole render is cacheable. It previously re-queried Neon on
+// every request including every bot crawl, which is what kept this project's
+// compute from ever scaling to zero. The data behind it moves once a day, when
+// the sync Action rebuilds (.github/workflows/sync.yml).
+export const revalidate = 3600;
 
 export default async function TokenPage({
   params,

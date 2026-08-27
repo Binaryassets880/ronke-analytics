@@ -1,5 +1,5 @@
 import { normalizeAddress } from "@/lib/format";
-import { getWallet, getWalletBadges, getWalletScore, getWalletHistory } from "@/lib/queries";
+import { getWallet, getWalletBadges, getWalletScore, getWalletHistory } from "@/lib/queries-cached";
 import { resolveNameLive } from "@/lib/rns/resolve";
 import { WalletView } from "@/app/components/WalletView";
 import { BadgeShelf } from "@/app/components/BadgeShelf";
@@ -7,7 +7,12 @@ import { RonkeScoreCard } from "@/app/components/RonkeScoreCard";
 import { WalletHistoryChart } from "@/app/components/WalletHistoryChart";
 import { DIAMOND_THRESHOLDS } from "@/config/contracts";
 
-export const dynamic = "force-dynamic";
+// ISR, not force-dynamic (2026-08-27, perf/neon-compute-cost). This page takes no
+// searchParams, so the whole render is cacheable. It previously re-queried Neon on
+// every request including every bot crawl, which is what kept this project's
+// compute from ever scaling to zero. The data behind it moves once a day, when
+// the sync Action rebuilds (.github/workflows/sync.yml).
+export const revalidate = 3600;
 
 const DIAMOND_TOOLTIP =
   `Matches the Diamond Hands badge: Diamond = a real (non-dust) position held ` +
