@@ -119,15 +119,25 @@ CREATE TABLE IF NOT EXISTS holder_metrics (
 -- Hand-tier columns (2026-08-23). CREATE TABLE IF NOT EXISTS does not add
 -- columns to an existing table, so these are separate idempotent ALTERs.
 -- NOTE: adding a column here is only half the job - it must also be listed in
--- the insertMany column list AND the row tuple in lib/analytics/rebuild.ts,
--- because persistSnapshot deletes and re-inserts a fixed tuple. A schema-only
--- change leaves the column at its default forever.
+-- the insertMany column list AND the row tuple in lib/analytics/rebuild.ts.
+-- The ON CONFLICT SET list is generated from that same column list by
+-- upsertAll(), so the column list is the one place to update - but omit it
+-- there and the column stays at its default forever.
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS peak_sell_rate DOUBLE PRECISION NOT NULL DEFAULT 0;
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS episode_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS rebuild_target DOUBLE PRECISION NOT NULL DEFAULT 0;
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS rebuild_held DOUBLE PRECISION NOT NULL DEFAULT 0;
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS sentence_served_days DOUBLE PRECISION NOT NULL DEFAULT 0;
 ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS sentence_required_days DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- Rebuild generation stamp (2026-08-27, perf/neon-compute-cost). persistSnapshot
+-- now UPSERTs holder_metrics instead of DELETE+INSERT, so it needs a way to find
+-- rows the current snapshot did not touch. Every upsert writes asOf here; the
+-- prune then deletes `WHERE updated_at < asOf`. The default is deliberately in
+-- the past so rows written before this column existed count as untouched and get
+-- refreshed on the first run rather than surviving forever.
+ALTER TABLE holder_metrics ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch';
+CREATE INDEX IF NOT EXISTS holder_metrics_stale_idx ON holder_metrics (asset, updated_at);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- Derived: daily time series.

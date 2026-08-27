@@ -10,6 +10,7 @@
  * is testable without a database.
  */
 
+import { createHash } from "node:crypto";
 import { insertMany, type Sql } from "@/db/client";
 import type { Asset } from "@/config/contracts";
 import { ASSETS } from "@/config/contracts";
@@ -129,53 +130,154 @@ export async function loadLabelsFromDb(sql: Sql): Promise<Labels> {
   return new Labels(labels);
 }
 
-/** Persist one asset's snapshot: replace the derived rows for that asset. */
-export async function persistSnapshot(sql: Sql, snap: AssetSnapshot): Promise<void> {
-  const { asset } = snap;
-  // Derived tables are fully rebuildable: clear this asset then re-insert
-  // (batched multi-row inserts - per-row HTTP round-trips are far too slow at
-  // this row count).
-  await sql`DELETE FROM holder_balances WHERE asset = ${asset}`;
-  await sql`DELETE FROM holder_lots WHERE asset = ${asset}`;
-  await sql`DELETE FROM holder_metrics WHERE asset = ${asset}`;
-  await sql`DELETE FROM snapshot_daily WHERE asset = ${asset}`;
+/**
+ * Stable content fingerprint for a batch of rows. `computeAssetSnapshot` is
+ * deterministic (same events -> same rows in the same order), so an identical
+ * fingerprint means an identical table, byte for byte.
+ */
+function fingerprint(rows: unknown[][]): string {
+  const h = createHash("sha256");
+  for (const r of rows) {
+    h.update(JSON.stringify(r));
+    h.update("\n");
+  }
+  return h.digest("hex");
+}
 
-  await insertMany(
-    sql,
-    "holder_balances",
-    ["asset", "address", "balance", "token_count", "first_acquired_at", "last_activity_at", "is_current_holder"],
-    snap.balances.map((b) => [
-      asset, b.address, b.balance.toString(), b.tokenCount,
-      b.firstAcquiredAt?.toISOString() ?? null, b.lastActivityAt?.toISOString() ?? null, b.isCurrentHolder,
-    ]),
-  );
-  await insertMany(
-    sql,
-    "holder_lots",
-    ["asset", "address", "token_id", "acquired_at", "acquired_block", "quantity_remaining"],
-    snap.lots.map((l) => [
-      asset, l.address, l.tokenId, l.acquiredAt.toISOString(), l.acquiredBlock, l.quantityRemaining.toString(),
-    ]),
-  );
-  await insertMany(
-    sql,
-    "holder_metrics",
-    ["asset", "address", "holding_duration_days", "weighted_duration_days", "diamond_bucket", "ever_paper_sold", "never_sold", "sell_count", "pct_original_held", "peak_sell_rate", "episode_count", "rebuild_target", "rebuild_held", "sentence_served_days", "sentence_required_days"],
-    snap.metrics.map((m) => [
-      asset, m.address, m.holdingDurationDays, m.weightedDurationDays, m.diamondBucket,
-      m.everPaperSold, m.neverSold, m.sellCount, m.pctOriginalHeld,
-      m.peakSellRate, m.episodeCount, m.rebuildTarget, m.rebuildHeld,
-      m.sentenceServedDays, m.sentenceRequiredDays,
-    ]),
-  );
-  await insertMany(
-    sql,
-    "snapshot_daily",
-    ["asset", "date", "holder_count", "gini", "top10_pct", "whale_count", "new_holders", "exited_holders", "supply_held"],
-    snap.daily.map((d) => [
-      asset, d.date, d.holderCount, d.gini, d.top10Pct, d.whaleCount, d.newHolders, d.exitedHolders, d.supplyHeld.toString(),
-    ]),
-  );
+/**
+ * Build `ON CONFLICT (...) DO UPDATE SET ...` covering every non-key column.
+ *
+ * Derived programmatically from the same column list passed to insertMany, so
+ * adding a column to that list cannot leave the upsert silently stale. That is
+ * the exact footgun called out in db/schema.sql above the hand-tier ALTERs.
+ */
+function upsertAll(conflictCols: string[], allCols: string[]): string {
+  const sets = allCols
+    .filter((c) => !conflictCols.includes(c))
+    .map((c) => `${c} = EXCLUDED.${c}`)
+    .join(", ");
+  return `ON CONFLICT (${conflictCols.join(",")}) DO UPDATE SET ${sets}`;
+}
+
+const FP_PREFIX = "snapshot_fp";
+const fpKey = (asset: Asset, table: string) => `${FP_PREFIX}:${asset}:${table}`;
+
+/**
+ * Persist one asset's snapshot.
+ *
+ * COST NOTE (2026-08-27). This used to DELETE and re-INSERT all four derived
+ * tables on every run. That is ~296k row writes per rebuild to maintain ~296k
+ * live rows, and pg_stat_user_tables showed 20.8M lifetime inserts against
+ * 20.5M deletes - the compute and WAL for a full rewrite, every night, almost
+ * always producing identical bytes. transfer_events, the append-only source of
+ * truth, had 950,329 inserts and exactly 1 delete over the same period. That
+ * contrast is the whole argument for this change.
+ *
+ * KTD-3 IS NOT WEAKENED. The rebuild still runs in full every time: events are
+ * still read, the snapshot is still recomputed from scratch, and
+ * `last_rebuild_at` still advances. The only thing that changed is that a write
+ * whose result would be byte-identical to what is already stored is skipped.
+ * A skipped write cannot make data stale, because the data it would have
+ * written is the data already there. Do not "restore" the unconditional
+ * DELETE to satisfy KTD-3 - re-read this paragraph instead.
+ *
+ * The two strategies, and why they differ:
+ *
+ *   holder_lots, holder_balances - derived ONLY from transfer_events. No field
+ *     on either is a function of `asOf` (check HolderLot: asset, address,
+ *     tokenId, acquiredAt, acquiredBlock, quantityRemaining - all event facts).
+ *     So on a day with no new events these tables are provably unchanged, and
+ *     the whole write is skipped on a fingerprint match. holder_lots is the
+ *     big win: 197k rows, 64MB, and 12.3M of the 20.8M lifetime writes.
+ *     When the fingerprint DOES differ they are still DELETEd and re-INSERTed,
+ *     because holder_lots has no natural key to upsert on (BIGSERIAL id).
+ *
+ *   holder_metrics, snapshot_daily - carry time-derived fields
+ *     (holding_duration_days, sentence_served_days) that tick up every day
+ *     even with zero new events, so they genuinely must be written daily.
+ *     They upsert on their existing primary keys instead of DELETE+INSERT,
+ *     which halves the row-write count and removes the index churn from the
+ *     delete. holder_metrics is then pruned by `updated_at` to drop addresses
+ *     that fell out of the snapshot (a newly-excluded label, for instance).
+ *     snapshot_daily needs no prune: dates only ever accumulate.
+ */
+export async function persistSnapshot(sql: Sql, snap: AssetSnapshot): Promise<void> {
+  const { asset, asOf } = snap;
+  const stamp = asOf.toISOString();
+
+  const balanceCols = ["asset", "address", "balance", "token_count", "first_acquired_at", "last_activity_at", "is_current_holder"];
+  const balanceRows = snap.balances.map((b) => [
+    asset, b.address, b.balance.toString(), b.tokenCount,
+    b.firstAcquiredAt?.toISOString() ?? null, b.lastActivityAt?.toISOString() ?? null, b.isCurrentHolder,
+  ]);
+
+  const lotCols = ["asset", "address", "token_id", "acquired_at", "acquired_block", "quantity_remaining"];
+  const lotRows = snap.lots.map((l) => [
+    asset, l.address, l.tokenId, l.acquiredAt.toISOString(), l.acquiredBlock, l.quantityRemaining.toString(),
+  ]);
+
+  const metricCols = ["asset", "address", "holding_duration_days", "weighted_duration_days", "diamond_bucket", "ever_paper_sold", "never_sold", "sell_count", "pct_original_held", "peak_sell_rate", "episode_count", "rebuild_target", "rebuild_held", "sentence_served_days", "sentence_required_days", "updated_at"];
+  const metricRows = snap.metrics.map((m) => [
+    asset, m.address, m.holdingDurationDays, m.weightedDurationDays, m.diamondBucket,
+    m.everPaperSold, m.neverSold, m.sellCount, m.pctOriginalHeld,
+    m.peakSellRate, m.episodeCount, m.rebuildTarget, m.rebuildHeld,
+    m.sentenceServedDays, m.sentenceRequiredDays, stamp,
+  ]);
+
+  const dailyCols = ["asset", "date", "holder_count", "gini", "top10_pct", "whale_count", "new_holders", "exited_holders", "supply_held"];
+  const dailyRows = snap.daily.map((d) => [
+    asset, d.date, d.holderCount, d.gini, d.top10Pct, d.whaleCount, d.newHolders, d.exitedHolders, d.supplyHeld.toString(),
+  ]);
+
+  const prior = await readFingerprints(sql, asset);
+
+  // ── holder_balances: event-derived, skippable ────────────────────────
+  const balanceFp = fingerprint(balanceRows);
+  if (balanceFp !== prior.get("holder_balances")) {
+    await sql`DELETE FROM holder_balances WHERE asset = ${asset}`;
+    await insertMany(sql, "holder_balances", balanceCols, balanceRows);
+    await setMeta(sql, fpKey(asset, "holder_balances"), balanceFp);
+  }
+
+  // ── holder_lots: event-derived, skippable. The 12.3M-write table. ────
+  const lotFp = fingerprint(lotRows);
+  if (lotFp !== prior.get("holder_lots")) {
+    await sql`DELETE FROM holder_lots WHERE asset = ${asset}`;
+    await insertMany(sql, "holder_lots", lotCols, lotRows);
+    await setMeta(sql, fpKey(asset, "holder_lots"), lotFp);
+  }
+
+  // ── holder_metrics: time-derived, upsert then prune ──────────────────
+  await insertMany(sql, "holder_metrics", metricCols, metricRows, {
+    conflict: upsertAll(["asset", "address"], metricCols),
+  });
+  // Anything not touched by the upsert above is no longer in the snapshot.
+  // Guarded on rows existing: an empty snapshot must not wipe the table on
+  // the back of a failed compute.
+  if (metricRows.length > 0) {
+    await sql`DELETE FROM holder_metrics WHERE asset = ${asset} AND updated_at < ${stamp}`;
+  }
+
+  // ── snapshot_daily: upsert only rows whose values actually moved ─────
+  // Historical dates are immutable once computed, so the IS DISTINCT FROM
+  // guard turns ~1,300 daily row rewrites into roughly one.
+  await insertMany(sql, "snapshot_daily", dailyCols, dailyRows, {
+    conflict:
+      upsertAll(["asset", "date"], dailyCols) +
+      " WHERE snapshot_daily IS DISTINCT FROM EXCLUDED",
+  });
+}
+
+/** Read this asset's stored table fingerprints in one round trip. */
+async function readFingerprints(sql: Sql, asset: Asset): Promise<Map<string, string>> {
+  const rows = await sql`
+    SELECT key, value FROM meta WHERE key LIKE ${`${FP_PREFIX}:${asset}:%`}
+  `;
+  const m = new Map<string, string>();
+  for (const r of rows) {
+    m.set(String(r.key).split(":").pop() as string, r.value as string);
+  }
+  return m;
 }
 
 async function setMeta(sql: Sql, key: string, value: string): Promise<void> {
