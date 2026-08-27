@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getWallet, getWalletBadges } from "@/lib/queries";
+import { getWallet, getWalletBadges } from "@/lib/queries-cached";
 import { badgeDef } from "@/config/badges";
 import { normalizeAddress, shortAddress, formatDuration, formatCompact, toWholeTokens } from "@/lib/format";
 

@@ -1,7 +1,7 @@
 # Ronke Analytics - handoff
 
 Absolute path: `C:\dev\claude\ronke-analytics`
-Last updated: 2026-08-24
+Last updated: 2026-08-27
 
 ## What this is
 
@@ -10,6 +10,34 @@ Next.js 16 + React 19 + Neon Postgres, deployed on Vercel. Vercel serves READS
 ONLY; all ingestion and the nightly rebuild run off-Vercel in the `sync.yml`
 GitHub Action (KTD-7). See `README.md` for the pipeline rules and `CLAUDE.md`
 for conventions.
+
+## Open right now: `perf/neon-compute-cost` (2026-08-27, NOT pushed)
+
+Two commits sitting on a local branch, in response to a Neon spending alert.
+They are tested, typechecked, built and measured - but **StoryLaneMedia cannot
+push to `Binaryassets880/ronke-analytics`**, so this has to go up from the
+BinaryAssets account. See the LOG entry for the full diagnosis.
+
+The one-line version: **the Neon bill is compute, not storage.** The database is
+471 MB and the history window is already 6h. What cost money was (a) every page
+view querying Neon because seven pages were `force-dynamic`, and (b) the nightly
+rebuild rewriting all four derived tables from scratch, 20.8M lifetime inserts to
+maintain 296k live rows.
+
+**Before deploying:** `db/migrate.ts` must run first - `persistSnapshot` now
+references a new `holder_metrics.updated_at` column. `sync.yml` already runs
+migrations ahead of the sync in the same job, so the scheduled path needs nothing.
+A Vercel deploy landing before the next sync only reads, so it is safe either way,
+but do not run `scripts/rebuild.ts` by hand against an unmigrated database.
+
+**Do not "restore" the unconditional DELETE in `persistSnapshot` to satisfy
+KTD-3.** The rebuild still runs and recomputes in full every time; only writes
+that would be byte-identical are skipped, and a skipped write cannot make data
+stale. The long comment above that function explains it.
+
+Still open, not done here: `Paddys-Tick` fires every 10 minutes against the
+separate `paddys` Neon project and issues two unconditional queries per tick,
+144 a day, to manage a 503-row table. Different project, different repo.
 
 ## Where this lives (verified 2026-08-11)
 

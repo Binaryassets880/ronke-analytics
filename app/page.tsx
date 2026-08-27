@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { getEcosystemStats, getDailyRandomToken, type DailyToken } from "@/lib/queries";
+import { getEcosystemStats, getDailyRandomToken, type DailyToken } from "@/lib/queries-cached";
 import { StatTile } from "./components/StatTile";
 import { WalletSearch } from "./components/WalletSearch";
 import { BadgeCatalog } from "./components/BadgeCatalog";
 import { formatCompact, formatUsd, formatRon } from "@/lib/format";
 
-export const dynamic = "force-dynamic"; // reads live ecosystem stats
+// ISR, not force-dynamic (2026-08-27, perf/neon-compute-cost). This page takes no
+// searchParams, so the whole render is cacheable. It previously re-queried Neon on
+// every request including every bot crawl, which is what kept this project's
+// compute from ever scaling to zero. The data behind it moves once a day, when
+// the sync Action rebuilds (.github/workflows/sync.yml).
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: { absolute: "Ronkeverse — the analytics home of the Blue Monke" },

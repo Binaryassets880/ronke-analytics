@@ -409,3 +409,41 @@ not. Recorded here because the failure mode matters more than either bug.
   identify an address without inventing one.
 - Touched: `CLAUDE.md` (new), `HANDOFF.md`, `LOG.md`,
   `C:\dev\claude\DECISIONS.md`.
+
+## [2026-08-27] Neon compute cost - ISR + incremental rebuild on `perf/neon-compute-cost`
+
+Triggered by a Neon $10 spending alert on the Story Lane Media org. Diagnosis
+first: storage is NOT the problem. The whole database is 471 MB and the history
+window is already at 6 hours. The bill is compute-hours.
+
+- **Every page view hit Neon.** Seven pages were `force-dynamic`, so every
+  visitor, bot crawl and uptime ping queried Neon. The compute was observed
+  awake at 06:31 with no cron scheduled and nobody using the site. Fixed two
+  ways: `revalidate = 3600` on the three pages that take no `searchParams`
+  (`/`, `/rarity/[tokenId]`, `/wallet/[address]`), and a new
+  `lib/queries-cached.ts` wrapping the reads for the four that do
+  (`/holders`, `/leaderboard`, `/overview`, `/rarity`). `lib/queries.ts` is
+  untouched and still the uncached path for the worker.
+- **The nightly rebuild rewrote everything.** `persistSnapshot` DELETEd and
+  re-INSERTed all four derived tables every run: 20.8M lifetime inserts against
+  20.5M deletes to maintain ~296k live rows. Now fingerprint-skips `holder_lots`
+  and `holder_balances` (event-derived, so provably unchanged on a quiet day -
+  `holder_lots` alone was 12.3M of those writes) and upserts `holder_metrics` +
+  `snapshot_daily` (time-derived, must be written daily). KTD-3 is intact: the
+  rebuild still runs and recomputes in full, it just skips byte-identical writes.
+- `holder_metrics` gains `updated_at` (default `'epoch'`) so stale rows can be
+  pruned. **`db/migrate.ts` must run before this code deploys.** `sync.yml`
+  already migrates ahead of the sync in the same job, so the scheduled path is
+  fine.
+- `persistSnapshot` had zero test coverage, which is how this went unnoticed.
+  Added `tests/persist-snapshot.test.ts` (6 tests). Full suite 403 passing.
+- Verified on a production build against the real DB by counting
+  `pg_stat_database` transactions: 50 requests across the five hot routes
+  produced 0, versus ~14 per request on an uncached control route.
+
+Files: `lib/queries-cached.ts` (new), `tests/persist-snapshot.test.ts` (new),
+`lib/analytics/rebuild.ts`, `db/schema.sql`, and the seven page files plus two
+`opengraph-image.tsx`.
+
+**Not pushed.** StoryLaneMedia has read-only access to `Binaryassets880/ronke-analytics`;
+the branch is local and has to be pushed from the BinaryAssets account.

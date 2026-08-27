@@ -1,7 +1,10 @@
 import { assetFromParam } from "@/lib/format";
-import { getOverview, getMetaState, getTokenMarket, getNftMarket, getSupplyStats } from "@/lib/queries";
+import { getOverview, getMetaState, getTokenMarket, getNftMarket, getSupplyStats } from "@/lib/queries-cached";
 import { OverviewView } from "../components/OverviewView";
 
+// Stays force-dynamic: this page reads searchParams, so the render itself cannot be
+// statically cached. The Neon reads behind it ARE cached - see lib/queries-cached.ts -
+// which is where the compute cost actually was (2026-08-27, perf/neon-compute-cost).
 export const dynamic = "force-dynamic"; // reads live snapshot tables
 
 export const metadata = { title: "Overview" };
