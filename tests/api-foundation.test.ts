@@ -63,13 +63,12 @@ describe("lib/api/version", () => {
 const META = { as_of: "2026-08-06T07:00:00.000Z", api_version: "v1", score_version: "v1-abcd1234" };
 
 describe("lib/api/respond", () => {
-  it("wraps success as { data, meta } with a cacheable s-maxage", async () => {
+  it("gives public score responses a one-hour TTL with eight-hour SWR", async () => {
     const res = ok({ score: 10 }, { meta: META, ttl: CACHE.score });
     expect(res.status).toBe(200);
-    const cc = res.headers.get("Cache-Control")!;
-    expect(cc).toContain(`s-maxage=${CACHE.score}`);
-    expect(cc).toContain("stale-while-revalidate=");
-    expect(cc).toContain("public");
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=0, s-maxage=3600, stale-while-revalidate=28800",
+    );
     expect(await res.json()).toEqual({ data: { score: 10 }, meta: META });
   });
 
@@ -92,11 +91,21 @@ describe("lib/api/respond", () => {
     expect(ok(null, { meta: META, ttl: 60 }).headers.get("Vary")).toBeNull();
   });
 
-  it("declares a distinct, non-zero TTL for every data class", () => {
-    const ttls = Object.values(CACHE);
-    expect(ttls.every((t) => t > 0)).toBe(true);
-    expect(CACHE.nft).toBeGreaterThan(CACHE.score); // static rarity outlives nightly scores
-    expect(CACHE.meta).toBeLessThan(CACHE.score); // freshness surfaces staleness fastest
+  it("changes only score TTL while preserving every other cache class", () => {
+    expect(CACHE).toEqual({
+      score: 3600,
+      bulk: 3600,
+      config: 3600,
+      meta: 300,
+      nft: 86_400,
+    });
+  });
+
+  it("keeps the simulator input route dynamic and outside the public cache layer", () => {
+    const source = readFileSync("app/api/score-inputs/[address]/route.ts", "utf8");
+    expect(source).toContain('export const dynamic = "force-dynamic"');
+    expect(source).not.toContain("CACHE.");
+    expect(source).not.toContain("Cache-Control");
   });
 });
 

@@ -118,8 +118,9 @@ describe("GET /api/v1/score/{address}", () => {
   it("is CDN-cacheable - the header that keeps third-party load off Neon", async () => {
     H.getWalletScore.mockResolvedValue(SCORE);
     const res = await getScore(new Request("https://x.test"), params(A));
-    expect(res.headers.get("Cache-Control")).toContain("s-maxage=");
-    expect(res.headers.get("Cache-Control")).not.toContain("no-store");
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=0, s-maxage=3600, stale-while-revalidate=28800",
+    );
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 

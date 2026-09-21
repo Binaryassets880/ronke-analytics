@@ -26,9 +26,9 @@ import { API_VERSION, scoreVersion } from "./version";
  */
 export const CACHE = {
   /** Scores, leaderboard, ecosystem stats - rebuilt nightly. */
-  score: 900,
+  score: 3600,
   /**
-   * The full dump. Longer than `score` on purpose, because this is the one
+   * The full dump. Its dedicated one-hour TTL stays fixed, because this is the one
    * response where a cache miss is expensive: ~450 KB out of Neon per query
    * against a transfer allowance the nightly rebuild has already largely spent.
    * At 15 minutes, a continuously-polled dump would cost ~1.2 GB/month; at an

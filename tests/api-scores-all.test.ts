@@ -60,11 +60,11 @@ describe("GET /api/v1/scores/all", () => {
     ]);
   });
 
-  it("caches LONGER than per-wallet reads - a miss here costs ~450 KB of Neon egress", async () => {
+  it("keeps the dedicated one-hour bulk TTL unchanged", async () => {
     const { CACHE } = await import("@/lib/api/respond");
     const res = await GET();
     expect(res.headers.get("Cache-Control")).toContain(`s-maxage=${CACHE.bulk}`);
-    expect(CACHE.bulk).toBeGreaterThan(CACHE.score);
+    expect(CACHE.bulk).toBe(3600);
     expect(res.headers.get("Cache-Control")).not.toContain("no-store");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
