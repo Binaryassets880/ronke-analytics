@@ -1,7 +1,7 @@
 # Ronke Analytics - handoff
 
 Absolute path: `C:\dev\claude\ronke-analytics`
-Last updated: 2026-08-27
+Last updated: 2026-09-21
 
 ## What this is
 
@@ -257,14 +257,14 @@ generated OpenAPI document and a `/developers` docs page:
 
 | Endpoint | Cache |
 |---|---|
-| `GET /api/v1/score/{addressOrName}` | 15 min |
-| `GET /api/v1/scores?addresses=` (batch, max 50) | 15 min |
-| `GET /api/v1/scores/all` (full dump, ~6,200 rows) | 15 min |
-| `GET /api/v1/leaderboard?limit=&offset=` | 15 min |
-| `GET /api/v1/wallet/{addressOrName}` | 15 min |
+| `GET /api/v1/score/{addressOrName}` | 1 h |
+| `GET /api/v1/scores?addresses=` (batch, max 50) | 1 h |
+| `GET /api/v1/scores/all` (full dump, ~6,200 rows) | 1 h |
+| `GET /api/v1/leaderboard?limit=&offset=` | 1 h |
+| `GET /api/v1/wallet/{addressOrName}` | 1 h |
 | `GET /api/v1/nft/{tokenId}` | 24 h |
 | `GET /api/v1/config` | 1 h |
-| `GET /api/v1/stats` | 15 min |
+| `GET /api/v1/stats` | 1 h |
 | `GET /api/v1/meta` | 5 min |
 | `GET /api/v1/openapi.json` | 1 h |
 | `GET /llms.txt` (site root, `text/plain`) | 1 h |

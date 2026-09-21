@@ -58,7 +58,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "A wallet with no score returns 200 with found:false and score 0 - not a 404 - because " +
       "wallets scoring zero are never stored.",
     params: [ADDRESS_PARAM],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         address: "0x36175b2c13e39de1a79583fa3476d124dc8dfb70",
@@ -98,7 +98,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
         schema: { type: "string" },
       },
     ],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         scores: [
@@ -162,7 +162,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
         schema: { type: "integer", minimum: 0, maximum: 5000, default: 0 },
       },
     ],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         entries: [
@@ -191,7 +191,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "earned badges. Use balance_raw (exact base units, a string) for anything numeric - " +
       "balance_whole is a convenience float and is lossy at large balances.",
     params: [ADDRESS_PARAM],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         address: "0x36175b2c13e39de1a79583fa3476d124dc8dfb70",
@@ -271,7 +271,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
       "Holder counts, DEX prices, supply and burn figures per token, NFT volume, and badge " +
       "totals. Market and supply fields degrade to null rather than failing the request.",
     params: [],
-    cacheSeconds: 900,
+    cacheSeconds: 3600,
     example: {
       data: {
         ronke_token: {

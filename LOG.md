@@ -447,3 +447,23 @@ Files: `lib/queries-cached.ts` (new), `tests/persist-snapshot.test.ts` (new),
 
 **Not pushed.** StoryLaneMedia has read-only access to `Binaryassets880/ronke-analytics`;
 the branch is local and has to be pushed from the BinaryAssets account.
+
+## [2026-09-21] Public score API cache TTL raised to one hour
+
+- Raised only `CACHE.score` from 900 to 3600 seconds. The five public routes
+  using that class are single score, batch scores, leaderboard, wallet, and
+  stats. Their generated API-document cache metadata now matches the response.
+- Preserved the eight-times stale-while-revalidate window, success envelopes,
+  CORS, and `no-store` errors. Bulk remains 3600 seconds, config 3600, meta 300,
+  and NFT 86400. `/api/score-inputs/[address]` remains force-dynamic and outside
+  the shared public cache layer.
+- Focused verification: 4 test files and 72 tests passed.
+- Full verification: 42 test files, 404 tests passed and 1 skipped. `tsc
+  --noEmit` passed. The Next.js production build passed and generated all 14
+  static pages.
+
+Files: `lib/api/respond.ts`, `config/apiDocs.ts`,
+`tests/api-foundation.test.ts`, `tests/api-score.test.ts`,
+`tests/api-scores-all.test.ts`,
+`docs/plans/2026-08-06-001-feat-ronke-score-public-api-plan.md`,
+`HANDOFF.md`, `LOG.md`.
