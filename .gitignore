@@ -15,3 +15,7 @@ coverage/
 
 # Design reference artifact (not app code)
 Ronkeverse.html
+
+.vercel
+.env*
+.event-cache/

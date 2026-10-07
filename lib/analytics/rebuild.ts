@@ -16,6 +16,7 @@ import type { Asset } from "@/config/contracts";
 import { ASSETS } from "@/config/contracts";
 import type { ReplayEvent } from "@/lib/types";
 import { Labels, type AddressLabel } from "./labels";
+import { readEventsCached } from "./event-cache";
 import { computeBalances } from "./balances";
 import { computeDiamond } from "./diamond";
 import { computeConcentration, type Concentration } from "./concentration";
@@ -293,8 +294,13 @@ async function setMeta(sql: Sql, key: string, value: string): Promise<void> {
  */
 export async function rebuild(sql: Sql, asOf: Date = new Date()): Promise<void> {
   const labels = await loadLabelsFromDb(sql);
+  // EVENT_CACHE_DIR (set by the sync workflow): keep the event history between runs and
+  // ask Neon only for new rows - see lib/analytics/event-cache.ts.
+  const cacheDir = process.env.EVENT_CACHE_DIR;
   for (const asset of ASSETS) {
-    const events = await readEvents(sql, asset);
+    const events = cacheDir
+      ? (await readEventsCached(sql, asset, cacheDir, new Date(), (m) => console.log(m))).events
+      : await readEvents(sql, asset);
     const snap = computeAssetSnapshot(asset, events, labels, asOf);
     await persistSnapshot(sql, snap);
   }

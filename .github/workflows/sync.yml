@@ -36,8 +36,18 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run migrate
+      # Event history kept between runs, so the rebuild reads only new events from Neon
+      # (lib/analytics/event-cache.ts). Unique key per run: the newest copy is always saved,
+      # and the previous one is what gets restored.
+      - name: Restore event cache
+        uses: actions/cache@v4
+        with:
+          path: .event-cache
+          key: events-v1-${{ github.run_id }}
+          restore-keys: events-v1-
       - name: Sync + rebuild
         env:
+          EVENT_CACHE_DIR: .event-cache
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MORALIS_API_KEY: ${{ secrets.MORALIS_API_KEY }}
         run: npm run sync
