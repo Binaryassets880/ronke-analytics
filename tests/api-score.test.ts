@@ -119,7 +119,7 @@ describe("GET /api/v1/score/{address}", () => {
     H.getWalletScore.mockResolvedValue(SCORE);
     const res = await getScore(new Request("https://x.test"), params(A));
     expect(res.headers.get("Cache-Control")).toBe(
-      "public, max-age=0, s-maxage=3600, stale-while-revalidate=28800",
+      "public, max-age=1800, s-maxage=3600, stale-while-revalidate=28800",
     );
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });

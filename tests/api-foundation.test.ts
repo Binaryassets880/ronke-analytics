@@ -67,7 +67,7 @@ describe("lib/api/respond", () => {
     const res = ok({ score: 10 }, { meta: META, ttl: CACHE.score });
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(
-      "public, max-age=0, s-maxage=3600, stale-while-revalidate=28800",
+      "public, max-age=1800, s-maxage=3600, stale-while-revalidate=28800",
     );
     expect(await res.json()).toEqual({ data: { score: 10 }, meta: META });
   });

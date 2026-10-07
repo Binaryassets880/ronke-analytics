@@ -14,7 +14,7 @@
  */
 
 import { renderLlmsTxt } from "@/lib/api/llms-txt";
-import { CACHE } from "@/lib/api/respond";
+import { CACHE, BROWSER_MAX_AGE } from "@/lib/api/respond";
 
 export async function GET(req: Request) {
   // Absolute URLs so a pasted document works from anywhere, and so the same
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       // rather than triggering a download, since "open this URL" is the point.
       "Content-Type": "text/plain; charset=utf-8",
       "Access-Control-Allow-Origin": "*",
-      "Cache-Control": `public, max-age=0, s-maxage=${CACHE.config}, stale-while-revalidate=${CACHE.config * 8}`,
+      "Cache-Control": `public, max-age=${Math.min(CACHE.config, BROWSER_MAX_AGE)}, s-maxage=${CACHE.config}, stale-while-revalidate=${CACHE.config * 8}`,
     },
   });
 }

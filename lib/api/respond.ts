@@ -98,8 +98,17 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400",
 } as const;
 
+/**
+ * How long a browser may reuse a response without asking again (2026-10-07).
+ *
+ * `max-age=0` sent every repeat view back to Vercel, and on the Hobby plan each of those
+ * counts against the 1M monthly edge requests even when the CDN answers from cache. The
+ * data changes once a day, so a visitor may keep what they got for half an hour.
+ */
+export const BROWSER_MAX_AGE = 1800;
+
 function cacheHeader(ttl: number): string {
-  return `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=${ttl * SWR_MULTIPLIER}`;
+  return `public, max-age=${Math.min(ttl, BROWSER_MAX_AGE)}, s-maxage=${ttl}, stale-while-revalidate=${ttl * SWR_MULTIPLIER}`;
 }
 
 export interface OkOptions {
