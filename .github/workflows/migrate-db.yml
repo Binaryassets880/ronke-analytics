@@ -1,0 +1,33 @@
+# One-off: copy the Ronke Score database (secrets.DATABASE_URL, read only) into the new
+# Neon project (secrets.TARGET_DATABASE_URL). Runs on a push to the migrate-db branch only.
+name: migrate-db
+on:
+  push:
+    branches: [migrate-db]
+concurrency:
+  group: ronke-sync   # never at the same time as the nightly sync
+  cancel-in-progress: false
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --prefix tools --no-audit --no-fund
+      - name: Create schema in the target
+        env:
+          DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+        run: npm ci --no-audit --no-fund && npm run migrate
+      - name: Dry run (counts only)
+        env:
+          SOURCE_URL: ${{ secrets.DATABASE_URL }}
+          TARGET_URL: ${{ secrets.TARGET_DATABASE_URL }}
+        run: NODE_PATH=tools/node_modules node tools/copy-db.mjs
+      - name: Copy and verify
+        env:
+          SOURCE_URL: ${{ secrets.DATABASE_URL }}
+          TARGET_URL: ${{ secrets.TARGET_DATABASE_URL }}
+        run: NODE_PATH=tools/node_modules node tools/copy-db.mjs --yes
