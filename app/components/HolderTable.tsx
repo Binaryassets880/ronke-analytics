@@ -81,7 +81,7 @@ export function HolderTable({ rows, asset }: { rows: HolderRow[]; asset: Asset }
           {sorted.map((r) => (
             <tr key={r.address} className="rv-row border-b border-[var(--border-soft)]">
               <td className="py-2">
-                <Link href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
+                <Link prefetch={false} href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
                   {displayName(r.name, r.address)}
                 </Link>
               </td>

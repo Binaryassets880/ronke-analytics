@@ -249,7 +249,7 @@ function DailyRonkeCard({ token }: { token: DailyToken | null }) {
     "rv-float relative flex h-[380px] w-[340px] flex-col items-center justify-center gap-5 rounded-3xl border border-[var(--border-strong)] px-6";
 
   return token ? (
-    <Link href={`/rarity/${token.tokenId}`} className={className} style={cardStyle}>
+    <Link prefetch={false} href={`/rarity/${token.tokenId}`} className={className} style={cardStyle}>
       {body}
     </Link>
   ) : (

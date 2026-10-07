@@ -61,7 +61,7 @@ export function LeaderboardView({
                       </span>
                     </td>
                     <td>
-                      <Link href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
+                      <Link prefetch={false} href={`/wallet/${r.address}`} className="text-[var(--accent)] hover:underline" title={r.address}>
                         {displayName(r.name, r.address)}
                       </Link>
                     </td>
