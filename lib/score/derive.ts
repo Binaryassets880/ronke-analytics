@@ -38,6 +38,7 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
         bodyTypesHeld: 0,
         bodyTypesTotal,
         oneOfOneCount: 0,
+        unitsCount: 0,
       };
       map.set(address, a);
     }
@@ -134,7 +135,29 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     }
   }
 
+  // Level 10+ PewPew units (unit_holdings, written by the sync job from the chain).
+  // A wallet holding only units enters the table here.
+  for (const r of await unitRows(sql)) {
+    ensure(r.address as string).unitsCount = Number(r.units_count);
+  }
+
   return map;
+}
+
+/**
+ * unit_holdings rows, optionally for one wallet. Empty when the table does not
+ * exist yet (web deployed before the migration), so the score degrades to "no
+ * unit points" instead of failing the page.
+ */
+async function unitRows(sql: Sql, address?: string): Promise<Record<string, unknown>[]> {
+  try {
+    return address
+      ? await sql`SELECT address, units_count FROM unit_holdings WHERE address = ${address}`
+      : await sql`SELECT address, units_count FROM unit_holdings`;
+  } catch (err) {
+    if (/unit_holdings/.test(String((err as Error)?.message))) return [];
+    throw err;
+  }
 }
 
 /**
@@ -159,6 +182,7 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
     bodyTypesHeld: 0,
     bodyTypesTotal: Number(bodyTotalRow[0]?.n ?? 0),
     oneOfOneCount: 0,
+    unitsCount: 0,
   };
 
   const balances = await sql`
@@ -216,6 +240,9 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
     `;
     input.bodyTypesHeld = Number(bodyRows[0]?.bodies ?? 0);
   }
+
+  const units = await unitRows(sql, address);
+  input.unitsCount = Number(units[0]?.units_count ?? 0);
 
   return input;
 }
@@ -284,6 +311,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       b.nftHoldingPoints, b.nftDurationPoints, b.nftDiamondMult,
       b.collectorPoints, b.bodyTypesHeld, b.bodyTypesTotal,
       b.oneOfOnePoints, b.oneOfOneCount,
+      s.result.unitsSubscore, b.unitsCount, b.unitsCounted,
       s.rank, s.percentile,
     ];
   });
@@ -297,6 +325,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       "nft_holding", "nft_duration", "nft_diamond_mult",
       "collector_points", "body_types_held", "body_types_total",
       "oneofone_points", "oneofone_count",
+      "units_subscore", "units_count", "units_counted",
       "rank", "percentile",
     ],
     rows,

@@ -49,6 +49,9 @@ const SCORE: WalletScore = {
   bodyTypesTotal: 10,
   oneOfOnePoints: 235,
   oneOfOneCount: 1,
+  unitsSubscore: 0,
+  unitsCount: 0,
+  unitsCounted: 0,
 };
 
 const params = (address: string) => ({ params: Promise.resolve({ address }) });

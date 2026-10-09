@@ -467,3 +467,28 @@ Files: `lib/api/respond.ts`, `config/apiDocs.ts`,
 `tests/api-scores-all.test.ts`,
 `docs/plans/2026-08-06-001-feat-ronke-score-public-api-plan.md`,
 `HANDOFF.md`, `LOG.md`.
+
+## [2026-10-09] PewPew units in the Ronke Score - built on `feat/units-score`
+
+- New sub-score: level 10+ PewPewBarracks units (`0xccf6…0862`), `25 * n^0.6`,
+  at most 30 units counted (192 pts), no duration/diamond multiplier, every level
+  from 10 up counts the same (`SCORE_CONFIG.units`). Calibrated with the founder:
+  a level-10 unit is worth ~$10-15 (median Tetris player spends ~19k RONKE to get
+  one there); the comparable asset is the Ronkeverse NFT count curve.
+- Simulated against the live table first: 13 wallets gain 25-155 pts, no wallet
+  changes a percentile tier, the biggest move is +367 ranks low in the table, and
+  nobody falls more than 2 ranks. Wallets without units score exactly as before
+  (units are rounded and added on top).
+- `lib/units/snapshot.ts` reads the units from the chain (Multicall3: tokenByIndex
+  -> getUnitFullData -> ownerOf for 10+, ~43 s for 5.5k units) and writes
+  `unit_holdings`; `scripts/sync.ts` runs it before the rebuild. All or nothing:
+  a failed read keeps yesterday's rows. Contracts are left out (the PewPew Market
+  escrow holds listed units). `RONIN_RPC_URLS` overrides the RPC list.
+- `wallet_scores` gains `units_subscore`, `units_count`, `units_counted`; the API
+  gains `subscores.units` and `breakdown.units_count/units_counted` (additive, no
+  key changed). Profile card shows a "PewPew units" panel when the wallet has any.
+- Deploy order: `npm run migrate` BEFORE the web deploy (the read path selects the
+  new columns), then the sync (or `npm run sync`) fills `unit_holdings` and rebuilds.
+- Tests: new `tests/score-units.test.ts` (12). Three tests fail on a non-English
+  Windows locale with or without this change (`toLocaleString` grouping):
+  badge-shelf x2, score-ui "renders all three sub-score cards".

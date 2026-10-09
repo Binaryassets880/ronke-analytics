@@ -266,6 +266,23 @@ ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS percentile DOUBLE PRECISION;
 
 CREATE INDEX IF NOT EXISTS wallet_scores_rank_idx ON wallet_scores (rank);
 
+-- PewPew units sub-score (config SCORE_CONFIG.units): level 10+ PewPewBarracks units.
+-- units_count = held, units_counted = the capped number that earns points.
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS units_subscore INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS units_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS units_counted INTEGER NOT NULL DEFAULT 0;
+
+-- Level 10+ PewPew units per wallet, read from PewPewBarracks by the sync job
+-- (lib/units/snapshot.ts) before the rebuild. A failed chain read leaves the
+-- previous rows in place, so an RPC outage never zeroes anybody's unit points.
+-- Contracts (marketplace escrow etc.) are left out.
+CREATE TABLE IF NOT EXISTS unit_holdings (
+  address      TEXT PRIMARY KEY,
+  units_count  INTEGER NOT NULL DEFAULT 0,
+  max_level    INTEGER NOT NULL DEFAULT 0,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ─────────────────────────────────────────────────────────────────────
 -- Market snapshots (E6): latest external market reading per source+asset.
 -- $RONKE price/volume/liquidity from GeckoTerminal. Fetched off-Vercel during

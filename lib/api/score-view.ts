@@ -43,6 +43,8 @@ export interface PublicScore {
     ronke: number;
     ronkestr: number;
     nft: number;
+    /** PewPew units at level 10+ (added 2026-10). */
+    units: number;
   };
   breakdown: {
     ronke_holding: number;
@@ -59,6 +61,8 @@ export interface PublicScore {
     body_types_total: number;
     oneofone_points: number;
     oneofone_count: number;
+    units_count: number;
+    units_counted: number;
   };
 }
 
@@ -71,7 +75,7 @@ function empty(address: string, name: string | null): PublicScore {
     score: 0,
     rank: null,
     percentile: null,
-    subscores: { ronke: 0, ronkestr: 0, nft: 0 },
+    subscores: { ronke: 0, ronkestr: 0, nft: 0, units: 0 },
     breakdown: {
       ronke_holding: 0,
       ronke_duration: 0,
@@ -87,6 +91,8 @@ function empty(address: string, name: string | null): PublicScore {
       body_types_total: 0,
       oneofone_points: 0,
       oneofone_count: 0,
+      units_count: 0,
+      units_counted: 0,
     },
   };
 }
@@ -108,6 +114,7 @@ export function toPublicScore(
       ronke: score.ronkeSubscore,
       ronkestr: score.ronkestrSubscore,
       nft: score.nftSubscore,
+      units: score.unitsSubscore,
     },
     breakdown: {
       ronke_holding: score.ronkeHolding,
@@ -124,6 +131,8 @@ export function toPublicScore(
       body_types_total: score.bodyTypesTotal,
       oneofone_points: score.oneOfOnePoints,
       oneofone_count: score.oneOfOneCount,
+      units_count: score.unitsCount,
+      units_counted: score.unitsCounted,
     },
   };
 }

@@ -18,6 +18,7 @@ import { getCursor, setCursor, insertTransfer, setMeta } from "@/lib/ingest";
 import { rebuild } from "@/lib/analytics/rebuild";
 import { refreshRnsNames } from "@/lib/rns/refresh";
 import { refreshMarket } from "@/lib/market/refresh";
+import { refreshUnitHoldings } from "@/lib/units/snapshot";
 
 export interface SyncClient {
   /** Recent tail only: transfers with block_number > sinceBlock (DESC + stop). */
@@ -71,7 +72,11 @@ if (process.argv[1]?.endsWith("sync.ts")) {
   const sql = requireSql();
   // Blockscout for transfers: no CU cap, DESC + stop-at-cursor reads only the tail.
   const client = new RoninDataClient({ blockscout: new BlockscoutProvider() });
-  sync(sql, client)
+  // Level 10+ PewPew units from the chain, before the rebuild scores them. Best-effort:
+  // a failed read keeps yesterday's unit_holdings rather than zeroing unit points.
+  refreshUnitHoldings(sql, { log: (m) => console.log(m) })
+    .catch((err) => console.warn("Units refresh skipped:", (err as Error)?.message ?? err))
+    .then(() => sync(sql, client))
     .then(async ({ appended }) => {
       console.log(`Sync complete. Appended ${appended} new events; snapshots rebuilt.`);
       // Reverse-resolve .ron names for holders (best-effort; never fails the sync).

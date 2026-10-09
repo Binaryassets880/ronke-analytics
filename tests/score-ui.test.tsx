@@ -33,6 +33,9 @@ const score: WalletScore = {
   bodyTypesTotal: 10,
   oneOfOnePoints: 0,
   oneOfOneCount: 0,
+  unitsSubscore: 0,
+  unitsCount: 0,
+  unitsCounted: 0,
 };
 
 describe("RonkeScoreCard", () => {
@@ -46,11 +49,22 @@ describe("RonkeScoreCard", () => {
     // Total is the combined score.
     expect(screen.getByText("1,653")).toBeInTheDocument();
   });
+  it("hides the PewPew units panel for a wallet without units", () => {
+    render(<RonkeScoreCard score={score} />);
+    expect(screen.queryByText("PewPew units")).toBeNull();
+  });
+
+  it("shows the PewPew units panel and the cap when it bites", () => {
+    render(<RonkeScoreCard score={{ ...score, unitsSubscore: 192, unitsCount: 41, unitsCounted: 30 }} />);
+    expect(screen.getByText("PewPew units")).toBeInTheDocument();
+    expect(screen.getByText("192")).toBeInTheDocument();
+    expect(screen.getByText("Level 10+ units (30 of 41 count)")).toBeInTheDocument();
+  });
 });
 
 describe("ScoreLeaderboardView", () => {
   const rows: ScoreLeaderboardRow[] = [
-    { address: "0x" + "1".repeat(40), name: "one.ron", score: 1_653, rank: 1, percentile: 99.9, ronkeSubscore: 820, ronkestrSubscore: 511, nftSubscore: 322, bodyTypesHeld: 4, bodyTypesTotal: 10 },
+    { address: "0x" + "1".repeat(40), name: "one.ron", score: 1_653, rank: 1, percentile: 99.9, ronkeSubscore: 820, ronkestrSubscore: 511, nftSubscore: 322, unitsSubscore: 0, bodyTypesHeld: 4, bodyTypesTotal: 10 },
   ];
 
   it("renders a RonkeStr Score column with the row's RonkeStr sub-score", () => {

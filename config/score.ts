@@ -100,4 +100,29 @@ export const SCORE_CONFIG = {
   oneOfOne: {
     bonus: 235,
   },
+  /**
+   * PewPew units (PewPewBarracks NFT) trained to level 10+. A level is earned by
+   * playing - XP is written on chain only with the game server's signature - so a
+   * high unit is time and RONKE spent, not something a wallet can mint for itself.
+   *
+   * Calibrated 2026-10-09 (founder): a level-10 unit is worth ~$10, at most $15
+   * (the median Tetris player spends ~19k RONKE ≈ $17 in 25-RONKE matches to get
+   * one there). The comparable asset is a Ronkeverse NFT's COUNT curve (~$34 floor,
+   * no rarity here), so a unit uses the same 25 * n^0.6 and is capped: 30 units =
+   * 192 pts, against a ~420 median and up to 1,431 for duration alone. No duration
+   * or diamond multiplier - units die and burn, so "time held" means little.
+   * Every level from minLevel up counts the same: a level-40 unit is not worth 16
+   * level-10s. Simulated against the live table: no wallet changed a percentile
+   * tier, the biggest move was +367 ranks low in the table, and nobody fell more
+   * than 2 ranks.
+   */
+  units: {
+    /** PewPewBarracks on Ronin. Level = floor(sqrt(xp / 100)). */
+    contract: "0xccf604511c5d2b5c3fd61adfba3950d0d2890862",
+    minLevel: 10,
+    base: 25,
+    countExp: 0.6,
+    /** Units counted per wallet; more are held without earning more. */
+    maxCount: 30,
+  },
 } as const;

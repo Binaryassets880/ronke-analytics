@@ -65,12 +65,22 @@ export const SCORE_EXPLAINER = {
         "adds a dedicated showpiece bonus on top - one 1/1 is tuned to be worth roughly as much as " +
         "bulk-buying 40 common pieces.",
     },
+    {
+      emoji: "⚔️",
+      title: "PewPew units",
+      body:
+        "Units from the PewPew game trained to level 10 or higher count too. A level can only be earned " +
+        "by playing, so a level-10 unit is real time and RONKE spent. Each one adds points with diminishing " +
+        "returns, up to 30 units per wallet, and every level from 10 up counts the same. There is no " +
+        "holding-time bonus here, because units can fall in battle.",
+    },
   ] as ScoreFactor[],
 
   howToRaise: [
     "Hold more $RONKE, RonkeStr, or Ronkeverse - across the whole ecosystem, not just one asset.",
     "Hold for the long term, and avoid selling so your diamond-hands multiplier stays at full.",
     "Collect across body types and chase rarer pieces to grow the Ronkeverse side.",
+    "Train PewPew units to level 10 and keep them in your wallet.",
   ],
 
   note:

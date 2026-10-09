@@ -79,6 +79,15 @@ export function RonkeScoreCard({ score, address }: { score: WalletScore; address
             <Row label={`1/1 bonus (${score.oneOfOneCount}×)`} value={formatCompact(score.oneOfOnePoints)} />
           ) : null}
         </Panel>
+
+        {score.unitsCount > 0 ? (
+          <Panel title="PewPew units" subscore={formatCompact(score.unitsSubscore)}>
+            <Row
+              label={`Level 10+ units${score.unitsCounted < score.unitsCount ? ` (${score.unitsCounted} of ${score.unitsCount} count)` : ""}`}
+              value={score.unitsCount.toLocaleString()}
+            />
+          </Panel>
+        ) : null}
       </div>
 
       <details className="group mt-3 rounded-xl border border-[var(--border-soft)] bg-[var(--card-2)] px-3.5 py-2.5">

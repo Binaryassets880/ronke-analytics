@@ -308,6 +308,7 @@ export interface ScoreLeaderboardRow {
   ronkeSubscore: number;
   ronkestrSubscore: number;
   nftSubscore: number;
+  unitsSubscore: number;
   bodyTypesHeld: number;
   bodyTypesTotal: number;
 }
@@ -317,7 +318,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
   const sql = getSql();
   if (!sql) return [];
   const rows = await sql`
-    SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore,
+    SELECT s.address, s.score, s.ronke_subscore, s.ronkestr_subscore, s.nft_subscore, s.units_subscore,
            s.body_types_held, s.body_types_total, s.rank, s.percentile,
            coalesce(al.label, n.name) AS name
     FROM wallet_scores s
@@ -335,6 +336,7 @@ export async function getScoreLeaderboard(page = 0, pageSize = 50): Promise<Scor
     ronkeSubscore: Number(r.ronke_subscore),
     ronkestrSubscore: Number(r.ronkestr_subscore),
     nftSubscore: Number(r.nft_subscore),
+    unitsSubscore: Number(r.units_subscore),
     bodyTypesHeld: Number(r.body_types_held),
     bodyTypesTotal: Number(r.body_types_total),
   }));
@@ -362,6 +364,10 @@ export interface WalletScore {
   bodyTypesTotal: number;
   oneOfOnePoints: number;
   oneOfOneCount: number;
+  /** PewPew units: points, level 10+ units held, and how many of them earn points. */
+  unitsSubscore: number;
+  unitsCount: number;
+  unitsCounted: number;
 }
 
 /** Total wallets carrying a non-zero Ronke Score - the percentile denominator. */
@@ -390,7 +396,7 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total,
-           oneofone_points, oneofone_count, rank, percentile
+           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, rank, percentile
     FROM wallet_scores WHERE address = ${address}
   `;
   if (rows.length === 0) return null;
@@ -430,6 +436,9 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     bodyTypesTotal: Number(r.body_types_total),
     oneOfOnePoints: Number(r.oneofone_points),
     oneOfOneCount: Number(r.oneofone_count),
+    unitsSubscore: Number(r.units_subscore),
+    unitsCount: Number(r.units_count),
+    unitsCounted: Number(r.units_counted),
   };
 }
 
@@ -455,7 +464,7 @@ export async function getWalletScoresBatch(
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total,
-           oneofone_points, oneofone_count, rank, percentile
+           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, rank, percentile
     FROM wallet_scores WHERE address = ANY(${addresses})
   `;
   for (const r of rows) {
@@ -480,6 +489,9 @@ export async function getWalletScoresBatch(
       bodyTypesTotal: Number(r.body_types_total),
       oneOfOnePoints: Number(r.oneofone_points),
       oneOfOneCount: Number(r.oneofone_count),
+      unitsSubscore: Number(r.units_subscore),
+      unitsCount: Number(r.units_count),
+      unitsCounted: Number(r.units_counted),
     });
   }
   return out;

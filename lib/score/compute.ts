@@ -41,6 +41,8 @@ export interface ScoreInput {
   bodyTypesTotal: number;
   /** Count of one-of-one (1/1) Ronkeverse held - community + official. */
   oneOfOneCount: number;
+  /** PewPew units held at level >= SCORE_CONFIG.units.minLevel (0 if none). */
+  unitsCount?: number;
 }
 
 export interface ScoreResult {
@@ -48,6 +50,7 @@ export interface ScoreResult {
   ronkeSubscore: number;
   ronkestrSubscore: number;
   nftSubscore: number;
+  unitsSubscore: number;
   breakdown: {
     ronkeHoldingPoints: number;
     ronkeDurationPoints: number; // after diamond multiplier
@@ -63,6 +66,8 @@ export interface ScoreResult {
     oneOfOneCount: number;
     bodyTypesHeld: number;
     bodyTypesTotal: number;
+    unitsCount: number; // level 10+ units held
+    unitsCounted: number; // the ones that earn points (capped)
   };
 }
 
@@ -135,11 +140,17 @@ export function computeScore(input: ScoreInput): ScoreResult {
 
   const nftSubscore = nftHoldingPoints + nftDurationPoints + collectorPoints + oneOfOnePoints;
 
+  // ── PewPew units sub-score (level 10+, capped, no duration) ───────
+  const unitsCount = Math.max(0, Math.floor(input.unitsCount ?? 0));
+  const unitsCounted = Math.min(unitsCount, C.units.maxCount);
+  const unitsSubscore = unitsCounted > 0 ? C.units.base * Math.pow(unitsCounted, C.units.countExp) : 0;
+
   return {
-    score: round(ronkeSubscore + ronkestrSubscore + nftSubscore),
+    score: round(ronkeSubscore + ronkestrSubscore + nftSubscore) + round(unitsSubscore),
     ronkeSubscore: round(ronkeSubscore),
     ronkestrSubscore: round(ronkestrSubscore),
     nftSubscore: round(nftSubscore),
+    unitsSubscore: round(unitsSubscore),
     breakdown: {
       ronkeHoldingPoints: round(ronkeHoldingPoints),
       ronkeDurationPoints: round(ronkeDurationPoints),
@@ -155,6 +166,8 @@ export function computeScore(input: ScoreInput): ScoreResult {
       oneOfOneCount: input.oneOfOneCount,
       bodyTypesHeld: input.bodyTypesHeld,
       bodyTypesTotal: input.bodyTypesTotal,
+      unitsCount,
+      unitsCounted,
     },
   };
 }
