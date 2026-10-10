@@ -15,6 +15,13 @@
  */
 
 export const API_BASE = "/api/v1";
+/**
+ * Where the API lives, for code people copy into THEIR projects (2026-10-10): the
+ * snippets used the bare path, which only works on this site, and the llms.txt line
+ * still pointed at ronke-analytics.vercel.app, switched off since the handover.
+ */
+export const PUBLIC_ORIGIN = "https://ronke-score-nine.vercel.app";
+export const API_URL = `${PUBLIC_ORIGIN}${API_BASE}`;
 
 export interface ApiParam {
   name: string;

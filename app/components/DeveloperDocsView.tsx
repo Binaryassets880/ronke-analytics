@@ -11,7 +11,7 @@
  * skims only the top of this page still gets them.
  */
 
-import { API_BASE, ENDPOINTS, ERROR_REFERENCE, CAVEATS, type ApiEndpoint } from "@/config/apiDocs";
+import { API_BASE, API_URL, PUBLIC_ORIGIN, ENDPOINTS, ERROR_REFERENCE, CAVEATS, type ApiEndpoint } from "@/config/apiDocs";
 
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
@@ -91,12 +91,12 @@ function Endpoint({ e }: { e: ApiEndpoint }) {
 
 /** The first code block on the page: a correct gate, so copy-paste lands right. */
 const LLMS_SNIPPET = `# Hand the whole API reference to a coding agent:
-curl https://ronke-analytics.vercel.app/llms.txt
+curl ${PUBLIC_ORIGIN}/llms.txt
 
 # ...or just paste that URL into the chat.`;
 
 const QUICKSTART = `const res = await fetch(
-  "${API_BASE}/score/0x36175b2c13e39de1a79583fa3476d124dc8dfb70"
+  "${API_URL}/score/0x36175b2c13e39de1a79583fa3476d124dc8dfb70"
 );
 const { data, meta } = await res.json();
 
@@ -111,7 +111,7 @@ console.log(data.score, data.rank, data.percentile, "as of", meta.as_of);`;
 
 const BATCH_SNIPPET = `// One request, one cache entry - not 40 lookups.
 const wallets = [...guildMembers].sort();          // sort = better cache hits
-const res = await fetch(\`${API_BASE}/scores?addresses=\${wallets.join(",")}\`);
+const res = await fetch(\`${API_URL}/scores?addresses=\${wallets.join(",")}\`);
 const { data } = await res.json();
 
 for (const s of data.scores) {
@@ -125,10 +125,10 @@ let applied = null;
 
 setInterval(async () => {
   // Cheap gate: has anything been rebuilt since we last acted?
-  const meta = await (await fetch("${API_BASE}/meta")).json();
+  const meta = await (await fetch("${API_URL}/meta")).json();
   if (meta.data.as_of === applied) return;
 
-  const dump = await (await fetch("${API_BASE}/scores/all")).json();
+  const dump = await (await fetch("${API_URL}/scores/all")).json();
 
   // Trust the DUMP's own as_of, not /meta's. They are cached separately, so
   // right after a rebuild /meta can report fresh data while the dump is still

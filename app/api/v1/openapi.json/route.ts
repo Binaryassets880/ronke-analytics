@@ -6,7 +6,7 @@
  * reason: a spec maintained separately from the docs is a spec that is wrong.
  */
 
-import { API_BASE, ENDPOINTS, ERROR_REFERENCE } from "@/config/apiDocs";
+import { API_BASE, ENDPOINTS, ERROR_REFERENCE, PUBLIC_ORIGIN } from "@/config/apiDocs";
 import { API_VERSION } from "@/lib/api/version";
 import { apiMeta, ok, fail, preflight, CACHE } from "@/lib/api/respond";
 
@@ -93,7 +93,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         "at 07:00 UTC - see meta.as_of. Every response carries score, rank and percentile. An " +
         "unknown wallet returns 200 with found:false and score 0, never a 404.",
     },
-    servers: [{ url: "/", description: "Same origin as this document." }],
+    servers: [{ url: PUBLIC_ORIGIN, description: "Ronke Score (public, no key)." }, { url: "/", description: "Same origin as this document." }],
     paths,
     components: {
       schemas: {
