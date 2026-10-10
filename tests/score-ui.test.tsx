@@ -36,6 +36,8 @@ const score: WalletScore = {
   unitsSubscore: 0,
   unitsCount: 0,
   unitsCounted: 0,
+  unitsHeld: 0,
+  unitsHoldPoints: 0,
 };
 
 describe("RonkeScoreCard", () => {
@@ -59,6 +61,14 @@ describe("RonkeScoreCard", () => {
     expect(screen.getByText("PewPew units")).toBeInTheDocument();
     expect(screen.getByText("192")).toBeInTheDocument();
     expect(screen.getByText("Level 10+ units (30 of 41 count)")).toBeInTheDocument();
+    expect(screen.queryByText(/^Holding \d/)).toBeNull();
+  });
+
+  it("shows the holding bonus row for a wallet with 100+ units and no level-10 ones", () => {
+    render(<RonkeScoreCard score={{ ...score, unitsSubscore: 45, unitsHeld: 205, unitsHoldPoints: 45 }} />);
+    expect(screen.getByText("PewPew units")).toBeInTheDocument();
+    expect(screen.getByText("Holding 205 units")).toBeInTheDocument();
+    expect(screen.queryByText(/Level 10\+ units/)).toBeNull();
   });
 });
 

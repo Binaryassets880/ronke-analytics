@@ -124,5 +124,18 @@ export const SCORE_CONFIG = {
     countExp: 0.6,
     /** Units counted per wallet; more are held without earning more. */
     maxCount: 30,
+    /**
+     * Holding bonus (2026-10-10, founder): a wallet with 100+ units of ANY level
+     * earns holdBase * (n / holdMin)^holdExp, counting at most holdMaxCount units:
+     * 100 -> 30, 200 -> 45, 500 -> 79, 1000+ -> 119. 100 new units cost ~55.6k RONKE
+     * (~$57) at the 10-10 training price, and 30 pts for that matches what one more
+     * floor Ronkeverse NFT adds (~0.5-0.6 pts per dollar). It stacks with the level
+     * bonus above. Simulated: 12 wallets qualify, others fall at most 3 ranks.
+     * The founder's own wallet counts like everybody's, as RONKE/NFT founders do.
+     */
+    holdMin: 100,
+    holdBase: 30,
+    holdExp: 0.6,
+    holdMaxCount: 1000,
   },
 } as const;

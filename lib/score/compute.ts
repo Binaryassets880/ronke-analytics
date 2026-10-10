@@ -43,6 +43,8 @@ export interface ScoreInput {
   oneOfOneCount: number;
   /** PewPew units held at level >= SCORE_CONFIG.units.minLevel (0 if none). */
   unitsCount?: number;
+  /** PewPew units of any level held (0 if none). */
+  unitsTotal?: number;
 }
 
 export interface ScoreResult {
@@ -68,6 +70,8 @@ export interface ScoreResult {
     bodyTypesTotal: number;
     unitsCount: number; // level 10+ units held
     unitsCounted: number; // the ones that earn points (capped)
+    unitsHeld: number; // units of any level held
+    unitsHoldPoints: number; // holding bonus (part of unitsSubscore)
   };
 }
 
@@ -143,7 +147,13 @@ export function computeScore(input: ScoreInput): ScoreResult {
   // ── PewPew units sub-score (level 10+, capped, no duration) ───────
   const unitsCount = Math.max(0, Math.floor(input.unitsCount ?? 0));
   const unitsCounted = Math.min(unitsCount, C.units.maxCount);
-  const unitsSubscore = unitsCounted > 0 ? C.units.base * Math.pow(unitsCounted, C.units.countExp) : 0;
+  const unitsLevelPoints = unitsCounted > 0 ? C.units.base * Math.pow(unitsCounted, C.units.countExp) : 0;
+  // Holding bonus from holdMin units of any level, capped at holdMaxCount.
+  const unitsHeld = Math.max(0, Math.floor(input.unitsTotal ?? 0));
+  const unitsHoldPoints = unitsHeld >= C.units.holdMin
+    ? C.units.holdBase * Math.pow(Math.min(unitsHeld, C.units.holdMaxCount) / C.units.holdMin, C.units.holdExp)
+    : 0;
+  const unitsSubscore = unitsLevelPoints + unitsHoldPoints;
 
   return {
     score: round(ronkeSubscore + ronkestrSubscore + nftSubscore) + round(unitsSubscore),
@@ -168,6 +178,8 @@ export function computeScore(input: ScoreInput): ScoreResult {
       bodyTypesTotal: input.bodyTypesTotal,
       unitsCount,
       unitsCounted,
+      unitsHeld,
+      unitsHoldPoints: round(unitsHoldPoints),
     },
   };
 }

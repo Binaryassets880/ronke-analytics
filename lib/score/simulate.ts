@@ -58,6 +58,7 @@ export function emptyScoreInput(bodyTypesTotal = 10): ScoreInput {
     bodyTypesTotal,
     oneOfOneCount: 0,
     unitsCount: 0,
+    unitsTotal: 0,
   };
 }
 
@@ -148,6 +149,7 @@ export function applyKnobs(base: ScoreInput, knobs: SimKnobs): ScoreInput {
     // Units are not a knob (they are levelled in the game, not bought here), but a
     // wallet's real ones must carry through or the simulation would drop them.
     unitsCount: base.unitsCount ?? 0,
+    unitsTotal: base.unitsTotal ?? 0,
   };
 }
 

@@ -24,8 +24,11 @@ const ABI = parseAbi([
 ]);
 
 export interface UnitHolding {
+  /** Level 10+ units held. */
   unitsCount: number;
   maxLevel: number;
+  /** Units of any level held. */
+  unitsTotal: number;
 }
 
 export function unitsClient(): PublicClient {
@@ -52,7 +55,11 @@ async function many<T>(client: PublicClient, calls: { functionName: string; args
   return out;
 }
 
-/** Wallet (lowercase) -> its level 10+ units. Contracts are left out. */
+/**
+ * Wallet (lowercase) -> its units: level 10+ count and total held. Only wallets
+ * that earn something (a level 10+ unit, or holdMin units) are returned, and
+ * contracts are left out.
+ */
 export async function readUnitHoldings(
   client: PublicClient = unitsClient(),
   log: (m: string) => void = () => {},
@@ -62,23 +69,26 @@ export async function readUnitHoldings(
   if (!(supply > 0)) throw new Error(`units: totalSupply ${supply}`);
   const ids = await many<bigint>(client, Array.from({ length: supply }, (_, i) => ({ functionName: "tokenByIndex", args: [BigInt(i)] })));
   const data = await many<readonly [number, number, number, ...unknown[]]>(client, ids.map((id) => ({ functionName: "getUnitFullData", args: [id] })));
-  const high = ids.map((id, k) => ({ id, level: Number(data[k][2]) })).filter((u) => u.level >= SCORE_CONFIG.units.minLevel);
-  const owners = await many<string>(client, high.map((u) => ({ functionName: "ownerOf", args: [u.id] })));
+  const owners = await many<string>(client, ids.map((id) => ({ functionName: "ownerOf", args: [id] })));
 
-  const map = new Map<string, UnitHolding>();
-  high.forEach((u, k) => {
+  const all = new Map<string, UnitHolding>();
+  ids.forEach((_, k) => {
     const w = owners[k].toLowerCase();
-    const h = map.get(w) ?? { unitsCount: 0, maxLevel: 0 };
-    h.unitsCount += 1;
-    h.maxLevel = Math.max(h.maxLevel, u.level);
-    map.set(w, h);
+    const level = Number(data[k][2]);
+    const h = all.get(w) ?? { unitsCount: 0, maxLevel: 0, unitsTotal: 0 };
+    h.unitsTotal += 1;
+    h.maxLevel = Math.max(h.maxLevel, level);
+    if (level >= SCORE_CONFIG.units.minLevel) h.unitsCount += 1;
+    all.set(w, h);
   });
+  const map = new Map([...all].filter(([, h]) => h.unitsCount > 0 || h.unitsTotal >= SCORE_CONFIG.units.holdMin));
   // A marketplace or other contract holding units is not a player.
   for (const w of [...map.keys()]) {
     const code = await client.getCode({ address: w as `0x${string}` });
     if (code && code !== "0x") map.delete(w);
   }
-  log(`units: ${supply} units, ${high.length} at level ${SCORE_CONFIG.units.minLevel}+, ${map.size} wallets`);
+  const high = [...map.values()].reduce((s, h) => s + h.unitsCount, 0);
+  log(`units: ${supply} units, ${all.size} holders, ${map.size} wallets earn points (${high} units at level ${SCORE_CONFIG.units.minLevel}+)`);
   return map;
 }
 
@@ -100,9 +110,9 @@ export async function refreshUnitHoldings(
   }
   // Upsert first, then drop the wallets that no longer hold any: if the write fails
   // half-way, the table still holds every wallet's last known count, never nothing.
-  await insertMany(sql, "unit_holdings", ["address", "units_count", "max_level"],
-    [...map].map(([a, h]) => [a, h.unitsCount, h.maxLevel]),
-    { conflict: "ON CONFLICT (address) DO UPDATE SET units_count = EXCLUDED.units_count, max_level = EXCLUDED.max_level, updated_at = now()" });
+  await insertMany(sql, "unit_holdings", ["address", "units_count", "max_level", "units_total"],
+    [...map].map(([a, h]) => [a, h.unitsCount, h.maxLevel, h.unitsTotal]),
+    { conflict: "ON CONFLICT (address) DO UPDATE SET units_count = EXCLUDED.units_count, max_level = EXCLUDED.max_level, units_total = EXCLUDED.units_total, updated_at = now()" });
   await sql`DELETE FROM unit_holdings WHERE NOT (address = ANY(${[...map.keys()]}))`;
   log(`units: unit_holdings now ${map.size} wallets`);
   return true;

@@ -63,6 +63,8 @@ export interface PublicScore {
     oneofone_count: number;
     units_count: number;
     units_counted: number;
+    units_held: number;
+    units_hold_points: number;
   };
 }
 
@@ -93,6 +95,8 @@ function empty(address: string, name: string | null): PublicScore {
       oneofone_count: 0,
       units_count: 0,
       units_counted: 0,
+      units_held: 0,
+      units_hold_points: 0,
     },
   };
 }
@@ -133,6 +137,8 @@ export function toPublicScore(
       oneofone_count: score.oneOfOneCount,
       units_count: score.unitsCount,
       units_counted: score.unitsCounted,
+      units_held: score.unitsHeld,
+      units_hold_points: score.unitsHoldPoints,
     },
   };
 }

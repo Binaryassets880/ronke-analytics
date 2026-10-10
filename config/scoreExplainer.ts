@@ -72,7 +72,8 @@ export const SCORE_EXPLAINER = {
         "Units from the PewPew game trained to level 10 or higher count too. A level can only be earned " +
         "by playing, so a level-10 unit is real time and RONKE spent. Each one adds points with diminishing " +
         "returns, up to 30 units per wallet, and every level from 10 up counts the same. There is no " +
-        "holding-time bonus here, because units can fall in battle.",
+        "holding-time bonus here, because units can fall in battle. Holding 100 or more units of any " +
+        "level adds a separate holding bonus (30 points at 100, growing slowly, counted up to 1,000 units).",
     },
   ] as ScoreFactor[],
 

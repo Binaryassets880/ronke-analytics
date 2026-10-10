@@ -80,12 +80,17 @@ export function RonkeScoreCard({ score, address }: { score: WalletScore; address
           ) : null}
         </Panel>
 
-        {score.unitsCount > 0 ? (
+        {score.unitsSubscore > 0 ? (
           <Panel title="PewPew units" subscore={formatCompact(score.unitsSubscore)}>
-            <Row
-              label={`Level 10+ units${score.unitsCounted < score.unitsCount ? ` (${score.unitsCounted} of ${score.unitsCount} count)` : ""}`}
-              value={score.unitsCount.toLocaleString()}
-            />
+            {score.unitsCount > 0 ? (
+              <Row
+                label={`Level 10+ units${score.unitsCounted < score.unitsCount ? ` (${score.unitsCounted} of ${score.unitsCount} count)` : ""}`}
+                value={score.unitsCount.toLocaleString()}
+              />
+            ) : null}
+            {score.unitsHoldPoints > 0 ? (
+              <Row label={`Holding ${score.unitsHeld.toLocaleString()} units`} value={formatCompact(score.unitsHoldPoints)} />
+            ) : null}
           </Panel>
         ) : null}
       </div>

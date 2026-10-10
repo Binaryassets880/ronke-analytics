@@ -492,3 +492,20 @@ Files: `lib/api/respond.ts`, `config/apiDocs.ts`,
 - Tests: new `tests/score-units.test.ts` (12). Three tests fail on a non-English
   Windows locale with or without this change (`toLocaleString` grouping):
   badge-shelf x2, score-ui "renders all three sub-score cards".
+
+## [2026-10-10] PewPew units holding bonus (option B) - built on `feat/units-holding`
+
+- A wallet holding 100+ PewPew units of ANY level earns `30 * (n/100)^0.6`, counting
+  at most 1,000 units: 100 -> 30, 200 -> 45, 500 -> 79, 1000+ -> 119. It stacks with
+  the level-10 bonus inside the units sub-score (`SCORE_CONFIG.units.hold*`).
+- Calibration: 100 new units cost ~55.6k RONKE (~$57) at the 10-10 training price;
+  30 pts matches what one more floor Ronkeverse NFT adds (~0.5-0.6 pts per dollar).
+  Founder chose option B over 20 / 50 and decided the founder wallet counts like any
+  other (as the RONKE and NFT founders' wallets do). Known effect: 0xda4f… moves from
+  TOP 1% to TOP 5% because the founder wallet passes it.
+- Live read: 5,517 units, 220 holders, 19 wallets earn unit points (11 of them the
+  holding bonus). Contracts skipped: PewPew Market escrow and a BeaconProxy mystery-pack
+  contract (`0x7962…e023`, 232 units held as prizes). The read now calls ownerOf for
+  every unit (~78 s).
+- `unit_holdings.units_total`, `wallet_scores.units_held/units_hold_points`, API
+  `breakdown.units_held/units_hold_points`, profile row "Holding N units".
