@@ -19,6 +19,7 @@ import { rebuild } from "@/lib/analytics/rebuild";
 import { refreshRnsNames } from "@/lib/rns/refresh";
 import { refreshMarket } from "@/lib/market/refresh";
 import { refreshUnitHoldings } from "@/lib/units/snapshot";
+import { refreshStaking } from "@/lib/staking/snapshot";
 
 export interface SyncClient {
   /** Recent tail only: transfers with block_number > sinceBlock (DESC + stop). */
@@ -76,6 +77,9 @@ if (process.argv[1]?.endsWith("sync.ts")) {
   // a failed read keeps yesterday's unit_holdings rather than zeroing unit points.
   refreshUnitHoldings(sql, { log: (m) => console.log(m) })
     .catch((err) => console.warn("Units refresh skipped:", (err as Error)?.message ?? err))
+    // RONKA staking locks + the day's pool price, same best-effort contract.
+    .then(() => refreshStaking(sql, { log: (m) => console.log(m) }))
+    .catch((err) => console.warn("Staking refresh skipped:", (err as Error)?.message ?? err))
     .then(() => sync(sql, client))
     .then(async ({ appended }) => {
       console.log(`Sync complete. Appended ${appended} new events; snapshots rebuilt.`);

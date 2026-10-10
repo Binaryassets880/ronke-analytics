@@ -74,7 +74,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
         score: 4820,
         rank: 312,
         percentile: 94.9,
-        subscores: { ronke: 1200, ronkestr: 620, nft: 3000, units: 66 },
+        subscores: { ronke: 1200, ronkestr: 620, nft: 3000, units: 66, staking: 0 },
         breakdown: { collector_points: 450, oneofone_count: 1, units_count: 5, "…": "…" },
       },
       meta: {
@@ -179,7 +179,7 @@ export const ENDPOINTS: ApiEndpoint[] = [
             score: 8830,
             rank: 1,
             percentile: 99.98,
-            subscores: { ronke: 3200, ronkestr: 1100, nft: 4530, units: 0 },
+            subscores: { ronke: 3200, ronkestr: 1100, nft: 4530, units: 0, staking: 0 },
           },
         ],
         count: 1,

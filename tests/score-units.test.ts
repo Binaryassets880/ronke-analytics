@@ -173,9 +173,9 @@ describe("public API shape", () => {
     const s = { score: 100, rank: 1, percentile: 99, ronkeSubscore: 10, ronkestrSubscore: 0, nftSubscore: 24,
       ronkeHolding: 0, ronkeDuration: 0, ronkeDiamondMult: 0, ronkestrHolding: 0, ronkestrDuration: 0, ronkestrDiamondMult: 0,
       nftHolding: 0, nftDuration: 0, nftDiamondMult: 0, collectorPoints: 0, bodyTypesHeld: 0, bodyTypesTotal: 10,
-      oneOfOnePoints: 0, oneOfOneCount: 0, unitsSubscore: 66, unitsCount: 5, unitsCounted: 5, unitsHeld: 40, unitsHoldPoints: 0 } as WalletScore;
+      oneOfOnePoints: 0, oneOfOneCount: 0, unitsSubscore: 66, unitsCount: 5, unitsCounted: 5, unitsHeld: 40, unitsHoldPoints: 0, stakingSubscore: 0, stakingTokens: 0, stakingMult: 0 } as WalletScore;
     const p = toPublicScore(s, "0xa");
-    expect(p.subscores).toEqual({ ronke: 10, ronkestr: 0, nft: 24, units: 66 });
+    expect(p.subscores).toEqual({ ronke: 10, ronkestr: 0, nft: 24, units: 66, staking: 0 });
     expect(p.breakdown.units_count).toBe(5);
     expect(p.breakdown.units_held).toBe(40);
     expect(p.breakdown.units_hold_points).toBe(0);

@@ -509,3 +509,21 @@ Files: `lib/api/respond.ts`, `config/apiDocs.ts`,
   every unit (~78 s).
 - `unit_holdings.units_total`, `wallet_scores.units_held/units_hold_points`, API
   `breakdown.units_held/units_hold_points`, profile row "Holding N units".
+
+## [2026-10-10] RONKA staking in the Ronke Score - built on `feat/ronka-staking`
+
+- RONKA locked in the ronkeverse.fun TokenLocker (`0x27D7…7768`) earns points while
+  it stays locked, score only, no token rewards (founder + RONKA team):
+  `100 * log10(1 + valueRonke / 10,000) * termMultiplier`, valueRonke = locked RONKA
+  (50,000 min, 10M max per wallet, locks summed) x the 7-day average RONKA/RONKE pool
+  price (Katana V3 `0xB999…C5a4`, token0 = RONKA). Terms: 30 d x1, 90 d x1.25,
+  180 d x1.75, 1 year+ x4 (value-weighted per wallet). 10M for a year = +796.
+- Only running locks count (endTime in the future), only the not-yet-releasable part of
+  a vesting lock, current owner, never a contract. The bonus is gone at the first
+  rebuild after the lock ends - re-lock to keep it.
+- `lib/staking/snapshot.ts` (all-or-nothing read; failed read keeps old rows),
+  `staking_holdings`, `staking_prices` (one row per day), `wallet_scores.staking_*`,
+  API `subscores.staking`, `breakdown.staking_tokens/staking_mult`, profile panel
+  "RONKA staking", explainer entry. Sync runs it before the rebuild.
+- Live read 2026-10-10: 17 running RONKA locks, 13 wallets earn +19…+474.
+- Tests: `tests/score-staking.test.ts` reproduces the founder's table exactly.

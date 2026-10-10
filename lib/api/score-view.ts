@@ -45,6 +45,8 @@ export interface PublicScore {
     nft: number;
     /** PewPew units at level 10+ (added 2026-10). */
     units: number;
+    /** RONKA locked in the ronkeverse.fun TokenLocker (added 2026-10). */
+    staking: number;
   };
   breakdown: {
     ronke_holding: number;
@@ -65,6 +67,8 @@ export interface PublicScore {
     units_counted: number;
     units_held: number;
     units_hold_points: number;
+    staking_tokens: number;
+    staking_mult: number;
   };
 }
 
@@ -77,7 +81,7 @@ function empty(address: string, name: string | null): PublicScore {
     score: 0,
     rank: null,
     percentile: null,
-    subscores: { ronke: 0, ronkestr: 0, nft: 0, units: 0 },
+    subscores: { ronke: 0, ronkestr: 0, nft: 0, units: 0, staking: 0 },
     breakdown: {
       ronke_holding: 0,
       ronke_duration: 0,
@@ -97,6 +101,8 @@ function empty(address: string, name: string | null): PublicScore {
       units_counted: 0,
       units_held: 0,
       units_hold_points: 0,
+      staking_tokens: 0,
+      staking_mult: 0,
     },
   };
 }
@@ -119,6 +125,7 @@ export function toPublicScore(
       ronkestr: score.ronkestrSubscore,
       nft: score.nftSubscore,
       units: score.unitsSubscore,
+      staking: score.stakingSubscore,
     },
     breakdown: {
       ronke_holding: score.ronkeHolding,
@@ -139,6 +146,8 @@ export function toPublicScore(
       units_counted: score.unitsCounted,
       units_held: score.unitsHeld,
       units_hold_points: score.unitsHoldPoints,
+      staking_tokens: Math.round(score.stakingTokens),
+      staking_mult: score.stakingMult,
     },
   };
 }

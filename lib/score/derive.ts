@@ -23,6 +23,7 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     SELECT count(DISTINCT value)::int AS n FROM nft_traits WHERE trait_type = ${SCORE_CONFIG.collector.bodyTrait}
   `;
   const bodyTypesTotal = Number(bodyTotalRow[0]?.n ?? 0);
+  const stakingPrice = await stakingAvgPrice(sql);
 
   const map = new Map<string, ScoreInput>();
   const ensure = (address: string): ScoreInput => {
@@ -40,6 +41,9 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
         oneOfOneCount: 0,
         unitsCount: 0,
         unitsTotal: 0,
+        stakingTokens: 0,
+        stakingMult: 0,
+        stakingPrice,
       };
       map.set(address, a);
     }
@@ -144,7 +148,38 @@ export async function assembleScoreInputs(sql: Sql): Promise<Map<string, ScoreIn
     a.unitsTotal = Number(r.units_total ?? 0);
   }
 
+  // RONKA staking (staking_holdings, written by the sync job from the chain).
+  for (const r of await stakingRows(sql)) {
+    const a = ensure(r.address as string);
+    a.stakingTokens = Number(r.tokens);
+    a.stakingMult = Number(r.mult);
+  }
+
   return map;
+}
+
+/** Rows of a table the sync job fills, or none while the table does not exist yet. */
+async function optionalRows(table: string, run: () => Promise<Record<string, unknown>[]>): Promise<Record<string, unknown>[]> {
+  try {
+    return await run();
+  } catch (err) {
+    if (new RegExp(table).test(String((err as Error)?.message))) return [];
+    throw err;
+  }
+}
+
+function stakingRows(sql: Sql, address?: string): Promise<Record<string, unknown>[]> {
+  return optionalRows("staking_holdings", () => address
+    ? sql`SELECT address, tokens, mult FROM staking_holdings WHERE address = ${address}`
+    : sql`SELECT address, tokens, mult FROM staking_holdings`);
+}
+
+/** RONKE per RONKA, averaged over the last priceDays daily prices (0 if none yet). */
+async function stakingAvgPrice(sql: Sql): Promise<number> {
+  const rows = await optionalRows("staking_prices", () =>
+    sql`SELECT price FROM staking_prices ORDER BY day DESC LIMIT ${SCORE_CONFIG.staking.priceDays}`);
+  if (rows.length === 0) return 0;
+  return rows.reduce((s, r) => s + Number(r.price), 0) / rows.length;
 }
 
 /**
@@ -187,6 +222,9 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
     oneOfOneCount: 0,
     unitsCount: 0,
     unitsTotal: 0,
+    stakingTokens: 0,
+    stakingMult: 0,
+    stakingPrice: await stakingAvgPrice(sql),
   };
 
   const balances = await sql`
@@ -248,6 +286,10 @@ export async function assembleScoreInputForWallet(sql: Sql, address: string): Pr
   const units = await unitRows(sql, address);
   input.unitsCount = Number(units[0]?.units_count ?? 0);
   input.unitsTotal = Number(units[0]?.units_total ?? 0);
+
+  const staking = await stakingRows(sql, address);
+  input.stakingTokens = Number(staking[0]?.tokens ?? 0);
+  input.stakingMult = Number(staking[0]?.mult ?? 0);
 
   return input;
 }
@@ -317,6 +359,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       b.collectorPoints, b.bodyTypesHeld, b.bodyTypesTotal,
       b.oneOfOnePoints, b.oneOfOneCount,
       s.result.unitsSubscore, b.unitsCount, b.unitsCounted, b.unitsHeld, b.unitsHoldPoints,
+      s.result.stakingSubscore, b.stakingTokens, b.stakingMult,
       s.rank, s.percentile,
     ];
   });
@@ -331,6 +374,7 @@ export async function deriveScores(sql: Sql): Promise<number> {
       "collector_points", "body_types_held", "body_types_total",
       "oneofone_points", "oneofone_count",
       "units_subscore", "units_count", "units_counted", "units_held", "units_hold_points",
+      "staking_subscore", "staking_tokens", "staking_mult",
       "rank", "percentile",
     ],
     rows,

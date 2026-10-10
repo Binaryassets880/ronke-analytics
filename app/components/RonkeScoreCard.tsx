@@ -93,6 +93,12 @@ export function RonkeScoreCard({ score, address }: { score: WalletScore; address
             ) : null}
           </Panel>
         ) : null}
+
+        {score.stakingSubscore > 0 ? (
+          <Panel title="RONKA staking" subscore={formatCompact(score.stakingSubscore)}>
+            <Row label={`Locked RONKA (${mult(score.stakingMult)} lock)`} value={formatCompact(Math.round(score.stakingTokens))} />
+          </Panel>
+        ) : null}
       </div>
 
       <details className="group mt-3 rounded-xl border border-[var(--border-soft)] bg-[var(--card-2)] px-3.5 py-2.5">

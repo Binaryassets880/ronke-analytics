@@ -59,6 +59,9 @@ export function emptyScoreInput(bodyTypesTotal = 10): ScoreInput {
     oneOfOneCount: 0,
     unitsCount: 0,
     unitsTotal: 0,
+    stakingTokens: 0,
+    stakingMult: 0,
+    stakingPrice: 0,
   };
 }
 
@@ -150,6 +153,9 @@ export function applyKnobs(base: ScoreInput, knobs: SimKnobs): ScoreInput {
     // wallet's real ones must carry through or the simulation would drop them.
     unitsCount: base.unitsCount ?? 0,
     unitsTotal: base.unitsTotal ?? 0,
+    stakingTokens: base.stakingTokens ?? 0,
+    stakingMult: base.stakingMult ?? 0,
+    stakingPrice: base.stakingPrice ?? 0,
   };
 }
 

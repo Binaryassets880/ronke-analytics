@@ -371,6 +371,10 @@ export interface WalletScore {
   /** Units of any level held, and the holding bonus they earn (part of unitsSubscore). */
   unitsHeld: number;
   unitsHoldPoints: number;
+  /** RONKA staking: points, RONKA locked, lock-length multiplier. */
+  stakingSubscore: number;
+  stakingTokens: number;
+  stakingMult: number;
 }
 
 /** Total wallets carrying a non-zero Ronke Score - the percentile denominator. */
@@ -399,7 +403,7 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total,
-           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, units_held, units_hold_points, rank, percentile
+           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, units_held, units_hold_points, staking_subscore, staking_tokens, staking_mult, rank, percentile
     FROM wallet_scores WHERE address = ${address}
   `;
   if (rows.length === 0) return null;
@@ -444,6 +448,9 @@ export async function getWalletScore(address: string): Promise<WalletScore | nul
     unitsCounted: Number(r.units_counted),
     unitsHeld: Number(r.units_held),
     unitsHoldPoints: Number(r.units_hold_points),
+    stakingSubscore: Number(r.staking_subscore),
+    stakingTokens: Number(r.staking_tokens),
+    stakingMult: Number(r.staking_mult),
   };
 }
 
@@ -469,7 +476,7 @@ export async function getWalletScoresBatch(
            ronkestr_holding, ronkestr_duration, ronkestr_diamond_mult,
            nft_holding, nft_duration, nft_diamond_mult,
            collector_points, body_types_held, body_types_total,
-           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, units_held, units_hold_points, rank, percentile
+           oneofone_points, oneofone_count, units_subscore, units_count, units_counted, units_held, units_hold_points, staking_subscore, staking_tokens, staking_mult, rank, percentile
     FROM wallet_scores WHERE address = ANY(${addresses})
   `;
   for (const r of rows) {
@@ -499,6 +506,9 @@ export async function getWalletScoresBatch(
       unitsCounted: Number(r.units_counted),
       unitsHeld: Number(r.units_held),
       unitsHoldPoints: Number(r.units_hold_points),
+      stakingSubscore: Number(r.staking_subscore),
+      stakingTokens: Number(r.staking_tokens),
+      stakingMult: Number(r.staking_mult),
     });
   }
   return out;

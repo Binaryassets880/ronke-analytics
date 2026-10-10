@@ -75,6 +75,15 @@ export const SCORE_EXPLAINER = {
         "holding-time bonus here, because units can fall in battle. Holding 100 or more units of any " +
         "level adds a separate holding bonus (30 points at 100, growing slowly, counted up to 1,000 units).",
     },
+    {
+      emoji: "🔒",
+      title: "RONKA staking",
+      body:
+        "RONKA locked on ronkeverse.fun earns points while it stays locked: from 50,000 RONKA, counted up " +
+        "to 10 million, valued at the 7-day average pool price. The lock length you choose sets the " +
+        "multiplier - 30 days x1, 90 days x1.25, 180 days x1.75, 1 year x4. When the lock ends the bonus " +
+        "ends with it; lock again to keep it.",
+    },
   ] as ScoreFactor[],
 
   howToRaise: [

@@ -54,6 +54,9 @@ const SCORE: WalletScore = {
   unitsCounted: 0,
   unitsHeld: 0,
   unitsHoldPoints: 0,
+  stakingSubscore: 0,
+  stakingTokens: 0,
+  stakingMult: 0,
 };
 
 const params = (address: string) => ({ params: Promise.resolve({ address }) });

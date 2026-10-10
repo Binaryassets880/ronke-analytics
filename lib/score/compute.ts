@@ -45,6 +45,12 @@ export interface ScoreInput {
   unitsCount?: number;
   /** PewPew units of any level held (0 if none). */
   unitsTotal?: number;
+  /** RONKA still locked in running locks (whole tokens, 0 if none). */
+  stakingTokens?: number;
+  /** Token-weighted lock-length multiplier of those locks. */
+  stakingMult?: number;
+  /** RONKE per RONKA (7-day average); no price means no staking points. */
+  stakingPrice?: number;
 }
 
 export interface ScoreResult {
@@ -53,6 +59,7 @@ export interface ScoreResult {
   ronkestrSubscore: number;
   nftSubscore: number;
   unitsSubscore: number;
+  stakingSubscore: number;
   breakdown: {
     ronkeHoldingPoints: number;
     ronkeDurationPoints: number; // after diamond multiplier
@@ -72,6 +79,9 @@ export interface ScoreResult {
     unitsCounted: number; // the ones that earn points (capped)
     unitsHeld: number; // units of any level held
     unitsHoldPoints: number; // holding bonus (part of unitsSubscore)
+    stakingTokens: number; // RONKA locked
+    stakingCounted: number; // RONKA that earns points (0 below the minimum, capped above)
+    stakingMult: number; // lock-length multiplier
   };
 }
 
@@ -155,12 +165,22 @@ export function computeScore(input: ScoreInput): ScoreResult {
     : 0;
   const unitsSubscore = unitsLevelPoints + unitsHoldPoints;
 
+  // ── RONKA staking (locked RONKA, valued in RONKE, x lock-length multiplier) ──
+  const stakingTokens = Math.max(0, input.stakingTokens ?? 0);
+  const stakingMult = Math.max(0, input.stakingMult ?? 0);
+  const stakingPrice = Math.max(0, input.stakingPrice ?? 0);
+  const stakingCounted = stakingTokens >= C.staking.minTokens ? Math.min(stakingTokens, C.staking.maxTokens) : 0;
+  const stakingSubscore = stakingCounted > 0 && stakingPrice > 0 && stakingMult > 0
+    ? C.staking.weight * Math.log10(1 + (stakingCounted * stakingPrice) / C.staking.valueScale) * stakingMult
+    : 0;
+
   return {
-    score: round(ronkeSubscore + ronkestrSubscore + nftSubscore) + round(unitsSubscore),
+    score: round(ronkeSubscore + ronkestrSubscore + nftSubscore) + round(unitsSubscore) + round(stakingSubscore),
     ronkeSubscore: round(ronkeSubscore),
     ronkestrSubscore: round(ronkestrSubscore),
     nftSubscore: round(nftSubscore),
     unitsSubscore: round(unitsSubscore),
+    stakingSubscore: round(stakingSubscore),
     breakdown: {
       ronkeHoldingPoints: round(ronkeHoldingPoints),
       ronkeDurationPoints: round(ronkeDurationPoints),
@@ -180,6 +200,9 @@ export function computeScore(input: ScoreInput): ScoreResult {
       unitsCounted,
       unitsHeld,
       unitsHoldPoints: round(unitsHoldPoints),
+      stakingTokens,
+      stakingCounted,
+      stakingMult,
     },
   };
 }

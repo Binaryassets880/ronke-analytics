@@ -287,6 +287,23 @@ ALTER TABLE unit_holdings ADD COLUMN IF NOT EXISTS units_total INTEGER NOT NULL 
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS units_held INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS units_hold_points INTEGER NOT NULL DEFAULT 0;
 
+-- RONKA staking (SCORE_CONFIG.staking): RONKA still locked in the ronkeverse.fun
+-- TokenLocker per wallet, and the daily RONKA/RONKE pool price (7-day average used).
+-- Written by the sync job (lib/staking/snapshot.ts); a failed read keeps the old rows.
+CREATE TABLE IF NOT EXISTS staking_holdings (
+  address     TEXT PRIMARY KEY,
+  tokens      DOUBLE PRECISION NOT NULL DEFAULT 0,
+  mult        DOUBLE PRECISION NOT NULL DEFAULT 0,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS staking_prices (
+  day    DATE PRIMARY KEY,
+  price  DOUBLE PRECISION NOT NULL
+);
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS staking_subscore INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS staking_tokens DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE wallet_scores ADD COLUMN IF NOT EXISTS staking_mult DOUBLE PRECISION NOT NULL DEFAULT 0;
+
 -- ─────────────────────────────────────────────────────────────────────
 -- Market snapshots (E6): latest external market reading per source+asset.
 -- $RONKE price/volume/liquidity from GeckoTerminal. Fetched off-Vercel during

@@ -138,4 +138,43 @@ export const SCORE_CONFIG = {
     holdExp: 0.6,
     holdMaxCount: 1000,
   },
+  /**
+   * RONKA staking (2026-10-10, founder + RONKA team): RONKA locked in the ronkeverse.fun
+   * TokenLocker earns Ronke Score while it stays locked - no token rewards, score only.
+   * The lock length is chosen up front and fully locked; when it ends the bonus is gone
+   * at the next daily rebuild (re-lock to keep it).
+   *
+   *   points = weight * log10(1 + valueRonke / valueScale) * termMultiplier
+   *
+   * valueRonke = locked RONKA (minTokens..maxTokens per wallet, all its locks summed) at
+   * the 7-day average RONKA/RONKE pool price, so a dust lock earns ~nothing and a whale's
+   * extra size gives diminishing returns. termMultiplier is the lock length the wallet
+   * chose (value-weighted across its locks): 30 days x1, 90 x1.25, 180 x1.75, 1 year x4
+   * (1 year is deliberately the big one). 10M RONKA for a year = +796.
+   * Simulated against the live table and today's 17 RONKA locks: other wallets fall at
+   * most 2 ranks, one wallet on the TOP 1% edge moves to TOP 5%.
+   */
+  staking: {
+    /** RONKA, the ronkeverse.fun coin. */
+    token: "0x885C4e7C864a632cE741AeBA2c688B139Bbbf835",
+    /** Katana V3 RONKA/RONKE pool (token0 = RONKA, token1 = RONKE) - the price source. */
+    pool: "0xB9995b4b7115828685b1B71650D71415a36DC5a4",
+    /** ronkeverse.fun TokenLocker contracts that count. */
+    lockers: ["0x27D7BC824165Ba59D82D9f54817cD2458DA27768"],
+    minTokens: 50_000,
+    maxTokens: 10_000_000,
+    weight: 100,
+    valueScale: 10_000,
+    /** [lock length in days, multiplier], longest first. Shorter than 30 days earns nothing. */
+    terms: [
+      [365, 4],
+      [180, 1.75],
+      [90, 1.25],
+      [30, 1],
+    ],
+    /** A lock's length is endTime - lockedAt; signing takes a moment, so allow some slack. */
+    termSlackDays: 2,
+    /** Days of daily pool prices averaged, so a one-day pump cannot inflate the value. */
+    priceDays: 7,
+  },
 } as const;
